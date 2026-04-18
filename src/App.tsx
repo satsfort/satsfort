@@ -15,6 +15,8 @@ function App() {
   const [route, setRoute] = useState<Route>("portfolio");
   const [collapsed, setCollapsed] = useState(false);
   const [unit, setUnit] = useState<Unit>("BTC");
+  const [balancesHidden, setBalancesHidden] = useState(false);
+  const toggleBalances = () => setBalancesHidden((h) => !h);
 
   if (!user) {
     return <LoginPage onLogin={setUser} />;
@@ -36,10 +38,20 @@ function App() {
       <main className="content">
         <div className="content-inner">
           {route === "portfolio" && (
-            <PortfolioPage unit={unit} setUnit={setUnit} />
+            <PortfolioPage
+              unit={unit}
+              setUnit={setUnit}
+              balancesHidden={balancesHidden}
+              onToggleBalances={toggleBalances}
+            />
           )}
           {route === "addresses" && (
-            <AddressesPage unit={unit} setUnit={setUnit} />
+            <AddressesPage
+              unit={unit}
+              setUnit={setUnit}
+              balancesHidden={balancesHidden}
+              onToggleBalances={toggleBalances}
+            />
           )}
           {route === "settings" && <SettingsPage />}
           {route === "account" && (

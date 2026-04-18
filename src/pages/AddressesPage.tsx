@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CopyIcon } from "../components/icons";
+import { CopyIcon, EyeIcon, EyeOffIcon } from "../components/icons";
 import { AddressBalanceRequest } from "../requests/AddressBalanceRequest";
 import { TrackedAddressesRequest } from "../requests/TrackedAddressesRequest";
 import type { TrackedAddress } from "../requests/TrackedAddressesRequest";
@@ -11,6 +11,8 @@ import { formatAmount, formatSecondary } from "../lib/format";
 type Props = {
   unit: Unit;
   setUnit: (u: Unit) => void;
+  balancesHidden: boolean;
+  onToggleBalances: () => void;
 };
 
 function shorten(addr: string) {
@@ -18,7 +20,12 @@ function shorten(addr: string) {
   return `${addr.slice(0, 10)}…${addr.slice(-8)}`;
 }
 
-export function AddressesPage({ unit, setUnit }: Props) {
+export function AddressesPage({
+  unit,
+  setUnit,
+  balancesHidden,
+  onToggleBalances,
+}: Props) {
   const [addresses, setAddresses] = useState<TrackedAddress[]>([]);
   const [spot, setSpot] = useState<SpotPrice | null>(null);
   const [refreshing, setRefreshing] = useState<string | null>(null);
@@ -57,13 +64,22 @@ export function AddressesPage({ unit, setUnit }: Props) {
   const total = addresses.reduce((s, a) => s + a.btc, 0);
 
   return (
-    <>
+    <div className={balancesHidden ? "balances-hidden" : undefined}>
       <header className="page-head">
         <div>
           <div className="eyebrow">Watch-only</div>
           <h1 className="page-title">Addresses</h1>
         </div>
         <div className="page-actions">
+          <button
+            className="btn btn-icon"
+            onClick={onToggleBalances}
+            aria-pressed={balancesHidden}
+            aria-label={balancesHidden ? "Show balances" : "Hide balances"}
+            title={balancesHidden ? "Show balances" : "Hide balances"}
+          >
+            {balancesHidden ? <EyeIcon /> : <EyeOffIcon />}
+          </button>
           <div className="unit-toggle" role="group" aria-label="Display unit">
             <button
               className={`unit-btn ${unit === "BTC" ? "active" : ""}`}
@@ -156,6 +172,6 @@ export function AddressesPage({ unit, setUnit }: Props) {
           ))}
         </div>
       </section>
-    </>
+    </div>
   );
 }

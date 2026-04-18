@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PortfolioChart } from "../components/PortfolioChart";
+import { EyeIcon, EyeOffIcon } from "../components/icons";
 import { PortfolioHistoryRequest } from "../requests/PortfolioHistoryRequest";
 import type { HistoryPoint } from "../requests/PortfolioHistoryRequest";
 import { TransactionHistoryRequest } from "../requests/TransactionHistoryRequest";
@@ -17,9 +18,16 @@ import {
 type Props = {
   unit: Unit;
   setUnit: (u: Unit) => void;
+  balancesHidden: boolean;
+  onToggleBalances: () => void;
 };
 
-export function PortfolioPage({ unit, setUnit }: Props) {
+export function PortfolioPage({
+  unit,
+  setUnit,
+  balancesHidden,
+  onToggleBalances,
+}: Props) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [spot, setSpot] = useState<SpotPrice | null>(null);
@@ -62,13 +70,22 @@ export function PortfolioPage({ unit, setUnit }: Props) {
   const heroSecondary = formatSecondary(latest.btc, unit, priceUsd);
 
   return (
-    <>
+    <div className={balancesHidden ? "balances-hidden" : undefined}>
       <header className="page-head">
         <div>
           <div className="eyebrow">Dashboard</div>
           <h1 className="page-title">Portfolio</h1>
         </div>
         <div className="page-actions">
+          <button
+            className="btn btn-icon"
+            onClick={onToggleBalances}
+            aria-pressed={balancesHidden}
+            aria-label={balancesHidden ? "Show balances" : "Hide balances"}
+            title={balancesHidden ? "Show balances" : "Hide balances"}
+          >
+            {balancesHidden ? <EyeIcon /> : <EyeOffIcon />}
+          </button>
           <div className="unit-toggle" role="group" aria-label="Display unit">
             <button
               className={`unit-btn ${unit === "BTC" ? "active" : ""}`}
@@ -176,6 +193,6 @@ export function PortfolioPage({ unit, setUnit }: Props) {
           ))}
         </div>
       </section>
-    </>
+    </div>
   );
 }

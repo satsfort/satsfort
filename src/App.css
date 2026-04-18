@@ -367,6 +367,24 @@ body::after {
   color: var(--orange);
 }
 
+.btn-icon {
+  padding: 0.5rem 0.6rem;
+  display: inline-grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.btn-icon:hover:not(:disabled) {
+  color: var(--orange);
+  border-color: var(--border-strong);
+}
+
+.btn-icon[aria-pressed="true"] {
+  color: var(--orange);
+  border-color: rgba(247, 147, 26, 0.35);
+  background: rgba(247, 147, 26, 0.08);
+}
+
 .btn-danger {
   border-color: oklch(0.4 0.12 25);
   color: var(--red);
@@ -588,6 +606,27 @@ body::after {
   font-size: 0.85rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* ---------- Balance privacy blur ---------- */
+
+.balances-hidden .hero-value,
+.balances-hidden .hero-sub .usd,
+.balances-hidden .hero-sub .delta-pos,
+.balances-hidden .hero-sub .delta-neg,
+.balances-hidden .stat-value,
+.balances-hidden .stat-card .small,
+.balances-hidden .chart-value,
+.balances-hidden .chart-head > div > .small,
+.balances-hidden .chart-svg,
+.balances-hidden .tx-amount,
+.balances-hidden .tx-row:not(.head) > div:last-child,
+.balances-hidden .addr-amount,
+.balances-hidden .addr-balance .small {
+  filter: blur(8px);
+  transition: filter 0.2s ease;
+  user-select: none;
+  pointer-events: none;
 }
 
 /* ---------- Login ---------- */
