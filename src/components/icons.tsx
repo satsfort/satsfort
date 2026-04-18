@@ -82,3 +82,23 @@ export function EyeOffIcon({ size = 16 }: IconProps) {
     </svg>
   );
 }
+
+export function WalletIcon({ size = 48 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
+      <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
+      <circle cx="18" cy="14" r="1" />
+    </svg>
+  );
+}
+
+export function BarChartIcon({ size = 48 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="12" width="4" height="9" rx="0.5" />
+      <rect x="10" y="7" width="4" height="14" rx="0.5" />
+      <rect x="17" y="3" width="4" height="18" rx="0.5" />
+    </svg>
+  );
+}

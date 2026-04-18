@@ -1,3 +1,5 @@
+import { Config } from "../lib/Config";
+
 export type AddressBalance = {
   address: string;
   btc: number;
@@ -40,6 +42,11 @@ export class AddressBalanceRequests {
   constructor(private address: string) {}
 
   async execute(): Promise<AddressBalance> {
+    if (!Config.useMockData) {
+      // TODO: fetch real balance from blockchain API
+      return { address: this.address, btc: 0, txCount: 0, lastSeen: "-" };
+    }
+
     const mock = MOCK_BALANCES[this.address];
     if (!mock) {
       return {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PortfolioChart } from "../components/PortfolioChart";
-import { EyeIcon, EyeOffIcon } from "../components/icons";
+import { EyeIcon, EyeOffIcon, BarChartIcon } from "../components/icons";
+import { EmptyState } from "../components/EmptyState";
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
 import { TransactionHistoryService } from "../services/TransactionHistoryService";
@@ -31,8 +32,8 @@ export function PortfolioPage({
   balancesHidden,
   onToggleBalances,
 }: Props) {
-  const [history, setHistory] = useState<HistoryPoint[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [history, setHistory] = useState<HistoryPoint[] | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [spot, setSpot] = useState<SpotPrice | null>(null);
   const { currency, denomination } = useSettings();
 
@@ -42,7 +43,7 @@ export function PortfolioPage({
     new SpotPriceRequests().execute().then(setSpot);
   }, []);
 
-  if (history.length === 0 || !spot) {
+  if (history === null || transactions === null || !spot) {
     return (
       <>
         <header className="page-head">
@@ -52,6 +53,28 @@ export function PortfolioPage({
           </div>
         </header>
         <div className="loading mono muted">Loading…</div>
+      </>
+    );
+  }
+
+  if (history.length === 0) {
+    return (
+      <>
+        <header className="page-head">
+          <div>
+            <div className="eyebrow">Dashboard</div>
+            <h1 className="page-title">Portfolio</h1>
+          </div>
+          <div className="page-actions">
+            <button className="btn btn-primary">+ Add Transaction</button>
+          </div>
+        </header>
+        <EmptyState
+          icon={<BarChartIcon size={56} />}
+          title="No portfolio data yet"
+          description="Add a transaction or import an address to start tracking your stack."
+          action={<button className="btn btn-primary">+ Add Transaction</button>}
+        />
       </>
     );
   }
@@ -182,7 +205,9 @@ export function PortfolioPage({
             <div className="tx-hide-sm">Source</div>
             <div className="tx-hide-sm">{unit === "BTC" ? `${currency} Value` : "BTC"}</div>
           </div>
-          {transactions.map((tx) => (
+          {transactions.length === 0 ? (
+            <div className="tx-row muted mono">No transactions yet.</div>
+          ) : transactions.map((tx) => (
             <div className="tx-row" key={tx.id}>
               <div>
                 <span className={`tx-tag ${tx.type}`}>{tx.type}</span>

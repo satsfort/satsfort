@@ -1,3 +1,5 @@
+import { Config } from "../lib/Config";
+
 export type AddressType = "Taproot" | "Segwit" | "Legacy";
 
 export type TrackedAddressMeta = {
@@ -50,7 +52,10 @@ const ADDRESS_META: TrackedAddressMeta[] = [
 
 export class TrackedAddressesRequests {
   async execute(): Promise<TrackedAddressMeta[]> {
+    if (!Config.useMockData) {
+      // TODO: fetch real tracked addresses from storage
+      return [];
+    }
     return [...ADDRESS_META];
   }
 }
-

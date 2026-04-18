@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CopyIcon, EyeIcon, EyeOffIcon } from "../components/icons";
+import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon } from "../components/icons";
 import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
@@ -8,6 +8,7 @@ import type { SpotPrice } from "../requests/SpotPriceRequests";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatBtcLabel, formatSecondary, formatSymbol } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
+import { EmptyState } from "../components/EmptyState";
 
 type Props = {
   unit: Unit;
@@ -27,7 +28,7 @@ export function AddressesPage({
   balancesHidden,
   onToggleBalances,
 }: Props) {
-  const [addresses, setAddresses] = useState<TrackedAddress[]>([]);
+  const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
   const [spot, setSpot] = useState<SpotPrice | null>(null);
   const [refreshing, setRefreshing] = useState<string | null>(null);
   const { currency, denomination } = useSettings();
@@ -41,14 +42,14 @@ export function AddressesPage({
     setRefreshing(addr.id);
     const next = await new AddressBalanceRequests(addr.address).execute();
     setAddresses((prev) =>
-      prev.map((a) =>
+      (prev ?? []).map((a) =>
         a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a
       )
     );
     setRefreshing(null);
   };
 
-  if (addresses.length === 0 || !spot) {
+  if (addresses === null || !spot) {
     return (
       <>
         <header className="page-head">
@@ -58,6 +59,34 @@ export function AddressesPage({
           </div>
         </header>
         <div className="loading mono muted">Loading…</div>
+      </>
+    );
+  }
+
+  if (addresses.length === 0) {
+    return (
+      <>
+        <header className="page-head">
+          <div>
+            <div className="eyebrow">Watch-only</div>
+            <h1 className="page-title">Addresses</h1>
+          </div>
+          <div className="page-actions">
+            <button className="btn">Import xpub</button>
+            <button className="btn btn-primary">+ Add Address</button>
+          </div>
+        </header>
+        <EmptyState
+          icon={<WalletIcon size={56} />}
+          title="No addresses tracked"
+          description="Add a Bitcoin address or import an xpub to start watching your balances."
+          action={
+            <>
+              <button className="btn">Import xpub</button>
+              <button className="btn btn-primary">+ Add Address</button>
+            </>
+          }
+        />
       </>
     );
   }

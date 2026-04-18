@@ -1,3 +1,5 @@
+import { Config } from "../lib/Config";
+
 export type HistoryPoint = {
   date: string;
   btc: number;
@@ -9,6 +11,10 @@ const END_DATE = new Date("2026-04-18T00:00:00Z");
 
 export class PortfolioHistoryRequests {
   async execute(): Promise<HistoryPoint[]> {
+    if (!Config.useMockData) {
+      // TODO: fetch real portfolio history
+      return [];
+    }
     return this.buildMock();
   }
 
