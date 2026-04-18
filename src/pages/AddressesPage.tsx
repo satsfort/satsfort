@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon } from "../components/icons";
 import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
+import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
@@ -9,6 +10,7 @@ import type { Unit } from "../lib/format";
 import { formatAmount, formatBtcLabel, formatSecondary, formatSymbol } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
 import { EmptyState } from "../components/EmptyState";
+import { AddAddressModal } from "../components/AddAddressModal";
 
 type Props = {
   unit: Unit;
@@ -31,6 +33,8 @@ export function AddressesPage({
   const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
   const [spot, setSpot] = useState<SpotPrice | null>(null);
   const [refreshing, setRefreshing] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const { currency, denomination } = useSettings();
 
   useEffect(() => {
@@ -50,6 +54,22 @@ export function AddressesPage({
       )
     );
     setRefreshing(null);
+  };
+
+  const handleAddAddress = async (address: string, label: string) => {
+    const meta = await new TrackedAddressesRequests().add(address, label);
+    const balance = await new AddressBalanceRequests(meta.address).execute();
+    const tracked: TrackedAddress = {
+      ...meta,
+      btc: balance.btc,
+      txCount: balance.txCount,
+    };
+    setAddresses((prev) => [...(prev ?? []), tracked]);
+  };
+
+  const handleRemove = async (id: string) => {
+    await new TrackedAddressesRequests().remove(id);
+    setAddresses((prev) => (prev ?? []).filter((a) => a.id !== id));
   };
 
   if (addresses === null || !spot) {
@@ -76,7 +96,7 @@ export function AddressesPage({
           </div>
           <div className="page-actions">
             <button className="btn">Import xpub</button>
-            <button className="btn btn-primary">+ Add Address</button>
+            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
           </div>
         </header>
         <EmptyState
@@ -86,10 +106,16 @@ export function AddressesPage({
           action={
             <>
               <button className="btn">Import xpub</button>
-              <button className="btn btn-primary">+ Add Address</button>
+              <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
             </>
           }
         />
+        {showAddModal && (
+          <AddAddressModal
+            onClose={() => setShowAddModal(false)}
+            onAdd={handleAddAddress}
+          />
+        )}
       </>
     );
   }
@@ -129,7 +155,7 @@ export function AddressesPage({
             </button>
           </div>
           <button className="btn">Import xpub</button>
-          <button className="btn btn-primary">+ Add Address</button>
+          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
         </div>
       </header>
 
@@ -172,8 +198,14 @@ export function AddressesPage({
                       className="icon-btn"
                       title="Copy address"
                       aria-label="Copy address"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(a.address).then(() => {
+                          setCopiedId(a.id);
+                          setTimeout(() => setCopiedId((prev) => prev === a.id ? null : prev), 2000);
+                        });
+                      }}
                     >
-                      <CopyIcon />
+                      {copiedId === a.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
                     </button>
                   </div>
                 </div>
@@ -200,12 +232,18 @@ export function AddressesPage({
                   {refreshing === a.id ? "Refreshing…" : "Refresh"}
                 </button>
                 <button className="link-btn">View</button>
-                <button className="link-btn danger">Remove</button>
+                <button className="link-btn danger" onClick={() => handleRemove(a.id)}>Remove</button>
               </div>
             </article>
           ))}
         </div>
       </section>
+      {showAddModal && (
+        <AddAddressModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAddAddress}
+        />
+      )}
     </div>
   );
 }
