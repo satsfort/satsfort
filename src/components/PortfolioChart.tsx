@@ -27,7 +27,7 @@ type Props = {
 export function PortfolioChart({ history, priceUsd, unit }: Props) {
   const [range, setRange] = useState<Range>("2Y");
   const [hover, setHover] = useState<number | null>(null);
-  const { currency } = useSettings();
+  const { currency, denomination } = useSettings();
 
   const points = useMemo(() => {
     const span = RANGE_WEEKS[range];
@@ -85,7 +85,7 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
               (hovered ?? points[points.length - 1]).btc,
               unit,
               priceUsd,
-              { btcDigits: 8, fiat: currency }
+              { btcDigits: 8, fiat: currency, denom: denomination }
             )}
           </div>
           <div className="muted small mono">
@@ -93,7 +93,8 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
               (hovered ?? points[points.length - 1]).btc,
               unit,
               priceUsd,
-              currency
+              currency,
+              denomination
             )}
           </div>
         </div>
@@ -149,7 +150,7 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
                 textAnchor="end"
                 className="axis-label"
               >
-                {formatAxis(v, unit, priceUsd, currency)}
+                {formatAxis(v, unit, priceUsd, currency, denomination)}
               </text>
             </g>
           );
