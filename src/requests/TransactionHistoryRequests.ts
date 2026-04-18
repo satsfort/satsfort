@@ -1,5 +1,5 @@
-import { PortfolioHistoryRequest } from "./PortfolioHistoryRequest";
-import type { HistoryPoint } from "./PortfolioHistoryRequest";
+import { PortfolioHistoryRequests } from "./PortfolioHistoryRequests";
+import type { HistoryPoint } from "./PortfolioHistoryRequests";
 
 export type Transaction = {
   id: string;
@@ -11,11 +11,11 @@ export type Transaction = {
 
 const SOURCES = ["Coldcard", "Jade", "Strike", "Kraken", "River"];
 
-export class TransactionHistoryRequest {
+export class TransactionHistoryRequests {
   constructor(private limit: number = 6) {}
 
   async execute(): Promise<Transaction[]> {
-    const history = await new PortfolioHistoryRequest().execute();
+    const history = await new PortfolioHistoryRequests().execute();
     return this.buildMock(history);
   }
 

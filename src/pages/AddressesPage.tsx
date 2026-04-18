@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { CopyIcon, EyeIcon, EyeOffIcon } from "../components/icons";
-import { AddressBalanceRequest } from "../requests/AddressBalanceRequest";
-import { TrackedAddressesRequest } from "../requests/TrackedAddressesRequest";
-import type { TrackedAddress } from "../requests/TrackedAddressesRequest";
-import { SpotPriceRequest } from "../requests/SpotPriceRequest";
-import type { SpotPrice } from "../requests/SpotPriceRequest";
+import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
+import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
+import type { TrackedAddress } from "../requests/TrackedAddressesRequests";
+import { SpotPriceRequests } from "../requests/SpotPriceRequests";
+import type { SpotPrice } from "../requests/SpotPriceRequests";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatBtcLabel, formatSecondary, formatSymbol } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
@@ -33,13 +33,13 @@ export function AddressesPage({
   const { currency, denomination } = useSettings();
 
   useEffect(() => {
-    new TrackedAddressesRequest().execute().then(setAddresses);
-    new SpotPriceRequest().execute().then(setSpot);
+    new TrackedAddressesRequests().execute().then(setAddresses);
+    new SpotPriceRequests().execute().then(setSpot);
   }, []);
 
   const refreshOne = async (addr: TrackedAddress) => {
     setRefreshing(addr.id);
-    const next = await new AddressBalanceRequest(addr.address).execute();
+    const next = await new AddressBalanceRequests(addr.address).execute();
     setAddresses((prev) =>
       prev.map((a) =>
         a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a

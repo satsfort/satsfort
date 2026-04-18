@@ -1,5 +1,5 @@
 import type { FiatCurrency, Denomination } from "./SettingsContext";
-import { ExchangeRateRequest } from "../requests/ExchangeRateRequest";
+import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
 
 export type Unit = "BTC" | "FIAT";
 
@@ -15,7 +15,7 @@ const FIAT_SYMBOLS: Record<FiatCurrency, string> = {
 const SATS_PER_BTC = 100_000_000;
 
 function toFiat(usdValue: number, fiat: FiatCurrency): number {
-  return usdValue * ExchangeRateRequest.rateFromUsd(fiat);
+  return usdValue * ExchangeRateRequests.rateFromUsd(fiat);
 }
 
 function btcToDisplay(btc: number, denom: Denomination): number {

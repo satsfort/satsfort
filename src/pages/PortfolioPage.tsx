@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { PortfolioChart } from "../components/PortfolioChart";
 import { EyeIcon, EyeOffIcon } from "../components/icons";
-import { PortfolioHistoryRequest } from "../requests/PortfolioHistoryRequest";
-import type { HistoryPoint } from "../requests/PortfolioHistoryRequest";
-import { TransactionHistoryRequest } from "../requests/TransactionHistoryRequest";
-import type { Transaction } from "../requests/TransactionHistoryRequest";
-import { SpotPriceRequest } from "../requests/SpotPriceRequest";
-import type { SpotPrice } from "../requests/SpotPriceRequest";
+import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
+import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
+import { TransactionHistoryRequests } from "../requests/TransactionHistoryRequests";
+import type { Transaction } from "../requests/TransactionHistoryRequests";
+import { SpotPriceRequests } from "../requests/SpotPriceRequests";
+import type { SpotPrice } from "../requests/SpotPriceRequests";
 import type { Unit } from "../lib/format";
 import {
   formatAmount,
@@ -16,7 +16,7 @@ import {
   formatSymbol,
 } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
-import { ExchangeRateRequest } from "../requests/ExchangeRateRequest";
+import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
 
 type Props = {
   unit: Unit;
@@ -37,9 +37,9 @@ export function PortfolioPage({
   const { currency, denomination } = useSettings();
 
   useEffect(() => {
-    new PortfolioHistoryRequest().execute().then(setHistory);
-    new TransactionHistoryRequest().execute().then(setTransactions);
-    new SpotPriceRequest().execute().then(setSpot);
+    new PortfolioHistoryRequests().execute().then(setHistory);
+    new TransactionHistoryRequests().execute().then(setTransactions);
+    new SpotPriceRequests().execute().then(setSpot);
   }, []);
 
   if (history.length === 0 || !spot) {
@@ -61,7 +61,7 @@ export function PortfolioPage({
   const yearAgo = history[history.length - 53] ?? history[0];
   const monthAgo = history[history.length - 5] ?? history[0];
 
-  const rate = ExchangeRateRequest.rateFromUsd(currency);
+  const rate = ExchangeRateRequests.rateFromUsd(currency);
   const fiatSymbol = formatSymbol("FIAT", currency);
 
   const usdValue = latest.btc * priceUsd;

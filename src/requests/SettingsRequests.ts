@@ -24,9 +24,9 @@ const DEFAULTS: SettingsData = {
   autoSync: true,
 };
 
-export class LoadSettingsRequest {
-  async execute(): Promise<SettingsData> {
-    return LoadSettingsRequest.loadSync();
+export class SettingsRequests {
+  async load(): Promise<SettingsData> {
+    return SettingsRequests.loadSync();
   }
 
   static loadSync(): SettingsData {
@@ -38,13 +38,8 @@ export class LoadSettingsRequest {
       return { ...DEFAULTS };
     }
   }
-}
 
-export class SaveSettingsRequest {
-  constructor(private readonly settings: SettingsData) {}
-
-  async execute(): Promise<void> {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
+  async save(settings: SettingsData): Promise<void> {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }
 }
-

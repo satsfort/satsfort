@@ -36,7 +36,7 @@ const MOCK_BALANCES: Record<
   },
 };
 
-export class AddressBalanceRequest {
+export class AddressBalanceRequests {
   constructor(private address: string) {}
 
   async execute(): Promise<AddressBalance> {

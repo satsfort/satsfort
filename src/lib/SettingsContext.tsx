@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { LoadSettingsRequest, SaveSettingsRequest } from "../requests/SettingsRequest";
+import { SettingsRequests } from "../requests/SettingsRequests";
 
 export type FiatCurrency = "USD" | "EUR" | "GBP" | "JPY" | "CAD" | "AUD";
 
@@ -16,19 +16,19 @@ const SettingsContext = createContext<AppSettings | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrency] = useState<FiatCurrency>(() => {
-    return LoadSettingsRequest.loadSync().currency;
+    return SettingsRequests.loadSync().currency;
   });
   const [denomination, setDenomination] = useState<Denomination>(() => {
-    return LoadSettingsRequest.loadSync().denomination;
+    return SettingsRequests.loadSync().denomination;
   });
 
   const persistSettings = (nextCurrency: FiatCurrency, nextDenomination: Denomination) => {
-    const current = LoadSettingsRequest.loadSync();
-    void new SaveSettingsRequest({
+    const current = SettingsRequests.loadSync();
+    void new SettingsRequests().save({
       ...current,
       currency: nextCurrency,
       denomination: nextDenomination,
-    }).execute();
+    });
   };
 
   const handleCurrency = (c: FiatCurrency) => {

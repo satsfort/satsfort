@@ -4,7 +4,7 @@ export type SpotPrice = {
   asOf: string;
 };
 
-export class SpotPriceRequest {
+export class SpotPriceRequests {
   async execute(): Promise<SpotPrice> {
     return {
       usd: 94_820,

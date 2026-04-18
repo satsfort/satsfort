@@ -7,7 +7,7 @@ const TARGET_BTC = 2.1;
 const WEEKS = 104;
 const END_DATE = new Date("2026-04-18T00:00:00Z");
 
-export class PortfolioHistoryRequest {
+export class PortfolioHistoryRequests {
   async execute(): Promise<HistoryPoint[]> {
     return this.buildMock();
   }

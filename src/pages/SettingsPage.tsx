@@ -2,13 +2,12 @@ import { useState } from "react";
 import { useSettings } from "../lib/SettingsContext";
 import type { FiatCurrency } from "../lib/SettingsContext";
 import {
-  LoadSettingsRequest,
-  SaveSettingsRequest,
+  SettingsRequests,
   type PriceSource,
-} from "../requests/SettingsRequest";
+} from "../requests/SettingsRequests";
 
 export function SettingsPage() {
-  const initialSettings = LoadSettingsRequest.loadSync();
+  const initialSettings = SettingsRequests.loadSync();
   const { currency, setCurrency, denomination, setDenomination } = useSettings();
   const [useOwnNode, setUseOwnNode] = useState(initialSettings.useOwnNode);
   const [nodeUrl, setNodeUrl] = useState(initialSettings.nodeUrl);
@@ -17,7 +16,7 @@ export function SettingsPage() {
   const [autoSync, setAutoSync] = useState(initialSettings.autoSync);
 
   const handleReset = () => {
-    const settings = LoadSettingsRequest.loadSync();
+    const settings = SettingsRequests.loadSync();
     setCurrency(settings.currency);
     setDenomination(settings.denomination);
     setUseOwnNode(settings.useOwnNode);
@@ -28,7 +27,7 @@ export function SettingsPage() {
   };
 
   const handleSave = async () => {
-    await new SaveSettingsRequest({
+    await new SettingsRequests().save({
       currency,
       denomination,
       useOwnNode,
@@ -36,7 +35,7 @@ export function SettingsPage() {
       priceSource,
       telemetry,
       autoSync,
-    }).execute();
+    });
   };
 
   return (

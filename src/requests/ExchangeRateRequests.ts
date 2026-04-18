@@ -10,7 +10,7 @@ const RATES_FROM_USD: Record<FiatCurrency, number> = {
   AUD: 1.53,
 };
 
-export class ExchangeRateRequest {
+export class ExchangeRateRequests {
   async execute(): Promise<Record<FiatCurrency, number>> {
     // TODO: fetch real rates from an API
     return { ...RATES_FROM_USD };
