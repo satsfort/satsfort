@@ -93,7 +93,11 @@ body::after {
 }
 
 .content {
-  padding: 2rem 2rem 4rem;
+  padding:
+    calc(2rem + env(safe-area-inset-top, 0px))
+    calc(2rem + env(safe-area-inset-right, 0px))
+    4rem
+    calc(2rem + env(safe-area-inset-left, 0px));
   width: 100%;
   min-width: 0;
 }
@@ -113,7 +117,11 @@ body::after {
   flex-direction: column;
   background: var(--bg-elev);
   border-right: 1px solid var(--border);
-  padding: 1.25rem 0.75rem;
+  padding:
+    calc(1.25rem + env(safe-area-inset-top, 0px))
+    0.75rem
+    calc(1.25rem + env(safe-area-inset-bottom, 0px))
+    calc(0.75rem + env(safe-area-inset-left, 0px));
   gap: 1.25rem;
   overflow: hidden;
 }
@@ -1098,7 +1106,11 @@ select.text-input {
     padding: 0.25rem 0 0.75rem;
   }
   .content {
-    padding: 1.5rem 1rem 3rem;
+    padding:
+      calc(1.5rem + env(safe-area-inset-top, 0px))
+      calc(1rem + env(safe-area-inset-right, 0px))
+      3rem
+      calc(1rem + env(safe-area-inset-left, 0px));
   }
 }
 
@@ -1113,8 +1125,11 @@ select.text-input {
   }
 
   .content {
-    padding: 1.25rem 1rem
-      calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    padding:
+      calc(1.25rem + env(safe-area-inset-top, 0px))
+      calc(1rem + env(safe-area-inset-right, 0px))
+      calc(5.5rem + env(safe-area-inset-bottom, 0px))
+      calc(1rem + env(safe-area-inset-left, 0px));
   }
 
   .bottom-nav {
