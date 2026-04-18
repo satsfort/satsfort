@@ -1001,6 +1001,28 @@ body::after {
   background: oklch(0.12 0.03 25 / 0.3);
 }
 
+.settings-card.coming-soon-card {
+  opacity: 0.55;
+  pointer-events: none;
+  position: relative;
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--orange);
+  border: 1px solid rgba(247, 147, 26, 0.4);
+  background: rgba(247, 147, 26, 0.08);
+  padding: 0.15rem 0.45rem;
+  border-radius: calc(var(--radius) - 0.2rem);
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  font-weight: 400;
+}
+
 .settings-card-head {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border);

@@ -54,34 +54,6 @@ export function SettingsPage() {
       <section className="settings-grid">
         <div className="settings-card">
           <div className="settings-card-head">
-            <h3 className="settings-card-title">Node</h3>
-            <p className="muted small">
-              Skip third parties. Point the app at a node you control.
-            </p>
-          </div>
-
-          <Row label="Use your own node" hint="Disable public APIs and query your Bitcoin Core or Electrum endpoint instead.">
-            <Toggle checked={useOwnNode} onChange={setUseOwnNode} />
-          </Row>
-
-          <Row label="RPC / Electrum URL" hint="Only used when 'Use your own node' is enabled.">
-            <input
-              className="text-input mono"
-              type="text"
-              value={nodeUrl}
-              onChange={(e) => setNodeUrl(e.target.value)}
-              disabled={!useOwnNode}
-              spellCheck={false}
-            />
-          </Row>
-
-          <Row label="Auto-sync" hint="Re-fetch balances every 60 seconds while the app is open.">
-            <Toggle checked={autoSync} onChange={setAutoSync} />
-          </Row>
-        </div>
-
-        <div className="settings-card">
-          <div className="settings-card-head">
             <h3 className="settings-card-title">Display</h3>
             <p className="muted small">How balances and prices are rendered across the app.</p>
           </div>
@@ -132,25 +104,6 @@ export function SettingsPage() {
           </Row>
         </div>
 
-        <div className="settings-card">
-          <div className="settings-card-head">
-            <h3 className="settings-card-title">Privacy</h3>
-            <p className="muted small">No tracking by default. Toggle what you want to share.</p>
-          </div>
-
-          <Row label="Anonymous telemetry" hint="Send crash reports and latency metrics — no wallet or address data.">
-            <Toggle checked={telemetry} onChange={setTelemetry} />
-          </Row>
-
-          <Row label="Export data">
-            <button className="btn">Download .json</button>
-          </Row>
-
-          <Row label="Clear local cache" hint="Removes cached price history and block headers.">
-            <button className="btn">Clear</button>
-          </Row>
-        </div>
-
         <div className="settings-card danger-card">
           <div className="settings-card-head">
             <h3 className="settings-card-title">Danger Zone</h3>
@@ -161,6 +114,57 @@ export function SettingsPage() {
           </Row>
           <Row label="Wipe application state">
             <button className="btn btn-danger">Wipe</button>
+          </Row>
+        </div>
+
+        <div className="settings-card coming-soon-card">
+          <div className="settings-card-head">
+            <h3 className="settings-card-title">Privacy <span className="coming-soon-badge">Coming Soon</span></h3>
+            <p className="muted small">No tracking by default. Toggle what you want to share.</p>
+          </div>
+
+          <Row label="Anonymous telemetry" hint="Send crash reports and latency metrics — no wallet or address data.">
+            <Toggle checked={telemetry} onChange={() => {}} disabled />
+          </Row>
+
+          <Row label="Import data">
+            <button className="btn" disabled>Upload .json</button>
+          </Row>
+
+          <Row label="Export data">
+            <button className="btn" disabled>Download .json</button>
+          </Row>
+
+          <Row label="Clear local cache" hint="Removes cached price history and block headers.">
+            <button className="btn" disabled>Clear</button>
+          </Row>
+        </div>
+
+        <div className="settings-card coming-soon-card">
+          <div className="settings-card-head">
+            <h3 className="settings-card-title">Node <span className="coming-soon-badge">Coming Soon</span></h3>
+            <p className="muted small">
+              Skip third parties. Point the app at a node you control.
+            </p>
+          </div>
+
+          <Row label="Use your own node" hint="Disable public APIs and query your Bitcoin Core or Electrum endpoint instead.">
+            <Toggle checked={useOwnNode} onChange={() => {}} disabled />
+          </Row>
+
+          <Row label="RPC / Electrum URL" hint="Only used when 'Use your own node' is enabled.">
+            <input
+              className="text-input mono"
+              type="text"
+              value={nodeUrl}
+              onChange={() => {}}
+              disabled
+              spellCheck={false}
+            />
+          </Row>
+
+          <Row label="Auto-sync" hint="Re-fetch balances every 60 seconds while the app is open.">
+            <Toggle checked={autoSync} onChange={() => {}} disabled />
           </Row>
         </div>
       </section>
@@ -191,16 +195,19 @@ function Row({
 function Toggle({
   checked,
   onChange,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       role="switch"
       aria-checked={checked}
       className={`switch ${checked ? "on" : ""}`}
-      onClick={() => onChange(!checked)}
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
     >
       <span className="switch-thumb" />
     </button>
