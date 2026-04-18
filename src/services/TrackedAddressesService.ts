@@ -1,4 +1,4 @@
-import { AddressBalanceRequests } from "./AddressBalanceRequests";
+import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
 
 export type AddressType = "Taproot" | "Segwit" | "Legacy";
 
@@ -54,7 +54,7 @@ const ADDRESS_META: AddressMeta[] = [
   },
 ];
 
-export class TrackedAddressesRequests {
+export class TrackedAddressesService {
   async execute(): Promise<TrackedAddress[]> {
     const balances = await Promise.all(
       ADDRESS_META.map((meta) =>

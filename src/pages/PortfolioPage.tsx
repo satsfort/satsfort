@@ -3,8 +3,8 @@ import { PortfolioChart } from "../components/PortfolioChart";
 import { EyeIcon, EyeOffIcon } from "../components/icons";
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
-import { TransactionHistoryRequests } from "../requests/TransactionHistoryRequests";
-import type { Transaction } from "../requests/TransactionHistoryRequests";
+import { TransactionHistoryService } from "../services/TransactionHistoryService";
+import type { Transaction } from "../services/TransactionHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../requests/SpotPriceRequests";
 import type { Unit } from "../lib/format";
@@ -38,7 +38,7 @@ export function PortfolioPage({
 
   useEffect(() => {
     new PortfolioHistoryRequests().execute().then(setHistory);
-    new TransactionHistoryRequests().execute().then(setTransactions);
+    new TransactionHistoryService().execute().then(setTransactions);
     new SpotPriceRequests().execute().then(setSpot);
   }, []);
 

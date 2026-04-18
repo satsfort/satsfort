@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { CopyIcon, EyeIcon, EyeOffIcon } from "../components/icons";
 import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
-import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
-import type { TrackedAddress } from "../requests/TrackedAddressesRequests";
+import { TrackedAddressesService } from "../services/TrackedAddressesService";
+import type { TrackedAddress } from "../services/TrackedAddressesService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../requests/SpotPriceRequests";
 import type { Unit } from "../lib/format";
@@ -33,7 +33,7 @@ export function AddressesPage({
   const { currency, denomination } = useSettings();
 
   useEffect(() => {
-    new TrackedAddressesRequests().execute().then(setAddresses);
+    new TrackedAddressesService().execute().then(setAddresses);
     new SpotPriceRequests().execute().then(setSpot);
   }, []);
 

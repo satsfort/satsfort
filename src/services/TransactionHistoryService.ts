@@ -1,5 +1,5 @@
-import { PortfolioHistoryRequests } from "./PortfolioHistoryRequests";
-import type { HistoryPoint } from "./PortfolioHistoryRequests";
+import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
+import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
 
 export type Transaction = {
   id: string;
@@ -11,7 +11,7 @@ export type Transaction = {
 
 const SOURCES = ["Coldcard", "Jade", "Strike", "Kraken", "River"];
 
-export class TransactionHistoryRequests {
+export class TransactionHistoryService {
   constructor(private limit: number = 6) {}
 
   async execute(): Promise<Transaction[]> {
