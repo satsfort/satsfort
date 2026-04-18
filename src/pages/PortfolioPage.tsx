@@ -40,7 +40,10 @@ export function PortfolioPage({
   useEffect(() => {
     new PortfolioHistoryRequests().execute().then(setHistory);
     new TransactionHistoryService().execute().then(setTransactions);
-    new SpotPriceRequests().execute().then(setSpot);
+    new SpotPriceRequests().execute().then(setSpot).catch((err) => {
+      console.error("Failed to fetch spot price", err);
+      setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+    });
   }, []);
 
   if (history === null || transactions === null || !spot) {

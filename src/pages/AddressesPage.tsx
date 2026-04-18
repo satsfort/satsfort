@@ -35,7 +35,10 @@ export function AddressesPage({
 
   useEffect(() => {
     new TrackedAddressesService().execute().then(setAddresses);
-    new SpotPriceRequests().execute().then(setSpot);
+    new SpotPriceRequests().execute().then(setSpot).catch((err) => {
+      console.error("Failed to fetch spot price", err);
+      setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+    });
   }, []);
 
   const refreshOne = async (addr: TrackedAddress) => {
