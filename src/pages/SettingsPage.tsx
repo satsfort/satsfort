@@ -1,14 +1,43 @@
 import { useState } from "react";
 import { useSettings } from "../lib/SettingsContext";
 import type { FiatCurrency } from "../lib/SettingsContext";
+import {
+  LoadSettingsRequest,
+  SaveSettingsRequest,
+  type PriceSource,
+} from "../requests/SettingsRequest";
 
 export function SettingsPage() {
+  const initialSettings = LoadSettingsRequest.loadSync();
   const { currency, setCurrency, denomination, setDenomination } = useSettings();
-  const [useOwnNode, setUseOwnNode] = useState(false);
-  const [nodeUrl, setNodeUrl] = useState("http://127.0.0.1:8332");
-  const [priceSource, setPriceSource] = useState("kraken");
-  const [telemetry, setTelemetry] = useState(false);
-  const [autoSync, setAutoSync] = useState(true);
+  const [useOwnNode, setUseOwnNode] = useState(initialSettings.useOwnNode);
+  const [nodeUrl, setNodeUrl] = useState(initialSettings.nodeUrl);
+  const [priceSource, setPriceSource] = useState<PriceSource>(initialSettings.priceSource);
+  const [telemetry, setTelemetry] = useState(initialSettings.telemetry);
+  const [autoSync, setAutoSync] = useState(initialSettings.autoSync);
+
+  const handleReset = () => {
+    const settings = LoadSettingsRequest.loadSync();
+    setCurrency(settings.currency);
+    setDenomination(settings.denomination);
+    setUseOwnNode(settings.useOwnNode);
+    setNodeUrl(settings.nodeUrl);
+    setPriceSource(settings.priceSource);
+    setTelemetry(settings.telemetry);
+    setAutoSync(settings.autoSync);
+  };
+
+  const handleSave = async () => {
+    await new SaveSettingsRequest({
+      currency,
+      denomination,
+      useOwnNode,
+      nodeUrl,
+      priceSource,
+      telemetry,
+      autoSync,
+    }).execute();
+  };
 
   return (
     <>
@@ -18,8 +47,8 @@ export function SettingsPage() {
           <h1 className="page-title">Settings</h1>
         </div>
         <div className="page-actions">
-          <button className="btn">Reset</button>
-          <button className="btn btn-primary">Save Changes</button>
+          <button className="btn" onClick={handleReset}>Reset</button>
+          <button className="btn btn-primary" onClick={() => void handleSave()}>Save Changes</button>
         </div>
       </header>
 
@@ -94,7 +123,7 @@ export function SettingsPage() {
             <select
               className="text-input"
               value={priceSource}
-              onChange={(e) => setPriceSource(e.target.value)}
+              onChange={(e) => setPriceSource(e.target.value as PriceSource)}
             >
               <option value="kraken">Kraken</option>
               <option value="bitstamp">Bitstamp</option>
