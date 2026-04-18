@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon } from "../components/icons";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon } from "../components/icons";
 import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
 import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
@@ -231,8 +232,10 @@ export function AddressesPage({
                 >
                   {refreshing === a.id ? "Refreshing…" : "Refresh"}
                 </button>
-                <button className="link-btn">View</button>
                 <button className="link-btn danger" onClick={() => handleRemove(a.id)}>Remove</button>
+                <button className="link-btn" onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}>
+                  View <ExternalLinkIcon size={12} />
+                </button>
               </div>
             </article>
           ))}

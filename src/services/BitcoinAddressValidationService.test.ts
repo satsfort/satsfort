@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateBitcoinAddress } from "./TrackedAddressesRequests";
+import { validateBitcoinAddress } from "./BitcoinAddressValidationService";
 
 describe("validateBitcoinAddress", () => {
   describe("valid addresses", () => {
@@ -53,7 +53,4 @@ describe("validateBitcoinAddress", () => {
     }
   });
 });
-
-
-
 
