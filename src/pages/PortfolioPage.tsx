@@ -44,6 +44,7 @@ export function PortfolioPage({
       console.error("Failed to fetch spot price", err);
       setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
     });
+    new ExchangeRateRequests().execute().catch(() => {});
   }, []);
 
   if (history === null || transactions === null || !spot) {
