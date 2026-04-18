@@ -6,7 +6,8 @@ import type { TrackedAddress } from "../requests/TrackedAddressesRequest";
 import { SpotPriceRequest } from "../requests/SpotPriceRequest";
 import type { SpotPrice } from "../requests/SpotPriceRequest";
 import type { Unit } from "../lib/format";
-import { formatAmount, formatSecondary } from "../lib/format";
+import { formatAmount, formatSecondary, formatSymbol } from "../lib/format";
+import { useSettings } from "../lib/SettingsContext";
 
 type Props = {
   unit: Unit;
@@ -29,6 +30,7 @@ export function AddressesPage({
   const [addresses, setAddresses] = useState<TrackedAddress[]>([]);
   const [spot, setSpot] = useState<SpotPrice | null>(null);
   const [refreshing, setRefreshing] = useState<string | null>(null);
+  const { currency } = useSettings();
 
   useEffect(() => {
     new TrackedAddressesRequest().execute().then(setAddresses);
@@ -88,10 +90,10 @@ export function AddressesPage({
               ₿ BTC
             </button>
             <button
-              className={`unit-btn ${unit === "USD" ? "active" : ""}`}
-              onClick={() => setUnit("USD")}
+              className={`unit-btn ${unit === "FIAT" ? "active" : ""}`}
+              onClick={() => setUnit("FIAT")}
             >
-              $ USD
+              {formatSymbol("FIAT", currency)} {currency}
             </button>
           </div>
           <button className="btn">Import xpub</button>
@@ -108,10 +110,10 @@ export function AddressesPage({
         <div className="stat-card">
           <div className="stat-label">Aggregate Balance</div>
           <div className="stat-value">
-            {formatAmount(total, unit, priceUsd, { btcDigits: 8 })}
+            {formatAmount(total, unit, priceUsd, { btcDigits: 8, fiat: currency })}
           </div>
           <div className="small muted mono">
-            {formatSecondary(total, unit, priceUsd)}
+            {formatSecondary(total, unit, priceUsd, currency)}
           </div>
         </div>
         <div className="stat-card">
@@ -145,10 +147,10 @@ export function AddressesPage({
                 </div>
                 <div className="addr-balance">
                   <div className="addr-amount">
-                    {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8 })}
+                    {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8, fiat: currency })}
                   </div>
                   <div className="small muted mono">
-                    {formatSecondary(a.btc, unit, priceUsd)}
+                    {formatSecondary(a.btc, unit, priceUsd, currency)}
                   </div>
                 </div>
               </div>

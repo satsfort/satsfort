@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useSettings } from "../lib/SettingsContext";
+import type { FiatCurrency } from "../lib/SettingsContext";
 
 export function SettingsPage() {
+  const { currency, setCurrency, denomination, setDenomination } = useSettings();
   const [useOwnNode, setUseOwnNode] = useState(false);
   const [nodeUrl, setNodeUrl] = useState("http://127.0.0.1:8332");
-  const [currency, setCurrency] = useState("USD");
-  const [denomination, setDenomination] = useState<"BTC" | "SATS">("BTC");
   const [priceSource, setPriceSource] = useState("kraken");
   const [telemetry, setTelemetry] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
@@ -61,7 +62,7 @@ export function SettingsPage() {
             <select
               className="text-input"
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+              onChange={(e) => setCurrency(e.target.value as FiatCurrency)}
             >
               <option value="USD">USD — US Dollar</option>
               <option value="EUR">EUR — Euro</option>

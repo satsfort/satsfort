@@ -8,6 +8,7 @@ import { AddressesPage } from "./pages/AddressesPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AccountPage } from "./pages/AccountPage";
 import { LoginPage } from "./pages/LoginPage";
+import { SettingsProvider } from "./lib/SettingsContext";
 import type { Unit } from "./lib/format";
 
 function App() {
@@ -28,39 +29,41 @@ function App() {
   };
 
   return (
-    <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
-      <Sidebar
-        route={route}
-        onNavigate={setRoute}
-        collapsed={collapsed}
-        onToggle={() => setCollapsed((c) => !c)}
-      />
-      <main className="content">
-        <div className="content-inner">
-          {route === "portfolio" && (
-            <PortfolioPage
-              unit={unit}
-              setUnit={setUnit}
-              balancesHidden={balancesHidden}
-              onToggleBalances={toggleBalances}
-            />
-          )}
-          {route === "addresses" && (
-            <AddressesPage
-              unit={unit}
-              setUnit={setUnit}
-              balancesHidden={balancesHidden}
-              onToggleBalances={toggleBalances}
-            />
-          )}
-          {route === "settings" && <SettingsPage />}
-          {route === "account" && (
-            <AccountPage username={user} onLogout={handleLogout} />
-          )}
-        </div>
-      </main>
-      <BottomNav route={route} onNavigate={setRoute} />
-    </div>
+    <SettingsProvider>
+      <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
+        <Sidebar
+          route={route}
+          onNavigate={setRoute}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((c) => !c)}
+        />
+        <main className="content">
+          <div className="content-inner">
+            {route === "portfolio" && (
+              <PortfolioPage
+                unit={unit}
+                setUnit={setUnit}
+                balancesHidden={balancesHidden}
+                onToggleBalances={toggleBalances}
+              />
+            )}
+            {route === "addresses" && (
+              <AddressesPage
+                unit={unit}
+                setUnit={setUnit}
+                balancesHidden={balancesHidden}
+                onToggleBalances={toggleBalances}
+              />
+            )}
+            {route === "settings" && <SettingsPage />}
+            {route === "account" && (
+              <AccountPage username={user} onLogout={handleLogout} />
+            )}
+          </div>
+        </main>
+        <BottomNav route={route} onNavigate={setRoute} />
+      </div>
+    </SettingsProvider>
   );
 }
 

@@ -14,6 +14,8 @@ import {
   formatSecondary,
   formatSymbol,
 } from "../lib/format";
+import { useSettings } from "../lib/SettingsContext";
+import { ExchangeRateRequest } from "../requests/ExchangeRateRequest";
 
 type Props = {
   unit: Unit;
@@ -31,6 +33,7 @@ export function PortfolioPage({
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [spot, setSpot] = useState<SpotPrice | null>(null);
+  const { currency } = useSettings();
 
   useEffect(() => {
     new PortfolioHistoryRequest().execute().then(setHistory);
@@ -57,6 +60,9 @@ export function PortfolioPage({
   const yearAgo = history[history.length - 53] ?? history[0];
   const monthAgo = history[history.length - 5] ?? history[0];
 
+  const rate = ExchangeRateRequest.rateFromUsd(currency);
+  const fiatSymbol = formatSymbol("FIAT", currency);
+
   const usdValue = latest.btc * priceUsd;
   const costBasis = 62_400;
   const avgPrice = costBasis * 0.98;
@@ -66,8 +72,8 @@ export function PortfolioPage({
   const monthDelta = latest.btc - monthAgo.btc;
   const yearDelta = latest.btc - yearAgo.btc;
 
-  const heroNumber = formatNumber(latest.btc, unit, priceUsd, 8);
-  const heroSecondary = formatSecondary(latest.btc, unit, priceUsd);
+  const heroNumber = formatNumber(latest.btc, unit, priceUsd, 8, currency);
+  const heroSecondary = formatSecondary(latest.btc, unit, priceUsd, currency);
 
   return (
     <div className={balancesHidden ? "balances-hidden" : undefined}>
@@ -94,10 +100,10 @@ export function PortfolioPage({
               ₿ BTC
             </button>
             <button
-              className={`unit-btn ${unit === "USD" ? "active" : ""}`}
-              onClick={() => setUnit("USD")}
+              className={`unit-btn ${unit === "FIAT" ? "active" : ""}`}
+              onClick={() => setUnit("FIAT")}
             >
-              $ USD
+              {formatSymbol("FIAT", currency)} {currency}
             </button>
           </div>
           <button className="btn btn-primary">+ Add Transaction</button>
@@ -108,13 +114,13 @@ export function PortfolioPage({
         <div className="hero-main">
           <div className="eyebrow">Total Holdings</div>
           <div className="hero-value">
-            <span className="tick">{formatSymbol(unit)}</span>
+            <span className="tick">{formatSymbol(unit, currency)}</span>
             {heroNumber}
           </div>
           <div className="hero-sub">
             <span className="usd">{heroSecondary}</span>
             <span className={pnl >= 0 ? "delta-pos" : "delta-neg"}>
-              {pnl >= 0 ? "▲" : "▼"} ${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
+              {pnl >= 0 ? "▲" : "▼"} {fiatSymbol}{Math.abs(pnl * rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
               ({pnlPct.toFixed(1)}%)
             </span>
             <span className="muted">unrealized</span>
@@ -125,10 +131,10 @@ export function PortfolioPage({
           <div className="stat-label">30-Day Stack</div>
           <div className="stat-value">
             <span className="plus">+</span>
-            {formatAmount(monthDelta, unit, priceUsd, { btcDigits: 4 })}
+            {formatAmount(monthDelta, unit, priceUsd, { btcDigits: 4, fiat: currency })}
           </div>
           <div className="small muted mono">
-            {formatSecondary(monthDelta, unit, priceUsd)}
+            {formatSecondary(monthDelta, unit, priceUsd, currency)}
           </div>
         </div>
 
@@ -136,17 +142,17 @@ export function PortfolioPage({
           <div className="stat-label">12-Month Stack</div>
           <div className="stat-value">
             <span className="plus">+</span>
-            {formatAmount(yearDelta, unit, priceUsd, { btcDigits: 4 })}
+            {formatAmount(yearDelta, unit, priceUsd, { btcDigits: 4, fiat: currency })}
           </div>
           <div className="small muted mono">
-            {formatSecondary(yearDelta, unit, priceUsd)}
+            {formatSecondary(yearDelta, unit, priceUsd, currency)}
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-label">Avg. Cost</div>
           <div className="stat-value">
-            ${avgPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {fiatSymbol}{(avgPrice * rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
           <div className="small muted mono">per BTC</div>
         </div>
@@ -154,7 +160,7 @@ export function PortfolioPage({
         <div className="stat-card">
           <div className="stat-label">BTC Price</div>
           <div className="stat-value">
-            ${priceUsd.toLocaleString()}
+            {fiatSymbol}{(priceUsd * rate).toLocaleString()}
           </div>
           <div className="small muted mono">source: {spot.source}</div>
         </div>
@@ -173,7 +179,7 @@ export function PortfolioPage({
             <div>Date</div>
             <div>Amount</div>
             <div className="tx-hide-sm">Source</div>
-            <div className="tx-hide-sm">{unit === "BTC" ? "USD Value" : "BTC"}</div>
+            <div className="tx-hide-sm">{unit === "BTC" ? `${currency} Value` : "BTC"}</div>
           </div>
           {transactions.map((tx) => (
             <div className="tx-row" key={tx.id}>
@@ -183,11 +189,11 @@ export function PortfolioPage({
               <div>{tx.date}</div>
               <div className="tx-amount">
                 <span className="plus">+</span>
-                {formatAmount(tx.amount, unit, priceUsd, { btcDigits: 6 })}
+                {formatAmount(tx.amount, unit, priceUsd, { btcDigits: 6, fiat: currency })}
               </div>
               <div className="tx-hide-sm muted">{tx.source}</div>
               <div className="tx-hide-sm">
-                {formatSecondary(tx.amount, unit, priceUsd)}
+                {formatSecondary(tx.amount, unit, priceUsd, currency)}
               </div>
             </div>
           ))}
