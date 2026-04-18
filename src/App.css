@@ -582,6 +582,147 @@ body::after {
   fill: var(--muted-dim);
 }
 
+.loading {
+  padding: 3rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ---------- Login ---------- */
+
+.login-screen {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding:
+    calc(2rem + var(--sa-top))
+    calc(1.25rem + var(--sa-right))
+    calc(2rem + var(--sa-bottom))
+    calc(1.25rem + var(--sa-left));
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow:
+    0 0 0 1px rgba(247, 147, 26, 0.06),
+    0 30px 80px -30px rgba(247, 147, 26, 0.35),
+    0 10px 40px -20px rgba(0, 0, 0, 0.6);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.login-heading .login-title {
+  font-family: var(--font-head);
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0.25rem 0 0;
+  text-shadow: 0 0 24px var(--orange-glow);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.login-prompt {
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.login-field .text-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+.input-wrap {
+  position: relative;
+  display: block;
+}
+
+.input-wrap .text-input.with-affix {
+  padding-right: 2.75rem;
+}
+
+.input-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 0.4rem;
+  border-radius: calc(var(--radius) - 0.2rem);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.input-toggle:hover {
+  color: var(--orange);
+  background: rgba(247, 147, 26, 0.08);
+}
+
+.input-toggle:focus-visible {
+  outline: 1px solid var(--orange);
+  outline-offset: 1px;
+}
+
+.login-submit {
+  margin-top: 0.25rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+
+.login-error {
+  background: oklch(0.2 0.08 25 / 0.35);
+  border: 1px solid oklch(0.45 0.15 25 / 0.5);
+  color: var(--red);
+  padding: 0.6rem 0.8rem;
+  border-radius: calc(var(--radius) - 0.15rem);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.login-hint {
+  text-align: center;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+  letter-spacing: 0.05em;
+}
+
 /* ---------- Sections / tx table ---------- */
 
 .section {

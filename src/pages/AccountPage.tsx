@@ -1,4 +1,10 @@
-export function AccountPage() {
+type Props = {
+  username: string;
+  onLogout: () => void;
+};
+
+export function AccountPage({ username, onLogout }: Props) {
+  const initials = username.slice(0, 2).toUpperCase();
   return (
     <>
       <header className="page-head">
@@ -7,17 +13,19 @@ export function AccountPage() {
           <h1 className="page-title">Account</h1>
         </div>
         <div className="page-actions">
-          <button className="btn btn-danger">Log Out</button>
+          <button className="btn btn-danger" onClick={onLogout}>
+            Log Out
+          </button>
         </div>
       </header>
 
       <section className="account-grid">
         <div className="account-card">
           <div className="account-head">
-            <div className="avatar">CZ</div>
+            <div className="avatar">{initials}</div>
             <div>
-              <div className="account-name">carloszaha17</div>
-              <div className="muted mono small">carloszaha17@proton.me</div>
+              <div className="account-name">{username}</div>
+              <div className="muted mono small">{username}@proton.me</div>
             </div>
           </div>
           <div className="account-meta">

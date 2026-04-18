@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { HistoryPoint } from "../data/mockHistory";
+import type { HistoryPoint } from "../requests/PortfolioHistoryRequest";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatAxis, formatSecondary } from "../lib/format";
 

@@ -1,67 +1,12 @@
-import { BTC_PRICE_USD } from "../data/mockHistory";
+import { useEffect, useState } from "react";
+import { CopyIcon } from "../components/icons";
+import { AddressBalanceRequest } from "../requests/AddressBalanceRequest";
+import { TrackedAddressesRequest } from "../requests/TrackedAddressesRequest";
+import type { TrackedAddress } from "../requests/TrackedAddressesRequest";
+import { SpotPriceRequest } from "../requests/SpotPriceRequest";
+import type { SpotPrice } from "../requests/SpotPriceRequest";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatSecondary } from "../lib/format";
-import { CopyIcon } from "../components/icons";
-
-type TrackedAddress = {
-  id: string;
-  label: string;
-  address: string;
-  btc: number;
-  txCount: number;
-  type: "Taproot" | "Segwit" | "Legacy";
-  added: string;
-  xpub?: boolean;
-};
-
-const ADDRESSES: TrackedAddress[] = [
-  {
-    id: "a1",
-    label: "Cold Storage · Coldcard Mk4",
-    address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-    btc: 1.24038211,
-    txCount: 14,
-    type: "Segwit",
-    added: "2024-05-02",
-    xpub: true,
-  },
-  {
-    id: "a2",
-    label: "Savings · Jade",
-    address: "bc1pqqqsyqcyq5rqwzqfpg9scrgwpugpzysnzs23v9ccrydpk8qarc0sj9hjuh",
-    btc: 0.51200000,
-    txCount: 22,
-    type: "Taproot",
-    added: "2024-09-14",
-  },
-  {
-    id: "a3",
-    label: "Hot Wallet · Strike",
-    address: "bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c",
-    btc: 0.08210450,
-    txCount: 47,
-    type: "Segwit",
-    added: "2025-01-10",
-  },
-  {
-    id: "a4",
-    label: "Legacy Stack",
-    address: "1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX",
-    btc: 0.24651339,
-    txCount: 3,
-    type: "Legacy",
-    added: "2024-04-18",
-  },
-  {
-    id: "a5",
-    label: "Lightning Collateral",
-    address: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
-    btc: 0.02000000,
-    txCount: 8,
-    type: "Segwit",
-    added: "2025-07-22",
-  },
-];
 
 type Props = {
   unit: Unit;
@@ -74,7 +19,42 @@ function shorten(addr: string) {
 }
 
 export function AddressesPage({ unit, setUnit }: Props) {
-  const total = ADDRESSES.reduce((s, a) => s + a.btc, 0);
+  const [addresses, setAddresses] = useState<TrackedAddress[]>([]);
+  const [spot, setSpot] = useState<SpotPrice | null>(null);
+  const [refreshing, setRefreshing] = useState<string | null>(null);
+
+  useEffect(() => {
+    new TrackedAddressesRequest().execute().then(setAddresses);
+    new SpotPriceRequest().execute().then(setSpot);
+  }, []);
+
+  const refreshOne = async (addr: TrackedAddress) => {
+    setRefreshing(addr.id);
+    const next = await new AddressBalanceRequest(addr.address).execute();
+    setAddresses((prev) =>
+      prev.map((a) =>
+        a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a
+      )
+    );
+    setRefreshing(null);
+  };
+
+  if (addresses.length === 0 || !spot) {
+    return (
+      <>
+        <header className="page-head">
+          <div>
+            <div className="eyebrow">Watch-only</div>
+            <h1 className="page-title">Addresses</h1>
+          </div>
+        </header>
+        <div className="loading mono muted">Loading…</div>
+      </>
+    );
+  }
+
+  const priceUsd = spot.usd;
+  const total = addresses.reduce((s, a) => s + a.btc, 0);
 
   return (
     <>
@@ -106,16 +86,16 @@ export function AddressesPage({ unit, setUnit }: Props) {
       <section className="hero">
         <div className="stat-card">
           <div className="stat-label">Tracked</div>
-          <div className="stat-value mono">{ADDRESSES.length}</div>
+          <div className="stat-value mono">{addresses.length}</div>
           <div className="small muted mono">addresses</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Aggregate Balance</div>
           <div className="stat-value">
-            {formatAmount(total, unit, BTC_PRICE_USD, { btcDigits: 8 })}
+            {formatAmount(total, unit, priceUsd, { btcDigits: 8 })}
           </div>
           <div className="small muted mono">
-            {formatSecondary(total, unit, BTC_PRICE_USD)}
+            {formatSecondary(total, unit, priceUsd)}
           </div>
         </div>
         <div className="stat-card">
@@ -131,7 +111,7 @@ export function AddressesPage({ unit, setUnit }: Props) {
           <span className="small muted mono">sorted by balance</span>
         </div>
         <div className="addr-list">
-          {ADDRESSES.map((a) => (
+          {addresses.map((a) => (
             <article key={a.id} className="addr-card">
               <div className="addr-card-head">
                 <div>
@@ -149,10 +129,10 @@ export function AddressesPage({ unit, setUnit }: Props) {
                 </div>
                 <div className="addr-balance">
                   <div className="addr-amount">
-                    {formatAmount(a.btc, unit, BTC_PRICE_USD, { btcDigits: 8 })}
+                    {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8 })}
                   </div>
                   <div className="small muted mono">
-                    {formatSecondary(a.btc, unit, BTC_PRICE_USD)}
+                    {formatSecondary(a.btc, unit, priceUsd)}
                   </div>
                 </div>
               </div>
@@ -162,6 +142,13 @@ export function AddressesPage({ unit, setUnit }: Props) {
                 <span className="muted mono small">· {a.txCount} tx</span>
                 <span className="muted mono small">· added {a.added}</span>
                 <span className="addr-spacer" />
+                <button
+                  className="link-btn"
+                  onClick={() => refreshOne(a)}
+                  disabled={refreshing === a.id}
+                >
+                  {refreshing === a.id ? "Refreshing…" : "Refresh"}
+                </button>
                 <button className="link-btn">View</button>
                 <button className="link-btn danger">Remove</button>
               </div>
