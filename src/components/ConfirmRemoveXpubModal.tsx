@@ -26,8 +26,7 @@ export function ConfirmRemoveXpubModal({ label, addressCount, onClose, onConfirm
 
                 <div className="modal-body">
                     <p style={{ margin: 0 }}>
-                        Are you sure you want to remove <strong>{label}</strong> and all <strong>{addressCount}</strong> derived
-                        addresses?
+                        Are you sure you want to remove <strong>{label}</strong> and all <strong>{addressCount}</strong> derived addresses?
                     </p>
                     <p className="small muted" style={{ margin: "0.5rem 0 0" }}>
                         This action cannot be undone. You will need to re-import the xpub to track these addresses again.

@@ -118,9 +118,7 @@ export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
                                 </option>
                             ))}
                         </select>
-                        <span className="small muted">
-                            {DERIVATION_TYPE_OPTIONS.find((o) => o.value === derivationType)?.description}
-                        </span>
+                        <span className="small muted">{DERIVATION_TYPE_OPTIONS.find((o) => o.value === derivationType)?.description}</span>
                     </div>
 
                     {error && <div className="modal-error">{error}</div>}

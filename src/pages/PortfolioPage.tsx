@@ -64,19 +64,18 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
             setHoldingsError(null);
 
             try {
-                const existing = await dbSelect<{ total: number }>(
-                    "SELECT COUNT(*) AS total FROM holdings WHERE notes = $1",
-                    ["DCA buy"]
-                );
+                const existing = await dbSelect<{ total: number }>("SELECT COUNT(*) AS total FROM holdings WHERE notes = $1", ["DCA buy"]);
 
                 if ((existing[0]?.total ?? 0) === 0) {
                     await dbExecute(
                         "INSERT INTO holdings (uuid, amount_btc, purchase_price, purchase_date, notes) VALUES ($1, $2, $3, $4, $5)",
-                        [crypto.randomUUID(), 0.5, 64000, "2025-01-15", "DCA buy"]
+                        [crypto.randomUUID(), 0.5, 64000, "2025-01-15", "DCA buy"],
                     );
                 }
 
-                const rows = await dbSelect<HoldingRow>("SELECT id, amount_btc, purchase_price, purchase_date, notes, created_at FROM holdings ORDER BY created_at DESC");
+                const rows = await dbSelect<HoldingRow>(
+                    "SELECT id, amount_btc, purchase_price, purchase_date, notes, created_at FROM holdings ORDER BY created_at DESC",
+                );
                 setHoldings(rows);
                 console.log("Encrypted holdings", rows);
             } catch (error) {

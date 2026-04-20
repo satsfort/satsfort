@@ -47,9 +47,7 @@ export function ConfirmWipeLocalDataModal({ onClose, onConfirm }: Props) {
                 </div>
 
                 <div className="modal-body">
-                    <p style={{ margin: 0 }}>
-                        This deletes your encrypted local vault from this device and logs you out immediately.
-                    </p>
+                    <p style={{ margin: 0 }}>This deletes your encrypted local vault from this device and logs you out immediately.</p>
                     <p className="small muted" style={{ margin: "0.5rem 0 0" }}>
                         This action cannot be undone. Make sure you remember your username and password.
                     </p>
@@ -75,4 +73,3 @@ export function ConfirmWipeLocalDataModal({ onClose, onConfirm }: Props) {
         </div>
     );
 }
-

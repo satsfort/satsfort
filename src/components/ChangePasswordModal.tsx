@@ -164,4 +164,3 @@ export function ChangePasswordModal({ username, onClose, onPasswordChanged }: Pr
         </div>
     );
 }
-

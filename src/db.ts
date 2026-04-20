@@ -33,4 +33,3 @@ export async function dbExecute(query: string, values: DatabaseValue[] = []): Pr
 export async function dbSelect<T = DatabaseRow>(query: string, values: DatabaseValue[] = []): Promise<T[]> {
     return invoke<T[]>("db_select", { query, values });
 }
-

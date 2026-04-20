@@ -78,7 +78,13 @@ export function LoginPage({ onLogin }: Props) {
                 <div className="login-heading">
                     <div className="eyebrow">{createMode ? "// first-time setup" : "// secure login"}</div>
                     <h1 className="login-title">{createMode ? "Create Vault" : "Unlock Vault"}</h1>
-                    <div className="login-mode-pill mono small">{vaultExists === null ? "Checking vault status..." : createMode ? "Create new user + password" : "Sign in with existing user + password"}</div>
+                    <div className="login-mode-pill mono small">
+                        {vaultExists === null
+                            ? "Checking vault status..."
+                            : createMode
+                              ? "Create new user + password"
+                              : "Sign in with existing user + password"}
+                    </div>
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -155,7 +161,13 @@ export function LoginPage({ onLogin }: Props) {
                     )}
 
                     <button type="submit" className="btn btn-primary login-submit" disabled={submitting || vaultExists === null}>
-                        {submitting ? (createMode ? "Creating..." : "Unlocking...") : createMode ? "Create Encrypted Vault" : "Unlock Vault"}
+                        {submitting
+                            ? createMode
+                                ? "Creating..."
+                                : "Unlocking..."
+                            : createMode
+                              ? "Create Encrypted Vault"
+                              : "Unlock Vault"}
                     </button>
                 </form>
 

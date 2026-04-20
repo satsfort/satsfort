@@ -115,7 +115,9 @@
     display: grid;
     place-items: center;
     border-radius: calc(var(--radius) - 0.2rem);
-    transition: transform 0.2s, color 0.15s;
+    transition:
+        transform 0.2s,
+        color 0.15s;
     flex: 0 0 auto;
 }
 
@@ -184,4 +186,3 @@
     text-align: right;
     min-width: 8rem;
 }
-

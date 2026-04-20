@@ -68,15 +68,13 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
 
             // Load xpubs and derived addresses, then fetch their balances
             const xpubRequests = new XpubRequests();
-            void Promise.all([xpubRequests.execute(), xpubRequests.getAllDerivedAddresses()]).then(
-                ([loadedXpubs, loadedDerived]) => {
-                    setXpubs(loadedXpubs);
-                    setDerivedAddresses(loadedDerived);
-                    if (loadedDerived.length > 0) {
-                        void fetchDerivedBalances(loadedDerived);
-                    }
-                },
-            );
+            void Promise.all([xpubRequests.execute(), xpubRequests.getAllDerivedAddresses()]).then(([loadedXpubs, loadedDerived]) => {
+                setXpubs(loadedXpubs);
+                setDerivedAddresses(loadedDerived);
+                if (loadedDerived.length > 0) {
+                    void fetchDerivedBalances(loadedDerived);
+                }
+            });
 
             track("Spot price", () => new SpotPriceRequests().execute())
                 .then(setSpot)
@@ -86,7 +84,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                 });
         }, 2000);
         return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [track]);
 
     /** Fetches balances for a list of derived addresses and merges them into state. */
@@ -154,11 +152,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
             }
 
             if (derivedAddresses.length > 0) {
-                allTasks.push(
-                    track(`Refreshing ${derivedAddresses.length} xpub addresses`, () =>
-                        fetchDerivedBalances(derivedAddresses),
-                    ),
-                );
+                allTasks.push(track(`Refreshing ${derivedAddresses.length} xpub addresses`, () => fetchDerivedBalances(derivedAddresses)));
             }
 
             await Promise.all(allTasks);
@@ -235,8 +229,12 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                         <h1 className="page-title">Addresses</h1>
                     </div>
                     <div className="page-actions">
-                        <button className="btn" onClick={() => setShowImportXpubModal(true)}>Import xpub</button>
-                        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
+                        <button className="btn" onClick={() => setShowImportXpubModal(true)}>
+                            Import xpub
+                        </button>
+                        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                            + Add Address
+                        </button>
                     </div>
                 </header>
                 <EmptyState
@@ -245,8 +243,12 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                     description="Add a Bitcoin address or import an xpub to start watching your balances."
                     action={
                         <>
-                            <button className="btn" onClick={() => setShowImportXpubModal(true)}>Import xpub</button>
-                            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
+                            <button className="btn" onClick={() => setShowImportXpubModal(true)}>
+                                Import xpub
+                            </button>
+                            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                                + Add Address
+                            </button>
                         </>
                     }
                 />
@@ -294,8 +296,12 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                         <RefreshIcon size={14} />
                         {refreshingAll ? "Refreshing…" : "Refresh All"}
                     </button>
-                    <button className="btn" onClick={() => setShowImportXpubModal(true)}>Import xpub</button>
-                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
+                    <button className="btn" onClick={() => setShowImportXpubModal(true)}>
+                        Import xpub
+                    </button>
+                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                        + Add Address
+                    </button>
                 </div>
             </header>
 
@@ -357,11 +363,18 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                                             e.stopPropagation();
                                                             void navigator.clipboard.writeText(xpub.xpub).then(() => {
                                                                 setCopiedId(xpub.id);
-                                                                setTimeout(() => setCopiedId((prev) => (prev === xpub.id ? null : prev)), 2000);
+                                                                setTimeout(
+                                                                    () => setCopiedId((prev) => (prev === xpub.id ? null : prev)),
+                                                                    2000,
+                                                                );
                                                             });
                                                         }}
                                                     >
-                                                        {copiedId === xpub.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
+                                                        {copiedId === xpub.id ? (
+                                                            <span className="copied-label">Copied!</span>
+                                                        ) : (
+                                                            <CopyIcon />
+                                                        )}
                                                     </button>
                                                 </div>
                                             </div>
@@ -371,12 +384,20 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                             </div>
                                             <div className="addr-balance" onClick={(e) => e.stopPropagation()}>
                                                 <div className="addr-amount">
-                                                    {balancesLoaded
-                                                        ? formatAmount(xpubBtc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })
-                                                        : <span className="muted small mono">loading…</span>}
+                                                    {balancesLoaded ? (
+                                                        formatAmount(xpubBtc, unit, priceUsd, {
+                                                            btcDigits: 8,
+                                                            fiat: currency,
+                                                            denom: denomination,
+                                                        })
+                                                    ) : (
+                                                        <span className="muted small mono">loading…</span>
+                                                    )}
                                                 </div>
                                                 {balancesLoaded && (
-                                                    <div className="small muted mono">{formatSecondary(xpubBtc, unit, priceUsd, currency, denomination)}</div>
+                                                    <div className="small muted mono">
+                                                        {formatSecondary(xpubBtc, unit, priceUsd, currency, denomination)}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -406,9 +427,17 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                                         <span className="derived-addr mono">{shorten(derived.address)}</span>
                                                         <span className="derived-path mono muted small">{derived.derivationPath}</span>
                                                         <span className="derived-balance">
-                                                            {bal !== undefined
-                                                                ? <span className="mono small">{formatAmount(bal.btc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}</span>
-                                                                : <span className="muted small mono">…</span>}
+                                                            {bal !== undefined ? (
+                                                                <span className="mono small">
+                                                                    {formatAmount(bal.btc, unit, priceUsd, {
+                                                                        btcDigits: 8,
+                                                                        fiat: currency,
+                                                                        denom: denomination,
+                                                                    })}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="muted small mono">…</span>
+                                                            )}
                                                         </span>
                                                         <button
                                                             className="icon-btn"
@@ -417,11 +446,18 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                                             onClick={() => {
                                                                 void navigator.clipboard.writeText(derived.address).then(() => {
                                                                     setCopiedId(derived.id);
-                                                                    setTimeout(() => setCopiedId((prev) => (prev === derived.id ? null : prev)), 2000);
+                                                                    setTimeout(
+                                                                        () => setCopiedId((prev) => (prev === derived.id ? null : prev)),
+                                                                        2000,
+                                                                    );
                                                                 });
                                                             }}
                                                         >
-                                                            {copiedId === derived.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
+                                                            {copiedId === derived.id ? (
+                                                                <span className="copied-label">Copied!</span>
+                                                            ) : (
+                                                                <CopyIcon />
+                                                            )}
                                                         </button>
                                                         <button
                                                             className="link-btn"
@@ -475,7 +511,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                         <div className="addr-amount">
                                             {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}
                                         </div>
-                                        <div className="small muted mono">{formatSecondary(a.btc, unit, priceUsd, currency, denomination)}</div>
+                                        <div className="small muted mono">
+                                            {formatSecondary(a.btc, unit, priceUsd, currency, denomination)}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="addr-meta">
@@ -487,7 +525,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                     <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id}>
                                         {refreshing === a.id ? "Refreshing…" : "Refresh"}
                                     </button>
-                                    <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>Remove</button>
+                                    <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>
+                                        Remove
+                                    </button>
                                     <button className="link-btn" onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}>
                                         View <ExternalLinkIcon size={12} />
                                     </button>

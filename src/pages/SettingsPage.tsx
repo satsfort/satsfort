@@ -199,12 +199,7 @@ export function SettingsPage({ username, onLogout }: Props) {
                 />
             )}
 
-            {wipeModalOpen && (
-                <ConfirmWipeLocalDataModal
-                    onClose={() => setWipeModalOpen(false)}
-                    onConfirm={handleWipeLocalData}
-                />
-            )}
+            {wipeModalOpen && <ConfirmWipeLocalDataModal onClose={() => setWipeModalOpen(false)} onConfirm={handleWipeLocalData} />}
         </>
     );
 }

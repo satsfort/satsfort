@@ -301,4 +301,3 @@ export function RefreshIcon({ size = 16 }: IconProps) {
         </svg>
     );
 }
-

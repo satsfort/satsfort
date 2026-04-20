@@ -112,10 +112,14 @@ function deriveP2TRAddress(publicKey: Uint8Array): string {
  */
 function getBipPurpose(derivationType: AddressDerivationType): number {
     switch (derivationType) {
-        case "P2PKH":  return 44;
-        case "P2SH":   return 49;
-        case "P2WPKH": return 84;
-        case "P2TR":   return 86;
+        case "P2PKH":
+            return 44;
+        case "P2SH":
+            return 49;
+        case "P2WPKH":
+            return 84;
+        case "P2TR":
+            return 86;
     }
 }
 
@@ -124,10 +128,14 @@ function getBipPurpose(derivationType: AddressDerivationType): number {
  */
 function deriveAddress(publicKey: Uint8Array, derivationType: AddressDerivationType): string {
     switch (derivationType) {
-        case "P2PKH":  return deriveP2PKHAddress(publicKey);
-        case "P2SH":   return deriveP2SHAddress(publicKey);
-        case "P2WPKH": return deriveP2WPKHAddress(publicKey);
-        case "P2TR":   return deriveP2TRAddress(publicKey);
+        case "P2PKH":
+            return deriveP2PKHAddress(publicKey);
+        case "P2SH":
+            return deriveP2SHAddress(publicKey);
+        case "P2WPKH":
+            return deriveP2WPKHAddress(publicKey);
+        case "P2TR":
+            return deriveP2TRAddress(publicKey);
     }
 }
 

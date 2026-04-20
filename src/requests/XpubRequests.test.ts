@@ -42,7 +42,8 @@ describe("validateXpub", () => {
         });
 
         it("rejects keys with invalid characters", () => {
-            const invalidXpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGOI0LO";
+            const invalidXpub =
+                "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGOI0LO";
             expect(validateXpub(invalidXpub)).toContain("Invalid character");
         });
     });
@@ -102,4 +103,3 @@ describe("XpubRequests", () => {
         await expect(requests.add(xpub, "Duplicate Wallet", "P2WPKH")).rejects.toThrow("already being tracked");
     });
 });
-

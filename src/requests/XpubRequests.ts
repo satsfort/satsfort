@@ -126,12 +126,7 @@ export function getDefaultDerivationType(xpub: string): DerivationType {
 /**
  * Derives addresses from an xpub using proper BIP32 derivation.
  */
-function deriveAddressesFromXpub(
-    xpubId: string,
-    xpub: string,
-    derivationType: DerivationType,
-    count: number,
-): DerivedAddress[] {
+function deriveAddressesFromXpub(xpubId: string, xpub: string, derivationType: DerivationType, count: number): DerivedAddress[] {
     const derivedInfos = deriveAddressesFromExtendedKey(xpub, derivationType, count);
 
     return derivedInfos.map((info) => ({
