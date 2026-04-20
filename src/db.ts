@@ -18,8 +18,8 @@ export async function getVaultStatus(): Promise<VaultStatus> {
     return invoke<VaultStatus>("get_vault_status");
 }
 
-export async function changeVaultPassword(newPassword: string): Promise<void> {
-    await invoke("change_vault_password", { newPassword });
+export async function changeVaultPassword(currentPassword: string, newPassword: string): Promise<void> {
+    await invoke("change_vault_password", { currentPassword, newPassword });
 }
 
 export async function dbExecute(query: string, values: DatabaseValue[] = []): Promise<number> {

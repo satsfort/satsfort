@@ -23,6 +23,7 @@ fn sqlcipher_pragma_key(password: &str) -> String {
 
 pub struct AppState {
     pub pool: Arc<RwLock<Option<SqlitePool>>>,
+    pub master_password: Arc<RwLock<Option<String>>>,
 }
 
 #[derive(Serialize)]
@@ -184,6 +185,10 @@ async fn unlock_db(password: String, app: AppHandle, state: State<'_, AppState>)
 
     let mut lock = state.pool.write().await;
     *lock = Some(pool);
+    drop(lock);
+
+    let mut password_lock = state.master_password.write().await;
+    *password_lock = Some(password);
 
     Ok(())
 }
@@ -192,13 +197,32 @@ async fn unlock_db(password: String, app: AppHandle, state: State<'_, AppState>)
 async fn lock_db(state: State<'_, AppState>) -> Result<(), String> {
     let mut lock = state.pool.write().await;
     *lock = None;
+    drop(lock);
+
+    let mut password_lock = state.master_password.write().await;
+    *password_lock = None;
     Ok(())
 }
 
 #[tauri::command]
-async fn change_vault_password(new_password: String, state: State<'_, AppState>) -> Result<(), String> {
+async fn change_vault_password(current_password: String, new_password: String, state: State<'_, AppState>) -> Result<(), String> {
+    if current_password.trim().is_empty() {
+        return Err("Current password is required".to_string());
+    }
+
     if new_password.trim().is_empty() {
         return Err("New password is required".to_string());
+    }
+
+    let active_password = {
+        let password_lock = state.master_password.read().await;
+        password_lock
+            .clone()
+            .ok_or_else(|| "Database is locked. Unlock before changing password.".to_string())?
+    };
+
+    if active_password != current_password {
+        return Err("Current password is incorrect".to_string());
     }
 
     let pool = {
@@ -215,6 +239,10 @@ async fn change_vault_password(new_password: String, state: State<'_, AppState>)
 
     let mut lock = state.pool.write().await;
     *lock = None;
+    drop(lock);
+
+    let mut password_lock = state.master_password.write().await;
+    *password_lock = None;
 
     Ok(())
 }
@@ -285,6 +313,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState {
             pool: Arc::new(RwLock::new(None)),
+            master_password: Arc::new(RwLock::new(None)),
         })
         .invoke_handler(tauri::generate_handler![
             unlock_db,
