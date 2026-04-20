@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon } from "../components/icons";
-import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
+import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIcon } from "../components/icons";
+import { AddressBalanceRequests, fetchAllAddressBalances } from "../requests/AddressBalanceRequests";
 import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
@@ -32,6 +32,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
     const [spot, setSpot] = useState<SpotPrice | null>(null);
     const [refreshing, setRefreshing] = useState<string | null>(null);
+    const [refreshingAll, setRefreshingAll] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
@@ -54,14 +55,42 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
 
     const refreshOne = async (addr: TrackedAddress) => {
         setRefreshing(addr.id);
-        const next = await new AddressBalanceRequests(addr.address).execute();
-        setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
-        setRefreshing(null);
+        try {
+            const next = await track(`Fetching balance for ${addr.label}`, () => new AddressBalanceRequests(addr.address).execute());
+            setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
+        } catch (err) {
+            console.error("Failed to refresh address balance", err);
+        } finally {
+            setRefreshing(null);
+        }
+    };
+
+    const refreshAll = async () => {
+        if (!addresses || addresses.length === 0) return;
+        setRefreshingAll(true);
+        try {
+            const balances = await track(`Refreshing ${addresses.length} addresses`, () =>
+                fetchAllAddressBalances(addresses.map((a) => a.address)),
+            );
+            setAddresses((prev) =>
+                (prev ?? []).map((addr) => {
+                    const balance = balances.find((b) => b.address === addr.address);
+                    if (balance) {
+                        return { ...addr, btc: balance.btc, txCount: balance.txCount };
+                    }
+                    return addr;
+                }),
+            );
+        } catch (err) {
+            console.error("Failed to refresh all address balances", err);
+        } finally {
+            setRefreshingAll(false);
+        }
     };
 
     const handleAddAddress = async (address: string, label: string) => {
         const meta = await new TrackedAddressesRequests().add(address, label);
-        const balance = await new AddressBalanceRequests(meta.address).execute();
+        const balance = await track(`Fetching balance for ${label}`, () => new AddressBalanceRequests(meta.address).execute());
         const tracked: TrackedAddress = {
             ...meta,
             btc: balance.btc,
@@ -150,6 +179,15 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                             {formatSymbol("FIAT", currency)} {currency}
                         </button>
                     </div>
+                    <button
+                        className="btn"
+                        onClick={() => void refreshAll()}
+                        disabled={refreshingAll}
+                        title="Refresh all address balances"
+                    >
+                        <RefreshIcon size={14} />
+                        {refreshingAll ? "Refreshing…" : "Refresh All"}
+                    </button>
                     <button className="btn">Import xpub</button>
                     <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                         + Add Address

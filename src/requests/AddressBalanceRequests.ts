@@ -35,29 +35,221 @@ const MOCK_BALANCES: Record<string, { btc: number; txCount: number; lastSeen: st
     },
 };
 
+/**
+ * Configuration for a public blockchain API endpoint.
+ * These are public Electrum-compatible HTTP APIs that provide address balance data.
+ */
+type ElectrumApiEndpoint = {
+    name: string;
+    baseUrl: string;
+    getAddressUrl: (address: string) => string;
+    parseResponse: (data: unknown) => { confirmed: number; unconfirmed: number; txCount: number };
+};
+
+/**
+ * Public blockchain APIs that expose Electrum server data via HTTP.
+ * These are rotated to avoid rate limits and provide fallback in case one fails.
+ */
+const ELECTRUM_API_ENDPOINTS: ElectrumApiEndpoint[] = [
+    {
+        name: "mempool.space",
+        baseUrl: "https://mempool.space/api",
+        getAddressUrl: (address: string) => `https://mempool.space/api/address/${address}`,
+        parseResponse: (data: unknown) => {
+            const d = data as {
+                chain_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
+                mempool_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
+            };
+            const confirmedBalance = d.chain_stats.funded_txo_sum - d.chain_stats.spent_txo_sum;
+            const unconfirmedBalance = d.mempool_stats.funded_txo_sum - d.mempool_stats.spent_txo_sum;
+            return {
+                confirmed: confirmedBalance,
+                unconfirmed: unconfirmedBalance,
+                txCount: d.chain_stats.tx_count + d.mempool_stats.tx_count,
+            };
+        },
+    },
+    {
+        name: "blockstream.info",
+        baseUrl: "https://blockstream.info/api",
+        getAddressUrl: (address: string) => `https://blockstream.info/api/address/${address}`,
+        parseResponse: (data: unknown) => {
+            const d = data as {
+                chain_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
+                mempool_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
+            };
+            const confirmedBalance = d.chain_stats.funded_txo_sum - d.chain_stats.spent_txo_sum;
+            const unconfirmedBalance = d.mempool_stats.funded_txo_sum - d.mempool_stats.spent_txo_sum;
+            return {
+                confirmed: confirmedBalance,
+                unconfirmed: unconfirmedBalance,
+                txCount: d.chain_stats.tx_count + d.mempool_stats.tx_count,
+            };
+        },
+    },
+    {
+        name: "blockchain.info",
+        baseUrl: "https://blockchain.info",
+        getAddressUrl: (address: string) => `https://blockchain.info/rawaddr/${address}?limit=0`,
+        parseResponse: (data: unknown) => {
+            const d = data as {
+                final_balance: number;
+                n_tx: number;
+            };
+            return {
+                confirmed: d.final_balance,
+                unconfirmed: 0,
+                txCount: d.n_tx,
+            };
+        },
+    },
+];
+
+/**
+ * Tracks the current endpoint index for round-robin rotation.
+ * This helps distribute load across APIs and avoid rate limits.
+ */
+let currentEndpointIndex = 0;
+
+/**
+ * Tracks failed endpoints to avoid retrying them too soon.
+ * Maps endpoint index to failure timestamp.
+ */
+const failedEndpoints = new Map<number, number>();
+
+const FAILURE_COOLDOWN_MS = 60_000; // 1 minute cooldown after failure
+
+/**
+ * Gets the next available endpoint, considering cooldowns for failed ones.
+ */
+function getNextEndpoint(): ElectrumApiEndpoint | null {
+    const now = Date.now();
+    const totalEndpoints = ELECTRUM_API_ENDPOINTS.length;
+
+    for (let i = 0; i < totalEndpoints; i++) {
+        const index = (currentEndpointIndex + i) % totalEndpoints;
+        const failedAt = failedEndpoints.get(index);
+
+        if (!failedAt || now - failedAt > FAILURE_COOLDOWN_MS) {
+            // Clear the failure if cooldown has passed
+            if (failedAt) failedEndpoints.delete(index);
+            currentEndpointIndex = (index + 1) % totalEndpoints;
+            return ELECTRUM_API_ENDPOINTS[index];
+        }
+    }
+
+    // All endpoints are in cooldown, use the one that failed longest ago
+    let oldestFailure = 0;
+    let oldestFailureTime = Infinity;
+    for (const [index, failedAt] of failedEndpoints.entries()) {
+        if (failedAt < oldestFailureTime) {
+            oldestFailureTime = failedAt;
+            oldestFailure = index;
+        }
+    }
+    failedEndpoints.delete(oldestFailure);
+    currentEndpointIndex = (oldestFailure + 1) % totalEndpoints;
+    return ELECTRUM_API_ENDPOINTS[oldestFailure];
+}
+
+/**
+ * Marks an endpoint as failed.
+ */
+function markEndpointFailed(endpoint: ElectrumApiEndpoint): void {
+    const index = ELECTRUM_API_ENDPOINTS.indexOf(endpoint);
+    if (index !== -1) {
+        failedEndpoints.set(index, Date.now());
+    }
+}
+
+/**
+ * Fetches address balance from a specific endpoint.
+ */
+async function fetchFromEndpoint(endpoint: ElectrumApiEndpoint, address: string): Promise<AddressBalance> {
+    const url = endpoint.getAddressUrl(address);
+
+    const response = await fetch(url, {
+        headers: {
+            Accept: "application/json",
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`${endpoint.name} returned ${response.status}: ${response.statusText}`);
+    }
+
+    const data: unknown = await response.json();
+    const parsed = endpoint.parseResponse(data);
+
+    // Convert satoshis to BTC
+    const btc = (parsed.confirmed + parsed.unconfirmed) / 100_000_000;
+
+    return {
+        address,
+        btc,
+        txCount: parsed.txCount,
+        lastSeen: new Date().toISOString().slice(0, 10),
+    };
+}
+
+/**
+ * Fetches address balance from public Electrum APIs with rotation and fallback.
+ */
+async function fetchBalanceFromElectrum(address: string): Promise<AddressBalance> {
+    const errors: Error[] = [];
+    const triedEndpoints = new Set<ElectrumApiEndpoint>();
+
+    // Try up to all endpoints
+    for (let attempt = 0; attempt < ELECTRUM_API_ENDPOINTS.length; attempt++) {
+        const endpoint = getNextEndpoint();
+        if (!endpoint || triedEndpoints.has(endpoint)) continue;
+
+        triedEndpoints.add(endpoint);
+
+        try {
+            return await fetchFromEndpoint(endpoint, address);
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            errors.push(new Error(`${endpoint.name}: ${error.message}`));
+            markEndpointFailed(endpoint);
+        }
+    }
+
+    // All endpoints failed
+    const errorMessages = errors.map((e) => e.message).join("; ");
+    throw new Error(`Failed to fetch balance from all endpoints: ${errorMessages}`);
+}
+
 export class AddressBalanceRequests {
     constructor(private address: string) {}
 
     async execute(): Promise<AddressBalance> {
-        if (!Config.useMockData) {
-            // TODO: fetch real balance from blockchain API
-            return { address: this.address, btc: 0, txCount: 0, lastSeen: "-" };
-        }
-
-        const mock = MOCK_BALANCES[this.address];
-        if (!mock) {
+        if (Config.useMockData) {
+            const mock = MOCK_BALANCES[this.address];
+            if (!mock) {
+                return {
+                    address: this.address,
+                    btc: 0,
+                    txCount: 0,
+                    lastSeen: "-",
+                };
+            }
             return {
                 address: this.address,
-                btc: 0,
-                txCount: 0,
-                lastSeen: "-",
+                btc: mock.btc,
+                txCount: mock.txCount,
+                lastSeen: mock.lastSeen,
             };
         }
-        return {
-            address: this.address,
-            btc: mock.btc,
-            txCount: mock.txCount,
-            lastSeen: mock.lastSeen,
-        };
+
+        return fetchBalanceFromElectrum(this.address);
     }
+}
+
+/**
+ * Fetches balances for multiple addresses in parallel.
+ * Useful for refreshing all addresses at once.
+ */
+export async function fetchAllAddressBalances(addresses: string[]): Promise<AddressBalance[]> {
+    return Promise.all(addresses.map((address) => new AddressBalanceRequests(address).execute()));
 }
