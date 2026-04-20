@@ -1,8 +1,9 @@
 use serde_json::{Map as JsonMap, Value as JsonValue};
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::{Column, Row, TypeInfo};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::RwLock;
@@ -53,6 +54,7 @@ const MIGRATIONS: [DbMigration; 3] = [
 const MIGRATION_HISTORY_TABLE_SQL: &str = "CREATE TABLE IF NOT EXISTS schema_migration_history (
     version INTEGER PRIMARY KEY,
     script_name TEXT NOT NULL,
+    checksum TEXT NOT NULL,
     executed_at TEXT NOT NULL DEFAULT (datetime('now'))
 )";
 
@@ -60,6 +62,11 @@ struct DbMigration {
     version: i64,
     script_name: &'static str,
     sql: &'static str,
+}
+
+fn migration_checksum(sql: &str) -> String {
+    let digest = Sha256::digest(sql.as_bytes());
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path) -> Result<(), String> {
@@ -75,7 +82,12 @@ async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path) ->
             format!("Failed preparing migration history: {error}")
         })?;
 
-    let version_rows = sqlx::query("SELECT version FROM schema_migration_history")
+    let migration_by_version: HashMap<i64, &DbMigration> = MIGRATIONS
+        .iter()
+        .map(|migration| (migration.version, migration))
+        .collect();
+
+    let version_rows = sqlx::query("SELECT version, script_name, checksum FROM schema_migration_history")
         .fetch_all(pool)
         .await
         .map_err(|error| {
@@ -93,6 +105,50 @@ async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path) ->
             );
             format!("Failed parsing migration history row: {error}")
         })?;
+
+        let script_name = row.try_get::<String, _>("script_name").map_err(|error| {
+            log_unlock_failure(
+                "parse_migration_history",
+                Some(db_path),
+                &error.to_string(),
+            );
+            format!("Failed parsing migration history row: {error}")
+        })?;
+
+        let checksum = row.try_get::<String, _>("checksum").map_err(|error| {
+            log_unlock_failure(
+                "parse_migration_history",
+                Some(db_path),
+                &error.to_string(),
+            );
+            format!("Failed parsing migration history row: {error}")
+        })?;
+
+        let expected_migration = migration_by_version.get(&version).ok_or_else(|| {
+            log_unlock_failure(
+                "validate_migration_history",
+                Some(db_path),
+                &format!("Unknown migration version in history: {version}"),
+            );
+            format!("Unknown migration version {version} found in migration history")
+        })?;
+
+        let expected_checksum = migration_checksum(expected_migration.sql);
+        if checksum != expected_checksum {
+            log_unlock_failure(
+                "validate_migration_history",
+                Some(db_path),
+                &format!(
+                    "Checksum mismatch for version={} script_name={} stored_checksum={} expected_checksum={}",
+                    version, script_name, checksum, expected_checksum
+                ),
+            );
+            return Err(format!(
+                "Migration checksum mismatch for version {} ({}). Wipe local data or restore the original migration file.",
+                version, script_name
+            ));
+        }
+
         applied_versions.insert(version);
     }
 
@@ -124,11 +180,13 @@ async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path) ->
                 )
             })?;
 
+        let checksum = migration_checksum(migration.sql);
         sqlx::query(
-            "INSERT INTO schema_migration_history (version, script_name) VALUES ($1, $2)",
+            "INSERT INTO schema_migration_history (version, script_name, checksum) VALUES ($1, $2, $3)",
         )
         .bind(migration.version)
         .bind(migration.script_name)
+        .bind(checksum.as_str())
         .execute(&mut *tx)
         .await
         .map_err(|error| {
