@@ -40,6 +40,17 @@
     text-shadow: 0 0 24px var(--orange-glow);
 }
 
+.login-mode-pill {
+    display: inline-block;
+    margin-top: 0.55rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    background: rgba(247, 147, 26, 0.08);
+    letter-spacing: 0.03em;
+}
+
 .login-form {
     display: flex;
     flex-direction: column;

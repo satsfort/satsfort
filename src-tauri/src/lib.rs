@@ -1,4 +1,5 @@
 use serde_json::{Map as JsonMap, Value as JsonValue};
+use serde::Serialize;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::{Column, Row, TypeInfo};
 use std::sync::Arc;
@@ -22,6 +23,11 @@ fn sqlcipher_pragma_key(password: &str) -> String {
 
 pub struct AppState {
     pub pool: Arc<RwLock<Option<SqlitePool>>>,
+}
+
+#[derive(Serialize)]
+struct VaultStatus {
+    database_exists: bool,
 }
 
 const MIGRATIONS: [&str; 3] = [
@@ -190,6 +196,18 @@ async fn lock_db(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn get_vault_status(app: AppHandle) -> Result<VaultStatus, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Unable to resolve app data directory: {error}"))?;
+    let db_path = app_data_dir.join("portfolio.db");
+    Ok(VaultStatus {
+        database_exists: db_path.exists(),
+    })
+}
+
+#[tauri::command]
 async fn db_execute(query: String, values: Vec<JsonValue>, state: State<'_, AppState>) -> Result<u64, String> {
     let pool = {
         let lock = state.pool.read().await;
@@ -244,7 +262,13 @@ pub fn run() {
         .manage(AppState {
             pool: Arc::new(RwLock::new(None)),
         })
-        .invoke_handler(tauri::generate_handler![unlock_db, lock_db, db_execute, db_select])
+        .invoke_handler(tauri::generate_handler![
+            unlock_db,
+            lock_db,
+            get_vault_status,
+            db_execute,
+            db_select
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
 }

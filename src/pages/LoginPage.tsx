@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./LoginPage.css";
 import { EyeIcon, EyeOffIcon } from "../components/icons";
-import { unlockDb } from "../db";
+import { getVaultStatus, unlockDb } from "../db";
 
 type Props = {
     onLogin: (username: string) => void;
@@ -10,11 +10,28 @@ type Props = {
 export function LoginPage({ onLogin }: Props) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [vaultExists, setVaultExists] = useState<boolean | null>(null);
 
     const deriveMasterPassword = (rawUsername: string, rawPassword: string): string => `${rawUsername.trim()}:${rawPassword}`;
+    const createMode = vaultExists === false;
+
+    useEffect(() => {
+        const loadVaultStatus = async () => {
+            try {
+                const status = await getVaultStatus();
+                setVaultExists(status.database_exists);
+            } catch (statusError) {
+                console.error("Failed to read vault status", statusError);
+                setError("Could not determine vault status. Please try again.");
+            }
+        };
+
+        void loadVaultStatus();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,12 +45,18 @@ export function LoginPage({ onLogin }: Props) {
             return;
         }
 
+        if (createMode && password !== confirmPassword) {
+            setError("Passwords do not match.");
+            setSubmitting(false);
+            return;
+        }
+
         try {
             await unlockDb(deriveMasterPassword(normalizedUsername, password));
             onLogin(normalizedUsername);
         } catch (unlockError) {
             console.error("Failed to unlock database", unlockError);
-            setError("Wrong password or inaccessible database.");
+            setError(createMode ? "Failed to create encrypted vault." : "Wrong credentials or inaccessible encrypted vault.");
         } finally {
             setSubmitting(false);
         }
@@ -53,8 +76,9 @@ export function LoginPage({ onLogin }: Props) {
                 </div>
 
                 <div className="login-heading">
-                    <div className="eyebrow">// secure terminal</div>
-                    <h1 className="login-title">Authorize</h1>
+                    <div className="eyebrow">{createMode ? "// first-time setup" : "// secure login"}</div>
+                    <h1 className="login-title">{createMode ? "Create Vault" : "Unlock Vault"}</h1>
+                    <div className="login-mode-pill mono small">{vaultExists === null ? "Checking vault status..." : createMode ? "Create new user + password" : "Sign in with existing user + password"}</div>
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -98,19 +122,36 @@ export function LoginPage({ onLogin }: Props) {
                         </span>
                     </label>
 
+                    {createMode && (
+                        <label className="login-field">
+                            <span className="login-prompt mono">&gt; confirm password</span>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                autoComplete="new-password"
+                                className="text-input mono"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                placeholder="••••••"
+                                required
+                            />
+                        </label>
+                    )}
+
                     {error && (
                         <div className="login-error mono" role="alert">
                             ✗ {error}
                         </div>
                     )}
 
-                    <button type="submit" className="btn btn-primary login-submit" disabled={submitting}>
-                        {submitting ? "Unlocking..." : "Unlock Vault"}
+                    <button type="submit" className="btn btn-primary login-submit" disabled={submitting || vaultExists === null}>
+                        {submitting ? (createMode ? "Creating..." : "Unlocking...") : createMode ? "Create Encrypted Vault" : "Unlock Vault"}
                     </button>
                 </form>
 
                 <div className="login-hint mono small muted">
-                    first unlock creates a new encrypted vault; if you lose the password, the data cannot be recovered
+                    {createMode
+                        ? "This creates your encrypted vault. Keep your user + password safe, recovery is not possible."
+                        : "Use the same user + password used when this vault was first created."}
                 </div>
             </div>
         </div>
