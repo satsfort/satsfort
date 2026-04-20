@@ -18,6 +18,7 @@ import {
 } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
 import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
+import { LoadingIndicator } from "../components/LoadingIndicator";
 
 type Props = {
   unit: Unit;
@@ -38,13 +39,17 @@ export function PortfolioPage({
   const { currency, denomination } = useSettings();
 
   useEffect(() => {
-    new PortfolioHistoryRequests().execute().then(setHistory);
-    new TransactionHistoryService().execute().then(setTransactions);
-    new SpotPriceRequests().execute().then(setSpot).catch((err) => {
-      console.error("Failed to fetch spot price", err);
-      setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
-    });
-    new ExchangeRateRequests().execute().catch(() => {});
+    // TEMP: artificial delay to preview loading state
+    const timer = setTimeout(() => {
+      new PortfolioHistoryRequests().execute().then(setHistory);
+      new TransactionHistoryService().execute().then(setTransactions);
+      new SpotPriceRequests().execute().then(setSpot).catch((err) => {
+        console.error("Failed to fetch spot price", err);
+        setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+      });
+      new ExchangeRateRequests().execute().catch(() => {});
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   if (history === null || transactions === null || !spot) {
@@ -56,7 +61,7 @@ export function PortfolioPage({
             <h1 className="page-title">Portfolio</h1>
           </div>
         </header>
-        <div className="loading mono muted">Loading…</div>
+        <LoadingIndicator />
       </>
     );
   }

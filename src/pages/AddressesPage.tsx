@@ -13,6 +13,7 @@ import { useSettings } from "../lib/SettingsContext";
 import { EmptyState } from "../components/EmptyState";
 import { AddAddressModal } from "../components/AddAddressModal";
 import { ConfirmRemoveAddressModal } from "../components/ConfirmRemoveAddressModal";
+import { LoadingIndicator } from "../components/LoadingIndicator";
 
 type Props = {
   unit: Unit;
@@ -41,11 +42,15 @@ export function AddressesPage({
   const { currency, denomination } = useSettings();
 
   useEffect(() => {
-    new TrackedAddressesService().execute().then(setAddresses);
-    new SpotPriceRequests().execute().then(setSpot).catch((err) => {
-      console.error("Failed to fetch spot price", err);
-      setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
-    });
+    // TEMP: artificial delay to preview loading state
+    const timer = setTimeout(() => {
+      new TrackedAddressesService().execute().then(setAddresses);
+      new SpotPriceRequests().execute().then(setSpot).catch((err) => {
+        console.error("Failed to fetch spot price", err);
+        setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+      });
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   const refreshOne = async (addr: TrackedAddress) => {
@@ -84,7 +89,7 @@ export function AddressesPage({
             <h1 className="page-title">Addresses</h1>
           </div>
         </header>
-        <div className="loading mono muted">Loading…</div>
+        <LoadingIndicator />
       </>
     );
   }
