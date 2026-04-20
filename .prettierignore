@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+src-tauri/target
+src-tauri/gen
+package-lock.json
+.claude
+*.min.js
+*.min.css

@@ -12,59 +12,52 @@ import { SettingsProvider } from "./lib/SettingsContext";
 import type { Unit } from "./lib/format";
 
 function App() {
-  const [user, setUser] = useState<string | null>(null);
-  const [route, setRoute] = useState<Route>("portfolio");
-  const [collapsed, setCollapsed] = useState(false);
-  const [unit, setUnit] = useState<Unit>("BTC");
-  const [balancesHidden, setBalancesHidden] = useState(false);
-  const toggleBalances = () => setBalancesHidden((h) => !h);
+    const [user, setUser] = useState<string | null>(null);
+    const [route, setRoute] = useState<Route>("portfolio");
+    const [collapsed, setCollapsed] = useState(false);
+    const [unit, setUnit] = useState<Unit>("BTC");
+    const [balancesHidden, setBalancesHidden] = useState(false);
+    const toggleBalances = () => setBalancesHidden((h) => !h);
 
-  if (!user) {
-    return <LoginPage onLogin={setUser} />;
-  }
+    if (!user) {
+        return <LoginPage onLogin={setUser} />;
+    }
 
-  const handleLogout = () => {
-    setUser(null);
-    setRoute("portfolio");
-  };
+    const handleLogout = () => {
+        setUser(null);
+        setRoute("portfolio");
+    };
 
-  return (
-    <SettingsProvider>
-      <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
-        <Sidebar
-          route={route}
-          onNavigate={setRoute}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((c) => !c)}
-        />
-        <main className="content">
-          <div className="content-inner">
-            {route === "portfolio" && (
-              <PortfolioPage
-                unit={unit}
-                setUnit={setUnit}
-                balancesHidden={balancesHidden}
-                onToggleBalances={toggleBalances}
-              />
-            )}
-            {route === "addresses" && (
-              <AddressesPage
-                unit={unit}
-                setUnit={setUnit}
-                balancesHidden={balancesHidden}
-                onToggleBalances={toggleBalances}
-              />
-            )}
-            {route === "settings" && <SettingsPage />}
-            {route === "account" && (
-              <AccountPage username={user} onLogout={handleLogout} />
-            )}
-          </div>
-        </main>
-        <BottomNav route={route} onNavigate={setRoute} />
-      </div>
-    </SettingsProvider>
-  );
+    return (
+        <SettingsProvider>
+            <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
+                <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+                <main className="content">
+                    <div className="content-inner">
+                        {route === "portfolio" && (
+                            <PortfolioPage
+                                unit={unit}
+                                setUnit={setUnit}
+                                balancesHidden={balancesHidden}
+                                onToggleBalances={toggleBalances}
+                            />
+                        )}
+                        {route === "addresses" && (
+                            <AddressesPage
+                                unit={unit}
+                                setUnit={setUnit}
+                                balancesHidden={balancesHidden}
+                                onToggleBalances={toggleBalances}
+                            />
+                        )}
+                        {route === "settings" && <SettingsPage />}
+                        {route === "account" && <AccountPage username={user} onLogout={handleLogout} />}
+                    </div>
+                </main>
+                <BottomNav route={route} onNavigate={setRoute} />
+            </div>
+        </SettingsProvider>
+    );
 }
 
 export default App;

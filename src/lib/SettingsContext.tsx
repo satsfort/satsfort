@@ -6,58 +6,57 @@ export type FiatCurrency = "USD" | "EUR" | "GBP" | "JPY" | "CAD" | "AUD";
 export type Denomination = "BTC" | "SATS";
 
 export type AppSettings = {
-  currency: FiatCurrency;
-  setCurrency: (c: FiatCurrency) => void;
-  denomination: Denomination;
-  setDenomination: (d: Denomination) => void;
+    currency: FiatCurrency;
+    setCurrency: (c: FiatCurrency) => void;
+    denomination: Denomination;
+    setDenomination: (d: Denomination) => void;
 };
 
 const SettingsContext = createContext<AppSettings | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [currency, setCurrency] = useState<FiatCurrency>(() => {
-    return SettingsRequests.loadSync().currency;
-  });
-  const [denomination, setDenomination] = useState<Denomination>(() => {
-    return SettingsRequests.loadSync().denomination;
-  });
-
-  const persistSettings = (nextCurrency: FiatCurrency, nextDenomination: Denomination) => {
-    const current = SettingsRequests.loadSync();
-    void new SettingsRequests().save({
-      ...current,
-      currency: nextCurrency,
-      denomination: nextDenomination,
+    const [currency, setCurrency] = useState<FiatCurrency>(() => {
+        return SettingsRequests.loadSync().currency;
     });
-  };
+    const [denomination, setDenomination] = useState<Denomination>(() => {
+        return SettingsRequests.loadSync().denomination;
+    });
 
-  const handleCurrency = (c: FiatCurrency) => {
-    setCurrency(c);
-    persistSettings(c, denomination);
-  };
+    const persistSettings = (nextCurrency: FiatCurrency, nextDenomination: Denomination) => {
+        const current = SettingsRequests.loadSync();
+        void new SettingsRequests().save({
+            ...current,
+            currency: nextCurrency,
+            denomination: nextDenomination,
+        });
+    };
 
-  const handleDenomination = (d: Denomination) => {
-    setDenomination(d);
-    persistSettings(currency, d);
-  };
+    const handleCurrency = (c: FiatCurrency) => {
+        setCurrency(c);
+        persistSettings(c, denomination);
+    };
 
-  return (
-    <SettingsContext.Provider
-      value={{
-        currency,
-        setCurrency: handleCurrency,
-        denomination,
-        setDenomination: handleDenomination,
-      }}
-    >
-      {children}
-    </SettingsContext.Provider>
-  );
+    const handleDenomination = (d: Denomination) => {
+        setDenomination(d);
+        persistSettings(currency, d);
+    };
+
+    return (
+        <SettingsContext.Provider
+            value={{
+                currency,
+                setCurrency: handleCurrency,
+                denomination,
+                setDenomination: handleDenomination,
+            }}
+        >
+            {children}
+        </SettingsContext.Provider>
+    );
 }
 
 export function useSettings(): AppSettings {
-  const ctx = useContext(SettingsContext);
-  if (!ctx) throw new Error("useSettings must be used within SettingsProvider");
-  return ctx;
+    const ctx = useContext(SettingsContext);
+    if (!ctx) throw new Error("useSettings must be used within SettingsProvider");
+    return ctx;
 }
-

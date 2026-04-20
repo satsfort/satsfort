@@ -16,252 +16,238 @@ import { ConfirmRemoveAddressModal } from "../components/ConfirmRemoveAddressMod
 import { LoadingIndicator } from "../components/LoadingIndicator";
 
 type Props = {
-  unit: Unit;
-  setUnit: (u: Unit) => void;
-  balancesHidden: boolean;
-  onToggleBalances: () => void;
+    unit: Unit;
+    setUnit: (u: Unit) => void;
+    balancesHidden: boolean;
+    onToggleBalances: () => void;
 };
 
 function shorten(addr: string) {
-  if (addr.length <= 18) return addr;
-  return `${addr.slice(0, 10)}…${addr.slice(-8)}`;
+    if (addr.length <= 18) return addr;
+    return `${addr.slice(0, 10)}…${addr.slice(-8)}`;
 }
 
-export function AddressesPage({
-  unit,
-  setUnit,
-  balancesHidden,
-  onToggleBalances,
-}: Props) {
-  const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
-  const [spot, setSpot] = useState<SpotPrice | null>(null);
-  const [refreshing, setRefreshing] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
-  const { currency, denomination } = useSettings();
+export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances }: Props) {
+    const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
+    const [spot, setSpot] = useState<SpotPrice | null>(null);
+    const [refreshing, setRefreshing] = useState<string | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
+    const { currency, denomination } = useSettings();
 
-  useEffect(() => {
-    // TEMP: artificial delay to preview loading state
-    const timer = setTimeout(() => {
-      new TrackedAddressesService().execute().then(setAddresses);
-      new SpotPriceRequests().execute().then(setSpot).catch((err) => {
-        console.error("Failed to fetch spot price", err);
-        setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
-      });
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    useEffect(() => {
+        // TEMP: artificial delay to preview loading state
+        const timer = setTimeout(() => {
+            new TrackedAddressesService().execute().then(setAddresses);
+            new SpotPriceRequests()
+                .execute()
+                .then(setSpot)
+                .catch((err) => {
+                    console.error("Failed to fetch spot price", err);
+                    setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+                });
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, []);
 
-  const refreshOne = async (addr: TrackedAddress) => {
-    setRefreshing(addr.id);
-    const next = await new AddressBalanceRequests(addr.address).execute();
-    setAddresses((prev) =>
-      (prev ?? []).map((a) =>
-        a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a
-      )
-    );
-    setRefreshing(null);
-  };
-
-  const handleAddAddress = async (address: string, label: string) => {
-    const meta = await new TrackedAddressesRequests().add(address, label);
-    const balance = await new AddressBalanceRequests(meta.address).execute();
-    const tracked: TrackedAddress = {
-      ...meta,
-      btc: balance.btc,
-      txCount: balance.txCount,
+    const refreshOne = async (addr: TrackedAddress) => {
+        setRefreshing(addr.id);
+        const next = await new AddressBalanceRequests(addr.address).execute();
+        setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
+        setRefreshing(null);
     };
-    setAddresses((prev) => [...(prev ?? []), tracked]);
-  };
 
-  const handleRemove = async (id: string) => {
-    await new TrackedAddressesRequests().remove(id);
-    setAddresses((prev) => (prev ?? []).filter((a) => a.id !== id));
-  };
+    const handleAddAddress = async (address: string, label: string) => {
+        const meta = await new TrackedAddressesRequests().add(address, label);
+        const balance = await new AddressBalanceRequests(meta.address).execute();
+        const tracked: TrackedAddress = {
+            ...meta,
+            btc: balance.btc,
+            txCount: balance.txCount,
+        };
+        setAddresses((prev) => [...(prev ?? []), tracked]);
+    };
 
-  if (addresses === null || !spot) {
-    return (
-      <>
-        <header className="page-head">
-          <div>
-            <div className="eyebrow">Watch-only</div>
-            <h1 className="page-title">Addresses</h1>
-          </div>
-        </header>
-        <LoadingIndicator />
-      </>
-    );
-  }
+    const handleRemove = async (id: string) => {
+        await new TrackedAddressesRequests().remove(id);
+        setAddresses((prev) => (prev ?? []).filter((a) => a.id !== id));
+    };
 
-  if (addresses.length === 0) {
-    return (
-      <>
-        <header className="page-head">
-          <div>
-            <div className="eyebrow">Watch-only</div>
-            <h1 className="page-title">Addresses</h1>
-          </div>
-          <div className="page-actions">
-            <button className="btn">Import xpub</button>
-            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
-          </div>
-        </header>
-        <EmptyState
-          icon={<WalletIcon size={56} />}
-          title="No addresses tracked"
-          description="Add a Bitcoin address or import an xpub to start watching your balances."
-          action={
+    if (addresses === null || !spot) {
+        return (
             <>
-              <button className="btn">Import xpub</button>
-              <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
+                <header className="page-head">
+                    <div>
+                        <div className="eyebrow">Watch-only</div>
+                        <h1 className="page-title">Addresses</h1>
+                    </div>
+                </header>
+                <LoadingIndicator />
             </>
-          }
-        />
-        {showAddModal && (
-          <AddAddressModal
-            onClose={() => setShowAddModal(false)}
-            onAdd={handleAddAddress}
-          />
-        )}
-      </>
-    );
-  }
+        );
+    }
 
-  const priceUsd = spot.usd;
-  const total = addresses.reduce((s, a) => s + a.btc, 0);
+    if (addresses.length === 0) {
+        return (
+            <>
+                <header className="page-head">
+                    <div>
+                        <div className="eyebrow">Watch-only</div>
+                        <h1 className="page-title">Addresses</h1>
+                    </div>
+                    <div className="page-actions">
+                        <button className="btn">Import xpub</button>
+                        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                            + Add Address
+                        </button>
+                    </div>
+                </header>
+                <EmptyState
+                    icon={<WalletIcon size={56} />}
+                    title="No addresses tracked"
+                    description="Add a Bitcoin address or import an xpub to start watching your balances."
+                    action={
+                        <>
+                            <button className="btn">Import xpub</button>
+                            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                                + Add Address
+                            </button>
+                        </>
+                    }
+                />
+                {showAddModal && <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} />}
+            </>
+        );
+    }
 
-  return (
-    <div className={balancesHidden ? "balances-hidden" : undefined}>
-      <header className="page-head">
-        <div>
-          <div className="eyebrow">Watch-only</div>
-          <h1 className="page-title">Addresses</h1>
-        </div>
-        <div className="page-actions">
-          <button
-            className="btn btn-icon"
-            onClick={onToggleBalances}
-            aria-pressed={balancesHidden}
-            aria-label={balancesHidden ? "Show balances" : "Hide balances"}
-            title={balancesHidden ? "Show balances" : "Hide balances"}
-          >
-            {balancesHidden ? <EyeIcon /> : <EyeOffIcon />}
-          </button>
-          <div className="unit-toggle" role="group" aria-label="Display unit">
-            <button
-              className={`unit-btn ${unit === "BTC" ? "active" : ""}`}
-              onClick={() => setUnit("BTC")}
-            >
-              {formatBtcLabel(denomination)}
-            </button>
-            <button
-              className={`unit-btn ${unit === "FIAT" ? "active" : ""}`}
-              onClick={() => setUnit("FIAT")}
-            >
-              {formatSymbol("FIAT", currency)} {currency}
-            </button>
-          </div>
-          <button className="btn">Import xpub</button>
-          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
-        </div>
-      </header>
+    const priceUsd = spot.usd;
+    const total = addresses.reduce((s, a) => s + a.btc, 0);
 
-      <section className="hero">
-        <div className="stat-card">
-          <div className="stat-label">Tracked</div>
-          <div className="stat-value mono">{addresses.length}</div>
-          <div className="small muted mono">addresses</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Aggregate Balance</div>
-          <div className="stat-value">
-            {formatAmount(total, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}
-          </div>
-          <div className="small muted mono">
-            {formatSecondary(total, unit, priceUsd, currency, denomination)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Last Synced</div>
-          <div className="stat-value mono">2m ago</div>
-          <div className="small muted mono">block 874,120</div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-head">
-          <h2 className="section-title">// Watch List</h2>
-          <span className="small muted mono">sorted by balance</span>
-        </div>
-        <div className="addr-list">
-          {addresses.map((a) => (
-            <article key={a.id} className="addr-card">
-              <div className="addr-card-head">
+    return (
+        <div className={balancesHidden ? "balances-hidden" : undefined}>
+            <header className="page-head">
                 <div>
-                  <div className="addr-label">{a.label}</div>
-                  <div className="addr-string mono">
-                    <span>{shorten(a.address)}</span>
+                    <div className="eyebrow">Watch-only</div>
+                    <h1 className="page-title">Addresses</h1>
+                </div>
+                <div className="page-actions">
                     <button
-                      className="icon-btn"
-                      title="Copy address"
-                      aria-label="Copy address"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(a.address).then(() => {
-                          setCopiedId(a.id);
-                          setTimeout(() => setCopiedId((prev) => prev === a.id ? null : prev), 2000);
-                        });
-                      }}
+                        className="btn btn-icon"
+                        onClick={onToggleBalances}
+                        aria-pressed={balancesHidden}
+                        aria-label={balancesHidden ? "Show balances" : "Hide balances"}
+                        title={balancesHidden ? "Show balances" : "Hide balances"}
                     >
-                      {copiedId === a.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
+                        {balancesHidden ? <EyeIcon /> : <EyeOffIcon />}
                     </button>
-                  </div>
+                    <div className="unit-toggle" role="group" aria-label="Display unit">
+                        <button className={`unit-btn ${unit === "BTC" ? "active" : ""}`} onClick={() => setUnit("BTC")}>
+                            {formatBtcLabel(denomination)}
+                        </button>
+                        <button className={`unit-btn ${unit === "FIAT" ? "active" : ""}`} onClick={() => setUnit("FIAT")}>
+                            {formatSymbol("FIAT", currency)} {currency}
+                        </button>
+                    </div>
+                    <button className="btn">Import xpub</button>
+                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                        + Add Address
+                    </button>
                 </div>
-                <div className="addr-balance">
-                  <div className="addr-amount">
-                    {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}
-                  </div>
-                  <div className="small muted mono">
-                    {formatSecondary(a.btc, unit, priceUsd, currency, denomination)}
-                  </div>
+            </header>
+
+            <section className="hero">
+                <div className="stat-card">
+                    <div className="stat-label">Tracked</div>
+                    <div className="stat-value mono">{addresses.length}</div>
+                    <div className="small muted mono">addresses</div>
                 </div>
-              </div>
-              <div className="addr-meta">
-                <span className={`tx-tag type-${a.type.toLowerCase()}`}>{a.type}</span>
-                {a.xpub && <span className="tx-tag xpub">xpub</span>}
-                <span className="muted mono small">· {a.txCount} tx</span>
-                <span className="muted mono small">· added {a.added}</span>
-                <span className="addr-spacer" />
-                <button
-                  className="link-btn"
-                  onClick={() => refreshOne(a)}
-                  disabled={refreshing === a.id}
-                >
-                  {refreshing === a.id ? "Refreshing…" : "Refresh"}
-                </button>
-                <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>Remove</button>
-                <button className="link-btn" onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}>
-                  View <ExternalLinkIcon size={12} />
-                </button>
-              </div>
-            </article>
-          ))}
+                <div className="stat-card">
+                    <div className="stat-label">Aggregate Balance</div>
+                    <div className="stat-value">
+                        {formatAmount(total, unit, priceUsd, {
+                            btcDigits: 8,
+                            fiat: currency,
+                            denom: denomination,
+                        })}
+                    </div>
+                    <div className="small muted mono">{formatSecondary(total, unit, priceUsd, currency, denomination)}</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-label">Last Synced</div>
+                    <div className="stat-value mono">2m ago</div>
+                    <div className="small muted mono">block 874,120</div>
+                </div>
+            </section>
+
+            <section className="section">
+                <div className="section-head">
+                    <h2 className="section-title">// Watch List</h2>
+                    <span className="small muted mono">sorted by balance</span>
+                </div>
+                <div className="addr-list">
+                    {addresses.map((a) => (
+                        <article key={a.id} className="addr-card">
+                            <div className="addr-card-head">
+                                <div>
+                                    <div className="addr-label">{a.label}</div>
+                                    <div className="addr-string mono">
+                                        <span>{shorten(a.address)}</span>
+                                        <button
+                                            className="icon-btn"
+                                            title="Copy address"
+                                            aria-label="Copy address"
+                                            onClick={() => {
+                                                void navigator.clipboard.writeText(a.address).then(() => {
+                                                    setCopiedId(a.id);
+                                                    setTimeout(() => setCopiedId((prev) => (prev === a.id ? null : prev)), 2000);
+                                                });
+                                            }}
+                                        >
+                                            {copiedId === a.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="addr-balance">
+                                    <div className="addr-amount">
+                                        {formatAmount(a.btc, unit, priceUsd, {
+                                            btcDigits: 8,
+                                            fiat: currency,
+                                            denom: denomination,
+                                        })}
+                                    </div>
+                                    <div className="small muted mono">{formatSecondary(a.btc, unit, priceUsd, currency, denomination)}</div>
+                                </div>
+                            </div>
+                            <div className="addr-meta">
+                                <span className={`tx-tag type-${a.type.toLowerCase()}`}>{a.type}</span>
+                                {a.xpub && <span className="tx-tag xpub">xpub</span>}
+                                <span className="muted mono small">· {a.txCount} tx</span>
+                                <span className="muted mono small">· added {a.added}</span>
+                                <span className="addr-spacer" />
+                                <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id}>
+                                    {refreshing === a.id ? "Refreshing…" : "Refresh"}
+                                </button>
+                                <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>
+                                    Remove
+                                </button>
+                                <button className="link-btn" onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}>
+                                    View <ExternalLinkIcon size={12} />
+                                </button>
+                            </div>
+                        </article>
+                    ))}
+                </div>
+            </section>
+            {showAddModal && <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} />}
+            {removeTarget && (
+                <ConfirmRemoveAddressModal
+                    label={removeTarget.label}
+                    address={removeTarget.address}
+                    onClose={() => setRemoveTarget(null)}
+                    onConfirm={() => handleRemove(removeTarget.id)}
+                />
+            )}
         </div>
-      </section>
-      {showAddModal && (
-        <AddAddressModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddAddress}
-        />
-      )}
-      {removeTarget && (
-        <ConfirmRemoveAddressModal
-          label={removeTarget.label}
-          address={removeTarget.address}
-          onClose={() => setRemoveTarget(null)}
-          onConfirm={() => handleRemove(removeTarget.id)}
-        />
-      )}
-    </div>
-  );
+    );
 }

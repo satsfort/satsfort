@@ -3,22 +3,18 @@ import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
 import type { TrackedAddressMeta } from "../requests/TrackedAddressesRequests";
 
 export type TrackedAddress = TrackedAddressMeta & {
-  btc: number;
-  txCount: number;
+    btc: number;
+    txCount: number;
 };
 
 export class TrackedAddressesService {
-  async execute(): Promise<TrackedAddress[]> {
-    const metas = await new TrackedAddressesRequests().execute();
-    const balances = await Promise.all(
-      metas.map((meta) =>
-        new AddressBalanceRequests(meta.address).execute()
-      )
-    );
-    return metas.map((meta, i) => ({
-      ...meta,
-      btc: balances[i].btc,
-      txCount: balances[i].txCount,
-    }));
-  }
+    async execute(): Promise<TrackedAddress[]> {
+        const metas = await new TrackedAddressesRequests().execute();
+        const balances = await Promise.all(metas.map((meta) => new AddressBalanceRequests(meta.address).execute()));
+        return metas.map((meta, i) => ({
+            ...meta,
+            btc: balances[i].btc,
+            txCount: balances[i].txCount,
+        }));
+    }
 }
