@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AddressBalanceRequests, fetchAllAddressBalances } from "./AddressBalanceRequests";
+import { AddressBalanceRequests } from "./AddressBalanceRequests";
 
 // Note: These tests hit real APIs and are integration tests
 // They verify that the Electrum-compatible APIs are working correctly
@@ -10,8 +10,10 @@ describe("AddressBalanceRequests (integration)", () => {
     // A well-known SegWit address with balance
     const SEGWIT_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
 
+    const requests = new AddressBalanceRequests();
+
     it("fetches balance for a legacy address", async () => {
-        const result = await new AddressBalanceRequests(GENESIS_ADDRESS).execute();
+        const result = await requests.execute(GENESIS_ADDRESS);
 
         expect(result.address).toBe(GENESIS_ADDRESS);
         expect(typeof result.btc).toBe("number");
@@ -22,7 +24,7 @@ describe("AddressBalanceRequests (integration)", () => {
     });
 
     it("fetches balance for a segwit address", async () => {
-        const result = await new AddressBalanceRequests(SEGWIT_ADDRESS).execute();
+        const result = await requests.execute(SEGWIT_ADDRESS);
 
         expect(result.address).toBe(SEGWIT_ADDRESS);
         expect(typeof result.btc).toBe("number");
@@ -33,7 +35,7 @@ describe("AddressBalanceRequests (integration)", () => {
     it("returns zero balance for an address with no transactions", async () => {
         // Generate a valid but unused address (theoretically never used)
         const unusedAddress = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
-        const result = await new AddressBalanceRequests(unusedAddress).execute();
+        const result = await requests.execute(unusedAddress);
 
         expect(result.address).toBe(unusedAddress);
         expect(typeof result.btc).toBe("number");
@@ -42,7 +44,7 @@ describe("AddressBalanceRequests (integration)", () => {
 
     it("can fetch multiple addresses in parallel", async () => {
         const addresses = [GENESIS_ADDRESS, SEGWIT_ADDRESS];
-        const results = await fetchAllAddressBalances(addresses);
+        const results = await requests.executeAll(addresses);
 
         expect(results.length).toBe(2);
         expect(results[0].address).toBe(GENESIS_ADDRESS);
@@ -51,6 +53,6 @@ describe("AddressBalanceRequests (integration)", () => {
 
     it("throws an error for invalid addresses", async () => {
         // The API should return an error for invalid addresses
-        await expect(new AddressBalanceRequests("not-a-valid-address").execute()).rejects.toThrow();
+        await expect(requests.execute("not-a-valid-address")).rejects.toThrow();
     });
 });

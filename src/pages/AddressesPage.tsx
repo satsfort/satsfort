@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIcon } from "../components/icons";
-import { AddressBalanceRequests, fetchAllAddressBalances } from "../requests/AddressBalanceRequests";
+import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
 import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
@@ -56,7 +56,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const refreshOne = async (addr: TrackedAddress) => {
         setRefreshing(addr.id);
         try {
-            const next = await track(`Fetching balance for ${addr.label}`, () => new AddressBalanceRequests(addr.address).execute());
+            const next = await track(`Fetching balance for ${addr.label}`, () => new AddressBalanceRequests().execute(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
         } catch (err) {
             console.error("Failed to refresh address balance", err);
@@ -70,7 +70,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         setRefreshingAll(true);
         try {
             const balances = await track(`Refreshing ${addresses.length} addresses`, () =>
-                fetchAllAddressBalances(addresses.map((a) => a.address)),
+                new AddressBalanceRequests().executeAll(addresses.map((a) => a.address)),
             );
             setAddresses((prev) =>
                 (prev ?? []).map((addr) => {
@@ -90,7 +90,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
 
     const handleAddAddress = async (address: string, label: string) => {
         const meta = await new TrackedAddressesRequests().add(address, label);
-        const balance = await track(`Fetching balance for ${label}`, () => new AddressBalanceRequests(meta.address).execute());
+        const balance = await track(`Fetching balance for ${label}`, () => new AddressBalanceRequests().execute(meta.address));
         const tracked: TrackedAddress = {
             ...meta,
             btc: balance.btc,
