@@ -1188,6 +1188,111 @@ body::after {
     text-transform: uppercase;
 }
 
+/* ---------- Xpub Groups ---------- */
+
+.xpub-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.xpub-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+
+.xpub-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: 0 0 0 1px rgba(247, 147, 26, 0.05);
+}
+
+.xpub-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.xpub-expand-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 0.25rem;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    border-radius: calc(var(--radius) - 0.2rem);
+    transition: transform 0.2s, color 0.15s;
+    flex: 0 0 auto;
+}
+
+.xpub-expand-btn:hover {
+    color: var(--orange);
+}
+
+.xpub-expand-btn.expanded {
+    transform: rotate(90deg);
+    color: var(--orange);
+}
+
+.xpub-info {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.xpub-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 0 0 auto;
+}
+
+.xpub-derived-list {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    margin-top: -1px;
+    padding: 0.5rem 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.derived-addr-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1.2rem 0.5rem 2.5rem;
+    transition: background 0.15s;
+}
+
+.derived-addr-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.derived-index {
+    font-size: 0.75rem;
+    min-width: 2rem;
+    text-align: right;
+}
+
+.derived-addr {
+    flex: 1 1 auto;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.derived-path {
+    flex: 0 0 auto;
+}
+
 /* ---------- Settings ---------- */
 
 .settings-grid {

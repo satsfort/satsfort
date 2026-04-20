@@ -19,8 +19,15 @@
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-opener": "^2",
         "@tauri-apps/plugin-sql": "^2.4.0",
+        "@types/bitcoinjs-lib": "^4.0.1",
+        "bip32": "^5.0.1",
+        "bitcoinjs-lib": "^7.0.1",
+        "bs58check": "^4.0.0",
         "react": "^19.1.0",
-        "react-dom": "^19.1.0"
+        "react-dom": "^19.1.0",
+        "tiny-secp256k1": "^2.2.4",
+        "vite-plugin-top-level-await": "^1.6.0",
+        "vite-plugin-wasm": "^3.6.0"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.4",
