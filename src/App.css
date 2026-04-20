@@ -386,6 +386,12 @@ body::after {
     background: rgba(247, 147, 26, 0.08);
 }
 
+.btn-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .btn-danger {
     border-color: oklch(0.4 0.12 25);
     color: var(--red);

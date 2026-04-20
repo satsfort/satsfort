@@ -180,7 +180,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                         </button>
                     </div>
                     <button
-                        className="btn"
+                        className="btn btn-with-icon"
                         onClick={() => void refreshAll()}
                         disabled={refreshingAll}
                         title="Refresh all address balances"
