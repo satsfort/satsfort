@@ -12,6 +12,7 @@ import { SettingsProvider } from "./lib/SettingsContext";
 import { TaskNotificationsProvider } from "./lib/TaskNotificationsContext";
 import { TaskNotifications } from "./components/TaskNotifications";
 import type { Unit } from "./lib/format";
+import { lockDb } from "./db";
 
 function App() {
     const [user, setUser] = useState<string | null>(null);
@@ -26,8 +27,16 @@ function App() {
     }
 
     const handleLogout = () => {
-        setUser(null);
-        setRoute("portfolio");
+        void (async () => {
+            try {
+                await lockDb();
+            } catch (lockError) {
+                console.error("Failed to lock database", lockError);
+            }
+
+            setUser(null);
+            setRoute("portfolio");
+        })();
     };
 
     return (

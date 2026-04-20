@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./LoginPage.css";
 import { EyeIcon, EyeOffIcon } from "../components/icons";
+import { unlockDb } from "../db";
 
 type Props = {
     onLogin: (username: string) => void;
@@ -13,17 +14,29 @@ export function LoginPage({ onLogin }: Props) {
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
+    const deriveMasterPassword = (rawUsername: string, rawPassword: string): string => `${rawUsername.trim()}:${rawPassword}`;
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSubmitting(true);
-        await new Promise((r) => setTimeout(r, 300));
-        if (username.trim() === "admin" && password === "admin") {
-            onLogin(username.trim());
-        } else {
-            setError("Invalid credentials. Access denied.");
+
+        const normalizedUsername = username.trim();
+        if (normalizedUsername.length === 0 || password.length === 0) {
+            setError("Username and password are required.");
+            setSubmitting(false);
+            return;
         }
-        setSubmitting(false);
+
+        try {
+            await unlockDb(deriveMasterPassword(normalizedUsername, password));
+            onLogin(normalizedUsername);
+        } catch (unlockError) {
+            console.error("Failed to unlock database", unlockError);
+            setError("Wrong password or inaccessible database.");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -92,12 +105,12 @@ export function LoginPage({ onLogin }: Props) {
                     )}
 
                     <button type="submit" className="btn btn-primary login-submit" disabled={submitting}>
-                        {submitting ? "Verifying…" : "⚡ Authorize"}
+                        {submitting ? "Unlocking..." : "Unlock Vault"}
                     </button>
                 </form>
 
                 <div className="login-hint mono small muted">
-                    demo credentials · <span className="mono">admin</span> / <span className="mono">admin</span>
+                    first unlock creates a new encrypted vault; if you lose the password, the data cannot be recovered
                 </div>
             </div>
         </div>
