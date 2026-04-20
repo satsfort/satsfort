@@ -1,3 +1,4 @@
+import "./Modal.css";
 import { useEscapeKey } from "../lib/useEscapeKey";
 
 type ConfirmRemoveXpubModalProps = {
@@ -45,4 +46,3 @@ export function ConfirmRemoveXpubModal({ label, addressCount, onClose, onConfirm
         </div>
     );
 }
-

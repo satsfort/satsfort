@@ -1,4 +1,5 @@
 import { AddressIcon, ChartIcon, ChevronLeft, ChevronRight, SettingsIcon, UserIcon } from "./icons";
+import "./Sidebar.css";
 import type { ReactNode } from "react";
 
 export type Route = "portfolio" | "addresses" | "settings" | "account";

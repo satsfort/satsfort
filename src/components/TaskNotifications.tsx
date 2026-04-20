@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import "./TaskNotifications.css";
 import { useTaskNotifications, type TaskItem } from "../lib/TaskNotificationsContext";
 import { AlertIcon, BellIcon, CheckIcon, SpinnerIcon } from "./icons";
 

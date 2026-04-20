@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./Modal.css";
 import { useEscapeKey } from "../lib/useEscapeKey";
 
 type ConfirmRemoveAddressModalProps = {

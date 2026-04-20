@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./Modal.css";
 import { validateBitcoinAddress } from "../requests/TrackedAddressesRequests";
 import { useEscapeKey } from "../lib/useEscapeKey";
 

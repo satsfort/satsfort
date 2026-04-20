@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import "./PortfolioPage.css";
+import "./BalancePrivacy.css";
 import { PortfolioChart } from "../components/PortfolioChart";
 import { EyeIcon, EyeOffIcon, BarChartIcon } from "../components/icons";
 import { EmptyState } from "../components/EmptyState";

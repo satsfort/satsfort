@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./Modal.css";
 import { validateXpub, getDefaultDerivationType } from "../requests/XpubRequests";
 import type { DerivationType } from "../requests/XpubRequests";
 import { useEscapeKey } from "../lib/useEscapeKey";
@@ -137,4 +138,3 @@ export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
         </div>
     );
 }
-

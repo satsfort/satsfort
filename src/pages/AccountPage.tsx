@@ -1,3 +1,5 @@
+import "./AccountPage.css";
+
 type Props = {
     username: string;
     onLogout: () => void;

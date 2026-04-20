@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "./BottomNav.css";
 import type { Route } from "./Sidebar";
 import { AddressIcon, ChartIcon, SettingsIcon, UserIcon } from "./icons";
 

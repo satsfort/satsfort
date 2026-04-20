@@ -1,0 +1,91 @@
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1rem;
+}
+
+.settings-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.settings-card.danger-card {
+    border-color: oklch(0.35 0.1 25 / 0.5);
+    background: oklch(0.12 0.03 25 / 0.3);
+}
+
+.settings-card.coming-soon-card {
+    opacity: 0.55;
+    pointer-events: none;
+    position: relative;
+}
+
+.coming-soon-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--orange);
+    border: 1px solid rgba(247, 147, 26, 0.4);
+    background: rgba(247, 147, 26, 0.08);
+    padding: 0.15rem 0.45rem;
+    border-radius: calc(var(--radius) - 0.2rem);
+    margin-left: 0.5rem;
+    vertical-align: middle;
+    font-weight: 400;
+}
+
+.settings-card-head {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-card-title {
+    font-family: var(--font-head);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin: 0 0 0.25rem;
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.25rem 0;
+}
+
+.settings-row-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.settings-row-label {
+    font-family: var(--font-head);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.15rem;
+}
+
+.settings-row-control {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+@media (max-width: 720px) {
+    .settings-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+

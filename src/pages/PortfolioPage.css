@@ -1,0 +1,131 @@
+.hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.hero-main {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.hero-value {
+    font-family: var(--font-mono);
+    font-size: clamp(2.2rem, 6vw, 3.6rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    text-shadow: 0 0 28px var(--orange-glow);
+}
+
+.hero-value .tick {
+    color: var(--orange);
+    margin-right: 0.4rem;
+}
+
+.hero-sub {
+    display: flex;
+    gap: 1.25rem;
+    align-items: baseline;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+}
+
+.hero-sub .usd {
+    color: var(--text);
+    font-size: 1.1rem;
+}
+
+.delta-pos {
+    color: var(--green);
+}
+
+.delta-neg {
+    color: var(--red);
+}
+
+.stat-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.stat-value {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 500;
+}
+
+.stat-value .plus {
+    color: var(--green);
+    margin-right: 0.2rem;
+}
+
+.tx-table {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.tx-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 0.85rem 1.2rem;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+}
+
+.tx-row:last-child {
+    border-bottom: none;
+}
+
+.tx-row.head {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.tx-amount {
+    color: var(--text);
+}
+
+.tx-amount .plus {
+    color: var(--green);
+    margin-right: 0.25rem;
+}
+
+@media (max-width: 720px) {
+    .tx-row {
+        grid-template-columns: 70px 1fr 1fr;
+        font-size: 0.8rem;
+    }
+
+    .tx-row .tx-hide-sm {
+        display: none;
+    }
+}
+

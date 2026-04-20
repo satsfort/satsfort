@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import "./AddressesPage.css";
+import "./BalancePrivacy.css";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIcon, ChevronRight } from "../components/icons";
 import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./LoginPage.css";
 import { EyeIcon, EyeOffIcon } from "../components/icons";
 
 type Props = {

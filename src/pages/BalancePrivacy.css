@@ -1,0 +1,19 @@
+.balances-hidden .hero-value,
+.balances-hidden .hero-sub .usd,
+.balances-hidden .hero-sub .delta-pos,
+.balances-hidden .hero-sub .delta-neg,
+.balances-hidden .stat-value,
+.balances-hidden .stat-card .small,
+.balances-hidden .chart-value,
+.balances-hidden .chart-head > div > .small,
+.balances-hidden .chart-svg,
+.balances-hidden .tx-amount,
+.balances-hidden .tx-row:not(.head) > div:last-child,
+.balances-hidden .addr-amount,
+.balances-hidden .addr-balance .small {
+    filter: blur(8px);
+    transition: filter 0.2s ease;
+    user-select: none;
+    pointer-events: none;
+}
+

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import "./PortfolioChart.css";
 import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatAxis, formatSecondary } from "../lib/format";

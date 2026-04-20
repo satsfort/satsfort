@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./LoadingIndicator.css";
 
 const STATUSES = ["DECRYPTING_LEDGER", "SYNCING_NODE", "HASHING_BLOCKS", "VERIFYING_UTXO", "ESTABLISHING_LINK", "SCANNING_MEMPOOL"];
 

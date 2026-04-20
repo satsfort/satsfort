@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "./SettingsPage.css";
 import { useSettings } from "../lib/SettingsContext";
 import type { FiatCurrency } from "../lib/SettingsContext";
 import { SettingsRequests, type PriceSource } from "../requests/SettingsRequests";
