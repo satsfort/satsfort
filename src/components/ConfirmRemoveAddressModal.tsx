@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEscapeKey } from "../lib/useEscapeKey";
 
 type ConfirmRemoveAddressModalProps = {
     label: string;
@@ -8,6 +9,7 @@ type ConfirmRemoveAddressModalProps = {
 };
 
 export function ConfirmRemoveAddressModal({ label, address, onClose, onConfirm }: ConfirmRemoveAddressModalProps) {
+    useEscapeKey(onClose);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 

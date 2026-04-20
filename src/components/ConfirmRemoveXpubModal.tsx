@@ -1,3 +1,5 @@
+import { useEscapeKey } from "../lib/useEscapeKey";
+
 type ConfirmRemoveXpubModalProps = {
     label: string;
     addressCount: number;
@@ -6,6 +8,7 @@ type ConfirmRemoveXpubModalProps = {
 };
 
 export function ConfirmRemoveXpubModal({ label, addressCount, onClose, onConfirm }: ConfirmRemoveXpubModalProps) {
+    useEscapeKey(onClose);
     const handleConfirm = () => {
         void Promise.resolve(onConfirm()).then(onClose);
     };

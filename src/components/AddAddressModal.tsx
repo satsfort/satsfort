@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { validateBitcoinAddress } from "../requests/TrackedAddressesRequests";
+import { useEscapeKey } from "../lib/useEscapeKey";
 
 type AddAddressModalProps = {
     onClose: () => void;
@@ -7,6 +8,7 @@ type AddAddressModalProps = {
 };
 
 export function AddAddressModal({ onClose, onAdd }: AddAddressModalProps) {
+    useEscapeKey(onClose);
     const [address, setAddress] = useState("");
     const [label, setLabel] = useState("");
     const [error, setError] = useState<string | null>(null);

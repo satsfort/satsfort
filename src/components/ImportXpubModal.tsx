@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { validateXpub, getDefaultDerivationType } from "../requests/XpubRequests";
 import type { DerivationType } from "../requests/XpubRequests";
+import { useEscapeKey } from "../lib/useEscapeKey";
 
 type ImportXpubModalProps = {
     onClose: () => void;
@@ -15,6 +16,7 @@ const DERIVATION_TYPE_OPTIONS: { value: DerivationType; label: string; descripti
 ];
 
 export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
+    useEscapeKey(onClose);
     const [xpub, setXpub] = useState("");
     const [label, setLabel] = useState("");
     const [derivationType, setDerivationType] = useState<DerivationType>("P2WPKH");
