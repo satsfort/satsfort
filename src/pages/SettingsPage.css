@@ -89,6 +89,15 @@
     background: rgba(247, 147, 26, 0.06);
 }
 
+.settings-danger-error {
+    padding: 0.55rem 0.7rem;
+    border: 1px solid oklch(0.45 0.15 25 / 0.5);
+    border-radius: calc(var(--radius) - 0.2rem);
+    color: var(--red);
+    background: oklch(0.2 0.08 25 / 0.35);
+    font-size: 0.8rem;
+}
+
 
 @media (max-width: 720px) {
     .settings-row {

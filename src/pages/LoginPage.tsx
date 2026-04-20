@@ -125,15 +125,26 @@ export function LoginPage({ onLogin }: Props) {
                     {createMode && (
                         <label className="login-field">
                             <span className="login-prompt mono">&gt; confirm password</span>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                autoComplete="new-password"
-                                className="text-input mono"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="••••••"
-                                required
-                            />
+                            <span className="input-wrap">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    autoComplete="new-password"
+                                    className="text-input mono with-affix"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="••••••"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="input-toggle"
+                                    onClick={() => setShowPassword((s) => !s)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    title={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                                </button>
+                            </span>
                         </label>
                     )}
 

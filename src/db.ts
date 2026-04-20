@@ -22,6 +22,10 @@ export async function changeVaultPassword(currentPassword: string, newPassword: 
     await invoke("change_vault_password", { currentPassword, newPassword });
 }
 
+export async function wipeLocalData(): Promise<void> {
+    await invoke("wipe_local_data");
+}
+
 export async function dbExecute(query: string, values: DatabaseValue[] = []): Promise<number> {
     return invoke<number>("db_execute", { query, values });
 }

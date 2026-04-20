@@ -4,6 +4,8 @@ import { useSettings } from "../lib/SettingsContext";
 import type { FiatCurrency } from "../lib/SettingsContext";
 import { SettingsRequests, type PriceSource } from "../requests/SettingsRequests";
 import { ChangePasswordModal } from "../components/ChangePasswordModal";
+import { ConfirmWipeLocalDataModal } from "../components/ConfirmWipeLocalDataModal";
+import { wipeLocalData } from "../db";
 
 type Props = {
     username: string;
@@ -19,6 +21,7 @@ export function SettingsPage({ username, onLogout }: Props) {
     const [telemetry, setTelemetry] = useState(initialSettings.telemetry);
     const [autoSync, setAutoSync] = useState(initialSettings.autoSync);
     const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+    const [wipeModalOpen, setWipeModalOpen] = useState(false);
 
     const handleReset = () => {
         const settings = SettingsRequests.loadSync();
@@ -41,6 +44,11 @@ export function SettingsPage({ username, onLogout }: Props) {
             telemetry,
             autoSync,
         });
+    };
+
+    const handleWipeLocalData = async () => {
+        await wipeLocalData();
+        await Promise.resolve(onLogout());
     };
 
     return (
@@ -110,8 +118,10 @@ export function SettingsPage({ username, onLogout }: Props) {
                     <Row label="Delete all tracked addresses">
                         <button className="btn btn-danger">Delete</button>
                     </Row>
-                    <Row label="Wipe application state">
-                        <button className="btn btn-danger">Wipe</button>
+                    <Row label="Wipe all local data">
+                        <button className="btn btn-danger" onClick={() => setWipeModalOpen(true)}>
+                            Wipe
+                        </button>
                     </Row>
                 </div>
 
@@ -186,6 +196,13 @@ export function SettingsPage({ username, onLogout }: Props) {
                     username={username}
                     onClose={() => setPasswordModalOpen(false)}
                     onPasswordChanged={() => Promise.resolve(onLogout())}
+                />
+            )}
+
+            {wipeModalOpen && (
+                <ConfirmWipeLocalDataModal
+                    onClose={() => setWipeModalOpen(false)}
+                    onConfirm={handleWipeLocalData}
                 />
             )}
         </>
