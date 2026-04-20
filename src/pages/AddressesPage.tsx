@@ -12,6 +12,7 @@ import { formatAmount, formatBtcLabel, formatSecondary, formatSymbol } from "../
 import { useSettings } from "../lib/SettingsContext";
 import { EmptyState } from "../components/EmptyState";
 import { AddAddressModal } from "../components/AddAddressModal";
+import { ConfirmRemoveAddressModal } from "../components/ConfirmRemoveAddressModal";
 
 type Props = {
   unit: Unit;
@@ -36,6 +37,7 @@ export function AddressesPage({
   const [refreshing, setRefreshing] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
   const { currency, denomination } = useSettings();
 
   useEffect(() => {
@@ -232,7 +234,7 @@ export function AddressesPage({
                 >
                   {refreshing === a.id ? "Refreshing…" : "Refresh"}
                 </button>
-                <button className="link-btn danger" onClick={() => handleRemove(a.id)}>Remove</button>
+                <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>Remove</button>
                 <button className="link-btn" onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}>
                   View <ExternalLinkIcon size={12} />
                 </button>
@@ -245,6 +247,14 @@ export function AddressesPage({
         <AddAddressModal
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddAddress}
+        />
+      )}
+      {removeTarget && (
+        <ConfirmRemoveAddressModal
+          label={removeTarget.label}
+          address={removeTarget.address}
+          onClose={() => setRemoveTarget(null)}
+          onConfirm={() => handleRemove(removeTarget.id)}
         />
       )}
     </div>
