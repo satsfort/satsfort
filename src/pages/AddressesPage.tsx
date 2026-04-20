@@ -27,6 +27,8 @@ type Props = {
     onToggleBalances: () => void;
 };
 
+type DerivedBalance = { btc: number; txCount: number };
+
 function shorten(addr: string) {
     if (addr.length <= 18) return addr;
     return `${addr.slice(0, 10)}…${addr.slice(-8)}`;
@@ -41,10 +43,14 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
     const [xpubs, setXpubs] = useState<TrackedXpubMeta[]>([]);
     const [derivedAddresses, setDerivedAddresses] = useState<DerivedAddress[]>([]);
+    // Map from address string → balance info
+    const [derivedBalances, setDerivedBalances] = useState<Map<string, DerivedBalance>>(new Map());
     const [expandedXpubs, setExpandedXpubs] = useState<Set<string>>(new Set());
     const [spot, setSpot] = useState<SpotPrice | null>(null);
     const [refreshing, setRefreshing] = useState<string | null>(null);
     const [refreshingAll, setRefreshingAll] = useState(false);
+    // Track which xpub groups are currently refreshing
+    const [refreshingXpub, setRefreshingXpub] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showImportXpubModal, setShowImportXpubModal] = useState(false);
@@ -58,10 +64,17 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         const timer = setTimeout(() => {
             new TrackedAddressesService().execute().then(setAddresses);
 
-            // Load xpubs and derived addresses
+            // Load xpubs and derived addresses, then fetch their balances
             const xpubRequests = new XpubRequests();
-            xpubRequests.execute().then(setXpubs);
-            xpubRequests.getAllDerivedAddresses().then(setDerivedAddresses);
+            void Promise.all([xpubRequests.execute(), xpubRequests.getAllDerivedAddresses()]).then(
+                ([loadedXpubs, loadedDerived]) => {
+                    setXpubs(loadedXpubs);
+                    setDerivedAddresses(loadedDerived);
+                    if (loadedDerived.length > 0) {
+                        void fetchDerivedBalances(loadedDerived);
+                    }
+                },
+            );
 
             track("Spot price", () => new SpotPriceRequests().execute())
                 .then(setSpot)
@@ -71,16 +84,26 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                 });
         }, 2000);
         return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [track]);
+
+    /** Fetches balances for a list of derived addresses and merges them into state. */
+    const fetchDerivedBalances = async (addresses: DerivedAddress[]) => {
+        const balanceResults = await new AddressBalanceRequests().executeAll(addresses.map((a) => a.address));
+        setDerivedBalances((prev) => {
+            const next = new Map(prev);
+            for (const result of balanceResults) {
+                next.set(result.address, { btc: result.btc, txCount: result.txCount });
+            }
+            return next;
+        });
+    };
 
     const toggleXpubExpanded = (xpubId: string) => {
         setExpandedXpubs((prev) => {
             const next = new Set(prev);
-            if (next.has(xpubId)) {
-                next.delete(xpubId);
-            } else {
-                next.add(xpubId);
-            }
+            if (next.has(xpubId)) next.delete(xpubId);
+            else next.add(xpubId);
             return next;
         });
     };
@@ -97,24 +120,48 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         }
     };
 
+    const refreshXpub = async (xpub: TrackedXpubMeta, xpubDerived: DerivedAddress[]) => {
+        setRefreshingXpub(xpub.id);
+        try {
+            await track(`Refreshing ${xpub.label}`, () => fetchDerivedBalances(xpubDerived));
+        } catch (err) {
+            console.error("Failed to refresh xpub balances", err);
+        } finally {
+            setRefreshingXpub(null);
+        }
+    };
+
     const refreshAll = async () => {
-        if (!addresses || addresses.length === 0) return;
         setRefreshingAll(true);
         try {
-            const balances = await track(`Refreshing ${addresses.length} addresses`, () =>
-                new AddressBalanceRequests().executeAll(addresses.map((a) => a.address)),
-            );
-            setAddresses((prev) =>
-                (prev ?? []).map((addr) => {
-                    const balance = balances.find((b) => b.address === addr.address);
-                    if (balance) {
-                        return { ...addr, btc: balance.btc, txCount: balance.txCount };
-                    }
-                    return addr;
-                }),
-            );
+            const allTasks: Promise<void>[] = [];
+
+            if (addresses && addresses.length > 0) {
+                allTasks.push(
+                    track(`Refreshing ${addresses.length} individual addresses`, () =>
+                        new AddressBalanceRequests().executeAll(addresses.map((a) => a.address)),
+                    ).then((balances) => {
+                        setAddresses((prev) =>
+                            (prev ?? []).map((addr) => {
+                                const balance = balances.find((b) => b.address === addr.address);
+                                return balance ? { ...addr, btc: balance.btc, txCount: balance.txCount } : addr;
+                            }),
+                        );
+                    }),
+                );
+            }
+
+            if (derivedAddresses.length > 0) {
+                allTasks.push(
+                    track(`Refreshing ${derivedAddresses.length} xpub addresses`, () =>
+                        fetchDerivedBalances(derivedAddresses),
+                    ),
+                );
+            }
+
+            await Promise.all(allTasks);
         } catch (err) {
-            console.error("Failed to refresh all address balances", err);
+            console.error("Failed to refresh all balances", err);
         } finally {
             setRefreshingAll(false);
         }
@@ -123,11 +170,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const handleAddAddress = async (address: string, label: string) => {
         const meta = await new TrackedAddressesRequests().add(address, label);
         const balance = await track(`Fetching balance for ${label}`, () => new AddressBalanceRequests().execute(meta.address));
-        const tracked: TrackedAddress = {
-            ...meta,
-            btc: balance.btc,
-            txCount: balance.txCount,
-        };
+        const tracked: TrackedAddress = { ...meta, btc: balance.btc, txCount: balance.txCount };
         setAddresses((prev) => [...(prev ?? []), tracked]);
     };
 
@@ -140,14 +183,22 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         const result = await track(`Importing ${label}`, () => new XpubRequests().add(xpub, label, derivationType));
         setXpubs((prev) => [...prev, result.xpub]);
         setDerivedAddresses((prev) => [...prev, ...result.addresses]);
-        // Auto-expand the newly added xpub
         setExpandedXpubs((prev) => new Set([...prev, result.xpub.id]));
+        // Fetch balances for newly derived addresses
+        await track(`Fetching balances for ${label}`, () => fetchDerivedBalances(result.addresses));
     };
 
     const handleRemoveXpub = async (id: string) => {
         await new XpubRequests().remove(id);
         setXpubs((prev) => prev.filter((x) => x.id !== id));
+        // Remove balances for this xpub's derived addresses
+        const removedAddresses = derivedAddresses.filter((a) => a.xpubId === id).map((a) => a.address);
         setDerivedAddresses((prev) => prev.filter((a) => a.xpubId !== id));
+        setDerivedBalances((prev) => {
+            const next = new Map(prev);
+            for (const addr of removedAddresses) next.delete(addr);
+            return next;
+        });
         setExpandedXpubs((prev) => {
             const next = new Set(prev);
             next.delete(id);
@@ -157,6 +208,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
 
     const totalAddressCount = (addresses?.length ?? 0) + derivedAddresses.length;
     const hasAnyData = totalAddressCount > 0 || xpubs.length > 0;
+    const xpubTotal = Array.from(derivedBalances.values()).reduce((s, b) => s + b.btc, 0);
 
     if (addresses === null || !spot) {
         return (
@@ -181,12 +233,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                         <h1 className="page-title">Addresses</h1>
                     </div>
                     <div className="page-actions">
-                        <button className="btn" onClick={() => setShowImportXpubModal(true)}>
-                            Import xpub
-                        </button>
-                        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                            + Add Address
-                        </button>
+                        <button className="btn" onClick={() => setShowImportXpubModal(true)}>Import xpub</button>
+                        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
                     </div>
                 </header>
                 <EmptyState
@@ -195,25 +243,20 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                     description="Add a Bitcoin address or import an xpub to start watching your balances."
                     action={
                         <>
-                            <button className="btn" onClick={() => setShowImportXpubModal(true)}>
-                                Import xpub
-                            </button>
-                            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                                + Add Address
-                            </button>
+                            <button className="btn" onClick={() => setShowImportXpubModal(true)}>Import xpub</button>
+                            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
                         </>
                     }
                 />
                 {showAddModal && <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} />}
-                {showImportXpubModal && (
-                    <ImportXpubModal onClose={() => setShowImportXpubModal(false)} onImport={handleImportXpub} />
-                )}
+                {showImportXpubModal && <ImportXpubModal onClose={() => setShowImportXpubModal(false)} onImport={handleImportXpub} />}
             </>
         );
     }
 
     const priceUsd = spot.usd;
-    const total = addresses.reduce((s, a) => s + a.btc, 0);
+    const individualTotal = addresses.reduce((s, a) => s + a.btc, 0);
+    const grandTotal = individualTotal + xpubTotal;
 
     return (
         <div className={balancesHidden ? "balances-hidden" : undefined}>
@@ -249,12 +292,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                         <RefreshIcon size={14} />
                         {refreshingAll ? "Refreshing…" : "Refresh All"}
                     </button>
-                    <button className="btn" onClick={() => setShowImportXpubModal(true)}>
-                        Import xpub
-                    </button>
-                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                        + Add Address
-                    </button>
+                    <button className="btn" onClick={() => setShowImportXpubModal(true)}>Import xpub</button>
+                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>+ Add Address</button>
                 </div>
             </header>
 
@@ -267,13 +306,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                 <div className="stat-card">
                     <div className="stat-label">Aggregate Balance</div>
                     <div className="stat-value">
-                        {formatAmount(total, unit, priceUsd, {
-                            btcDigits: 8,
-                            fiat: currency,
-                            denom: denomination,
-                        })}
+                        {formatAmount(grandTotal, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}
                     </div>
-                    <div className="small muted mono">{formatSecondary(total, unit, priceUsd, currency, denomination)}</div>
+                    <div className="small muted mono">{formatSecondary(grandTotal, unit, priceUsd, currency, denomination)}</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-label">Last Synced</div>
@@ -291,8 +326,11 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                     </div>
                     <div className="addr-list">
                         {xpubs.map((xpub) => {
-                            const xpubDerivedAddresses = derivedAddresses.filter((a) => a.xpubId === xpub.id);
+                            const xpubDerived = derivedAddresses.filter((a) => a.xpubId === xpub.id);
                             const isExpanded = expandedXpubs.has(xpub.id);
+                            const isRefreshingThisXpub = refreshingXpub === xpub.id;
+                            const xpubBtc = xpubDerived.reduce((s, a) => s + (derivedBalances.get(a.address)?.btc ?? 0), 0);
+                            const balancesLoaded = xpubDerived.some((a) => derivedBalances.has(a.address));
 
                             return (
                                 <article key={xpub.id} className="xpub-group">
@@ -327,46 +365,71 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                             </div>
                                             <div className="xpub-stats">
                                                 <span className="tx-tag xpub">{xpub.derivationType}</span>
-                                                <span className="muted mono small">{xpubDerivedAddresses.length} addresses</span>
+                                                <span className="muted mono small">{xpubDerived.length} addresses</span>
+                                            </div>
+                                            <div className="addr-balance" onClick={(e) => e.stopPropagation()}>
+                                                <div className="addr-amount">
+                                                    {balancesLoaded
+                                                        ? formatAmount(xpubBtc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })
+                                                        : <span className="muted small mono">loading…</span>}
+                                                </div>
+                                                {balancesLoaded && (
+                                                    <div className="small muted mono">{formatSecondary(xpubBtc, unit, priceUsd, currency, denomination)}</div>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="addr-meta" onClick={(e) => e.stopPropagation()}>
                                             <span className="muted mono small">added {xpub.added}</span>
                                             <span className="addr-spacer" />
+                                            <button
+                                                className="link-btn"
+                                                onClick={() => void refreshXpub(xpub, xpubDerived)}
+                                                disabled={isRefreshingThisXpub}
+                                            >
+                                                {isRefreshingThisXpub ? "Refreshing…" : "Refresh"}
+                                            </button>
                                             <button className="link-btn danger" onClick={() => setRemoveXpubTarget(xpub)}>
                                                 Remove
                                             </button>
                                         </div>
                                     </div>
 
-                                    {isExpanded && xpubDerivedAddresses.length > 0 && (
+                                    {isExpanded && xpubDerived.length > 0 && (
                                         <div className="xpub-derived-list">
-                                            {xpubDerivedAddresses.map((derived) => (
-                                                <div key={derived.id} className="derived-addr-row">
-                                                    <span className="derived-index mono muted">{derived.index}</span>
-                                                    <span className="derived-addr mono">{shorten(derived.address)}</span>
-                                                    <span className="derived-path mono muted small">{derived.derivationPath}</span>
-                                                    <button
-                                                        className="icon-btn"
-                                                        title="Copy address"
-                                                        aria-label="Copy address"
-                                                        onClick={() => {
-                                                            void navigator.clipboard.writeText(derived.address).then(() => {
-                                                                setCopiedId(derived.id);
-                                                                setTimeout(() => setCopiedId((prev) => (prev === derived.id ? null : prev)), 2000);
-                                                            });
-                                                        }}
-                                                    >
-                                                        {copiedId === derived.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
-                                                    </button>
-                                                    <button
-                                                        className="link-btn"
-                                                        onClick={() => void openUrl(`https://mempool.space/address/${derived.address}`)}
-                                                    >
-                                                        <ExternalLinkIcon size={12} />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                            {xpubDerived.map((derived) => {
+                                                const bal = derivedBalances.get(derived.address);
+                                                return (
+                                                    <div key={derived.id} className="derived-addr-row">
+                                                        <span className="derived-index mono muted">{derived.index}</span>
+                                                        <span className="derived-addr mono">{shorten(derived.address)}</span>
+                                                        <span className="derived-path mono muted small">{derived.derivationPath}</span>
+                                                        <span className="derived-balance">
+                                                            {bal !== undefined
+                                                                ? <span className="mono small">{formatAmount(bal.btc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}</span>
+                                                                : <span className="muted small mono">…</span>}
+                                                        </span>
+                                                        <button
+                                                            className="icon-btn"
+                                                            title="Copy address"
+                                                            aria-label="Copy address"
+                                                            onClick={() => {
+                                                                void navigator.clipboard.writeText(derived.address).then(() => {
+                                                                    setCopiedId(derived.id);
+                                                                    setTimeout(() => setCopiedId((prev) => (prev === derived.id ? null : prev)), 2000);
+                                                                });
+                                                            }}
+                                                        >
+                                                            {copiedId === derived.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
+                                                        </button>
+                                                        <button
+                                                            className="link-btn"
+                                                            onClick={() => void openUrl(`https://mempool.space/address/${derived.address}`)}
+                                                        >
+                                                            <ExternalLinkIcon size={12} />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </article>
@@ -408,11 +471,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                     </div>
                                     <div className="addr-balance">
                                         <div className="addr-amount">
-                                            {formatAmount(a.btc, unit, priceUsd, {
-                                                btcDigits: 8,
-                                                fiat: currency,
-                                                denom: denomination,
-                                            })}
+                                            {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}
                                         </div>
                                         <div className="small muted mono">{formatSecondary(a.btc, unit, priceUsd, currency, denomination)}</div>
                                     </div>
@@ -426,9 +485,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                                     <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id}>
                                         {refreshing === a.id ? "Refreshing…" : "Refresh"}
                                     </button>
-                                    <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>
-                                        Remove
-                                    </button>
+                                    <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>Remove</button>
                                     <button className="link-btn" onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}>
                                         View <ExternalLinkIcon size={12} />
                                     </button>
@@ -440,9 +497,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
             )}
 
             {showAddModal && <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} />}
-            {showImportXpubModal && (
-                <ImportXpubModal onClose={() => setShowImportXpubModal(false)} onImport={handleImportXpub} />
-            )}
+            {showImportXpubModal && <ImportXpubModal onClose={() => setShowImportXpubModal(false)} onImport={handleImportXpub} />}
             {removeTarget && (
                 <ConfirmRemoveAddressModal
                     label={removeTarget.label}

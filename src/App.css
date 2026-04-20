@@ -1293,6 +1293,12 @@ body::after {
     flex: 0 0 auto;
 }
 
+.derived-balance {
+    flex: 0 0 auto;
+    text-align: right;
+    min-width: 8rem;
+}
+
 /* ---------- Settings ---------- */
 
 .settings-grid {
