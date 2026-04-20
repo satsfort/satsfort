@@ -2,6 +2,7 @@ use serde_json::{Map as JsonMap, Value as JsonValue};
 use serde::Serialize;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::{Column, Row, TypeInfo};
+use std::collections::HashSet;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::RwLock;
@@ -31,35 +32,138 @@ struct VaultStatus {
     database_exists: bool,
 }
 
-const MIGRATIONS: [&str; 3] = [
-    "CREATE TABLE IF NOT EXISTS holdings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT NOT NULL UNIQUE,
-        amount_btc REAL NOT NULL,
-        purchase_price REAL,
-        purchase_date TEXT,
-        notes TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )",
-    "CREATE TABLE IF NOT EXISTS tracked_addresses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT NOT NULL UNIQUE,
-        label TEXT NOT NULL,
-        address TEXT NOT NULL UNIQUE,
-        address_type TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )",
-    "CREATE TABLE IF NOT EXISTS tracked_xpubs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT NOT NULL UNIQUE,
-        label TEXT NOT NULL,
-        xpub TEXT NOT NULL UNIQUE,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )",
+const MIGRATIONS: [DbMigration; 3] = [
+    DbMigration {
+        version: 1,
+        script_name: "V001__create_holdings.sql",
+        sql: include_str!("../migrations/V001__create_holdings.sql"),
+    },
+    DbMigration {
+        version: 2,
+        script_name: "V002__create_tracked_addresses.sql",
+        sql: include_str!("../migrations/V002__create_tracked_addresses.sql"),
+    },
+    DbMigration {
+        version: 3,
+        script_name: "V003__create_tracked_xpubs.sql",
+        sql: include_str!("../migrations/V003__create_tracked_xpubs.sql"),
+    },
 ];
+
+const MIGRATION_HISTORY_TABLE_SQL: &str = "CREATE TABLE IF NOT EXISTS schema_migration_history (
+    version INTEGER PRIMARY KEY,
+    script_name TEXT NOT NULL,
+    executed_at TEXT NOT NULL DEFAULT (datetime('now'))
+)";
+
+struct DbMigration {
+    version: i64,
+    script_name: &'static str,
+    sql: &'static str,
+}
+
+async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path) -> Result<(), String> {
+    sqlx::query(MIGRATION_HISTORY_TABLE_SQL)
+        .execute(pool)
+        .await
+        .map_err(|error| {
+            log_unlock_failure(
+                "ensure_migration_history",
+                Some(db_path),
+                &error.to_string(),
+            );
+            format!("Failed preparing migration history: {error}")
+        })?;
+
+    let version_rows = sqlx::query("SELECT version FROM schema_migration_history")
+        .fetch_all(pool)
+        .await
+        .map_err(|error| {
+            log_unlock_failure("read_migration_history", Some(db_path), &error.to_string());
+            format!("Failed reading migration history: {error}")
+        })?;
+
+    let mut applied_versions = HashSet::new();
+    for row in version_rows {
+        let version = row.try_get::<i64, _>("version").map_err(|error| {
+            log_unlock_failure(
+                "parse_migration_history",
+                Some(db_path),
+                &error.to_string(),
+            );
+            format!("Failed parsing migration history row: {error}")
+        })?;
+        applied_versions.insert(version);
+    }
+
+    for migration in MIGRATIONS {
+        if applied_versions.contains(&migration.version) {
+            continue;
+        }
+
+        let mut tx = pool.begin().await.map_err(|error| {
+            log_unlock_failure("begin_migration_transaction", Some(db_path), &error.to_string());
+            format!("Failed starting migration transaction: {error}")
+        })?;
+
+        sqlx::query(migration.sql)
+            .execute(&mut *tx)
+            .await
+            .map_err(|error| {
+                log_unlock_failure(
+                    "run_migration_sql",
+                    Some(db_path),
+                    &format!(
+                        "version={} script_name={} error={error}",
+                        migration.version, migration.script_name
+                    ),
+                );
+                format!(
+                    "Failed running migration {} ({}): {error}",
+                    migration.version, migration.script_name
+                )
+            })?;
+
+        sqlx::query(
+            "INSERT INTO schema_migration_history (version, script_name) VALUES ($1, $2)",
+        )
+        .bind(migration.version)
+        .bind(migration.script_name)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| {
+            log_unlock_failure(
+                "record_migration_history",
+                Some(db_path),
+                &format!(
+                    "version={} script_name={} error={error}",
+                    migration.version, migration.script_name
+                ),
+            );
+            format!(
+                "Failed recording migration {} ({}): {error}",
+                migration.version, migration.script_name
+            )
+        })?;
+
+        tx.commit().await.map_err(|error| {
+            log_unlock_failure(
+                "commit_migration_transaction",
+                Some(db_path),
+                &format!(
+                    "version={} script_name={} error={error}",
+                    migration.version, migration.script_name
+                ),
+            );
+            format!(
+                "Failed committing migration {} ({}): {error}",
+                migration.version, migration.script_name
+            )
+        })?;
+    }
+
+    Ok(())
+}
 
 fn bind_json_values<'q>(
     mut query: sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments<'q>>,
@@ -169,19 +273,7 @@ async fn unlock_db(password: String, app: AppHandle, state: State<'_, AppState>)
             "Wrong password or database error".to_string()
         })?;
 
-    for migration in MIGRATIONS {
-        sqlx::query(migration)
-            .execute(&pool)
-            .await
-            .map_err(|error| {
-                log_unlock_failure(
-                    "run_migrations",
-                    Some(db_path.as_path()),
-                    &format!("migration_sql={migration}; error={error}"),
-                );
-                format!("Failed running migrations: {error}")
-            })?;
-    }
+    run_pending_migrations(&pool, db_path.as_path()).await?;
 
     let mut lock = state.pool.write().await;
     *lock = Some(pool);
