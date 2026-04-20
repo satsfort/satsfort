@@ -13,6 +13,7 @@ import { formatAmount, formatBtcLabel, formatNumber, formatSecondary, formatSymb
 import { useSettings } from "../lib/SettingsContext";
 import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
 import { LoadingIndicator } from "../components/LoadingIndicator";
+import { useTaskNotifications } from "../lib/TaskNotificationsContext";
 
 type Props = {
     unit: Unit;
@@ -26,23 +27,23 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const [transactions, setTransactions] = useState<Transaction[] | null>(null);
     const [spot, setSpot] = useState<SpotPrice | null>(null);
     const { currency, denomination } = useSettings();
+    const { track } = useTaskNotifications();
 
     useEffect(() => {
         // TEMP: artificial delay to preview loading state
         const timer = setTimeout(() => {
             new PortfolioHistoryRequests().execute().then(setHistory);
             new TransactionHistoryService().execute().then(setTransactions);
-            new SpotPriceRequests()
-                .execute()
+            track("Spot price", () => new SpotPriceRequests().execute())
                 .then(setSpot)
                 .catch((err) => {
                     console.error("Failed to fetch spot price", err);
                     setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
                 });
-            new ExchangeRateRequests().execute().catch(() => {});
+            track("Exchange rates", () => new ExchangeRateRequests().execute()).catch(() => {});
         }, 2000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [track]);
 
     if (history === null || transactions === null || !spot) {
         return (

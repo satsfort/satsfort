@@ -9,6 +9,8 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { AccountPage } from "./pages/AccountPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SettingsProvider } from "./lib/SettingsContext";
+import { TaskNotificationsProvider } from "./lib/TaskNotificationsContext";
+import { TaskNotifications } from "./components/TaskNotifications";
 import type { Unit } from "./lib/format";
 
 function App() {
@@ -30,32 +32,35 @@ function App() {
 
     return (
         <SettingsProvider>
-            <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
-                <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-                <main className="content">
-                    <div className="content-inner">
-                        {route === "portfolio" && (
-                            <PortfolioPage
-                                unit={unit}
-                                setUnit={setUnit}
-                                balancesHidden={balancesHidden}
-                                onToggleBalances={toggleBalances}
-                            />
-                        )}
-                        {route === "addresses" && (
-                            <AddressesPage
-                                unit={unit}
-                                setUnit={setUnit}
-                                balancesHidden={balancesHidden}
-                                onToggleBalances={toggleBalances}
-                            />
-                        )}
-                        {route === "settings" && <SettingsPage />}
-                        {route === "account" && <AccountPage username={user} onLogout={handleLogout} />}
-                    </div>
-                </main>
-                <BottomNav route={route} onNavigate={setRoute} />
-            </div>
+            <TaskNotificationsProvider>
+                <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
+                    <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+                    <main className="content">
+                        <div className="content-inner">
+                            {route === "portfolio" && (
+                                <PortfolioPage
+                                    unit={unit}
+                                    setUnit={setUnit}
+                                    balancesHidden={balancesHidden}
+                                    onToggleBalances={toggleBalances}
+                                />
+                            )}
+                            {route === "addresses" && (
+                                <AddressesPage
+                                    unit={unit}
+                                    setUnit={setUnit}
+                                    balancesHidden={balancesHidden}
+                                    onToggleBalances={toggleBalances}
+                                />
+                            )}
+                            {route === "settings" && <SettingsPage />}
+                            {route === "account" && <AccountPage username={user} onLogout={handleLogout} />}
+                        </div>
+                    </main>
+                    <BottomNav route={route} onNavigate={setRoute} />
+                    <TaskNotifications />
+                </div>
+            </TaskNotificationsProvider>
         </SettingsProvider>
     );
 }

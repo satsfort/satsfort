@@ -14,6 +14,7 @@ import { EmptyState } from "../components/EmptyState";
 import { AddAddressModal } from "../components/AddAddressModal";
 import { ConfirmRemoveAddressModal } from "../components/ConfirmRemoveAddressModal";
 import { LoadingIndicator } from "../components/LoadingIndicator";
+import { useTaskNotifications } from "../lib/TaskNotificationsContext";
 
 type Props = {
     unit: Unit;
@@ -35,13 +36,13 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const [showAddModal, setShowAddModal] = useState(false);
     const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
     const { currency, denomination } = useSettings();
+    const { track } = useTaskNotifications();
 
     useEffect(() => {
         // TEMP: artificial delay to preview loading state
         const timer = setTimeout(() => {
             new TrackedAddressesService().execute().then(setAddresses);
-            new SpotPriceRequests()
-                .execute()
+            track("Spot price", () => new SpotPriceRequests().execute())
                 .then(setSpot)
                 .catch((err) => {
                     console.error("Failed to fetch spot price", err);
@@ -49,7 +50,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                 });
         }, 2000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [track]);
 
     const refreshOne = async (addr: TrackedAddress) => {
         setRefreshing(addr.id);
