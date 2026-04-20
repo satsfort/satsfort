@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import "./SettingsPage.css";
 import { useSettings } from "../lib/SettingsContext";
 import type { FiatCurrency } from "../lib/SettingsContext";
 import { SettingsRequests, type PriceSource } from "../requests/SettingsRequests";
+import { changeVaultPassword } from "../db";
 
-export function SettingsPage() {
+type Props = {
+    username: string;
+    onLogout: () => void | Promise<void>;
+};
+
+export function SettingsPage({ username, onLogout }: Props) {
     const initialSettings = SettingsRequests.loadSync();
     const { currency, setCurrency, denomination, setDenomination } = useSettings();
     const [useOwnNode, setUseOwnNode] = useState(initialSettings.useOwnNode);
@@ -12,6 +18,13 @@ export function SettingsPage() {
     const [priceSource, setPriceSource] = useState<PriceSource>(initialSettings.priceSource);
     const [telemetry, setTelemetry] = useState(initialSettings.telemetry);
     const [autoSync, setAutoSync] = useState(initialSettings.autoSync);
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [changingPassword, setChangingPassword] = useState(false);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+
+    const deriveMasterPassword = (rawUsername: string, rawPassword: string): string => `${rawUsername.trim()}:${rawPassword}`;
 
     const handleReset = () => {
         const settings = SettingsRequests.loadSync();
@@ -34,6 +47,36 @@ export function SettingsPage() {
             telemetry,
             autoSync,
         });
+    };
+
+    const handlePasswordChange = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setPasswordError(null);
+        setPasswordMessage(null);
+
+        if (newPassword.length === 0 || confirmPassword.length === 0) {
+            setPasswordError("Enter the new password twice.");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError("New passwords do not match.");
+            return;
+        }
+
+        setChangingPassword(true);
+        try {
+            await changeVaultPassword(deriveMasterPassword(username, newPassword));
+            setPasswordMessage("Password updated. Logging out now...");
+            setNewPassword("");
+            setConfirmPassword("");
+            await Promise.resolve(onLogout());
+        } catch (error) {
+            console.error("Failed to change vault password", error);
+            setPasswordError("Failed to update password. Please try again.");
+        } finally {
+            setChangingPassword(false);
+        }
     };
 
     return (
@@ -106,6 +149,45 @@ export function SettingsPage() {
                     <Row label="Wipe application state">
                         <button className="btn btn-danger">Wipe</button>
                     </Row>
+                </div>
+
+                <div className="settings-card">
+                    <div className="settings-card-head">
+                        <h3 className="settings-card-title">Security</h3>
+                        <p className="muted small">Change your password. Username stays fixed.</p>
+                    </div>
+                    <form className="settings-security-form" onSubmit={handlePasswordChange} noValidate>
+                        <div className="settings-security-note small muted">
+                            Account: <span className="mono">{username}</span>
+                        </div>
+                        <label className="settings-security-field">
+                            <span className="settings-row-label">New password</span>
+                            <input
+                                className="text-input mono"
+                                type="password"
+                                autoComplete="new-password"
+                                value={newPassword}
+                                onChange={(event) => setNewPassword(event.target.value)}
+                                required
+                            />
+                        </label>
+                        <label className="settings-security-field">
+                            <span className="settings-row-label">Confirm new password</span>
+                            <input
+                                className="text-input mono"
+                                type="password"
+                                autoComplete="new-password"
+                                value={confirmPassword}
+                                onChange={(event) => setConfirmPassword(event.target.value)}
+                                required
+                            />
+                        </label>
+                        {passwordError && <div className="settings-password-error mono">{passwordError}</div>}
+                        {passwordMessage && <div className="settings-password-success mono">{passwordMessage}</div>}
+                        <button type="submit" className="btn btn-primary" disabled={changingPassword}>
+                            {changingPassword ? "Updating..." : "Change Password & Log Out"}
+                        </button>
+                    </form>
                 </div>
 
                 <div className="settings-card coming-soon-card">

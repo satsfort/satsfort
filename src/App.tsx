@@ -62,7 +62,7 @@ function App() {
                                     onToggleBalances={toggleBalances}
                                 />
                             )}
-                            {route === "settings" && <SettingsPage />}
+                            {route === "settings" && <SettingsPage username={user} onLogout={handleLogout} />}
                             {route === "account" && <AccountPage username={user} onLogout={handleLogout} />}
                         </div>
                     </main>
