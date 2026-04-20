@@ -5,6 +5,21 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::RwLock;
 
+fn log_unlock_failure(stage: &str, db_path: Option<&std::path::Path>, error: &str) {
+    let db_path_display = db_path
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| "<unresolved>".to_string());
+    eprintln!(
+        "[unlock_db] stage={stage} db_path={db_path_display} error={error}"
+    );
+}
+
+fn sqlcipher_pragma_key(password: &str) -> String {
+    // SQLCipher PRAGMA key expects a SQL string literal.
+    let escaped = password.replace('\'', "''");
+    format!("'{escaped}'")
+}
+
 pub struct AppState {
     pub pool: Arc<RwLock<Option<SqlitePool>>>,
 }
@@ -106,31 +121,59 @@ async fn unlock_db(password: String, app: AppHandle, state: State<'_, AppState>)
     let app_data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|error| format!("Unable to resolve app data directory: {error}"))?;
+        .map_err(|error| {
+            log_unlock_failure(
+                "resolve_app_data_dir",
+                None,
+                &format!("Unable to resolve app data directory: {error}"),
+            );
+            format!("Unable to resolve app data directory: {error}")
+        })?;
 
     std::fs::create_dir_all(&app_data_dir)
-        .map_err(|error| format!("Unable to initialize app data directory: {error}"))?;
+        .map_err(|error| {
+            log_unlock_failure(
+                "create_app_data_dir",
+                Some(app_data_dir.as_path()),
+                &format!("Unable to initialize app data directory: {error}"),
+            );
+            format!("Unable to initialize app data directory: {error}")
+        })?;
 
     let db_path = app_data_dir.join("portfolio.db");
+    let key_pragma = sqlcipher_pragma_key(&password);
     let options = SqliteConnectOptions::new()
-        .filename(db_path)
-        .pragma("key", password)
+        .filename(db_path.as_path())
+        .pragma("key", key_pragma)
         .create_if_missing(true);
 
     let pool = SqlitePool::connect_with(options)
         .await
-        .map_err(|_| "Wrong password or database error".to_string())?;
+        .map_err(|error| {
+            log_unlock_failure("connect_with_key", Some(db_path.as_path()), &error.to_string());
+            "Wrong password or database error".to_string()
+        })?;
 
     sqlx::query("SELECT count(*) FROM sqlite_master")
         .execute(&pool)
         .await
-        .map_err(|_| "Wrong password or database error".to_string())?;
+        .map_err(|error| {
+            log_unlock_failure("verify_cipher_key", Some(db_path.as_path()), &error.to_string());
+            "Wrong password or database error".to_string()
+        })?;
 
     for migration in MIGRATIONS {
         sqlx::query(migration)
             .execute(&pool)
             .await
-            .map_err(|error| format!("Failed running migrations: {error}"))?;
+            .map_err(|error| {
+                log_unlock_failure(
+                    "run_migrations",
+                    Some(db_path.as_path()),
+                    &format!("migration_sql={migration}; error={error}"),
+                );
+                format!("Failed running migrations: {error}")
+            })?;
     }
 
     let mut lock = state.pool.write().await;
