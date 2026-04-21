@@ -31,6 +31,7 @@ export type DerivedAddress = {
 };
 
 type XpubRow = {
+    id: number;
     uuid: string;
     label: string;
     xpub: string;
@@ -133,7 +134,7 @@ export class XpubRequests {
      */
     async execute(): Promise<TrackedXpubMeta[]> {
         const rows = await dbSelect<XpubRow>(
-            "SELECT uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs ORDER BY id",
+            "SELECT id, uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs ORDER BY id",
         );
         return rows.map(rowToXpubMeta);
     }
@@ -143,7 +144,7 @@ export class XpubRequests {
      */
     async getDerivedAddresses(xpubId: string): Promise<DerivedAddress[]> {
         const rows = await dbSelect<XpubAddressRow>(
-            "SELECT uuid, xpub_uuid, address, derivation_path, address_index FROM xpub_addresses WHERE xpub_uuid = ? ORDER BY address_index",
+            "SELECT xa.uuid, x.uuid AS xpub_uuid, xa.address, xa.derivation_path, xa.address_index FROM xpub_addresses xa JOIN xpubs x ON xa.xpub_id = x.id WHERE x.uuid = ? ORDER BY xa.address_index",
             [xpubId],
         );
         return rows.map(rowToDerivedAddress);
@@ -154,7 +155,7 @@ export class XpubRequests {
      */
     async getAllDerivedAddresses(): Promise<DerivedAddress[]> {
         const rows = await dbSelect<XpubAddressRow>(
-            "SELECT uuid, xpub_uuid, address, derivation_path, address_index FROM xpub_addresses ORDER BY xpub_uuid, address_index",
+            "SELECT xa.uuid, x.uuid AS xpub_uuid, xa.address, xa.derivation_path, xa.address_index FROM xpub_addresses xa JOIN xpubs x ON xa.xpub_id = x.id ORDER BY xa.xpub_id, xa.address_index",
         );
         return rows.map(rowToDerivedAddress);
     }
@@ -188,13 +189,19 @@ export class XpubRequests {
             [xpubUuid, trimmedLabel, trimmedXpub, derivationType, addressCount],
         );
 
+        const xpubRows = await dbSelect<XpubRow>(
+            "SELECT id, uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs WHERE uuid = ?",
+            [xpubUuid],
+        );
+        const xpubId = xpubRows[0].id;
+
         const derivedInfos = deriveAddressesFromExtendedKey(trimmedXpub, derivationType, addressCount);
         const derivedAddresses: DerivedAddress[] = [];
         for (const info of derivedInfos) {
             const addressUuid = crypto.randomUUID();
             await dbExecute(
-                "INSERT INTO xpub_addresses (uuid, xpub_uuid, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)",
-                [addressUuid, xpubUuid, info.address, info.derivationPath, info.index],
+                "INSERT INTO xpub_addresses (uuid, xpub_id, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)",
+                [addressUuid, xpubId, info.address, info.derivationPath, info.index],
             );
             derivedAddresses.push({
                 id: addressUuid,
@@ -205,11 +212,6 @@ export class XpubRequests {
             });
         }
 
-        const xpubRows = await dbSelect<XpubRow>(
-            "SELECT uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs WHERE uuid = ?",
-            [xpubUuid],
-        );
-
         return { xpub: rowToXpubMeta(xpubRows[0]), addresses: derivedAddresses };
     }
 
@@ -217,7 +219,10 @@ export class XpubRequests {
      * Removes an xpub and all its derived addresses.
      */
     async remove(id: string): Promise<void> {
-        await dbExecute("DELETE FROM xpub_addresses WHERE xpub_uuid = ?", [id]);
+        await dbExecute(
+            "DELETE FROM xpub_addresses WHERE xpub_id = (SELECT id FROM xpubs WHERE uuid = ?)",
+            [id],
+        );
         await dbExecute("DELETE FROM xpubs WHERE uuid = ?", [id]);
     }
 }

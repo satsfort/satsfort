@@ -22,7 +22,7 @@ CREATE TABLE xpubs (
 CREATE TABLE xpub_addresses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uuid TEXT NOT NULL UNIQUE,
-    xpub_uuid TEXT NOT NULL REFERENCES xpubs(uuid) ON DELETE CASCADE,
+    xpub_id INTEGER NOT NULL REFERENCES xpubs(id) ON DELETE CASCADE,
     address TEXT NOT NULL,
     derivation_path TEXT NOT NULL,
     address_index INTEGER NOT NULL,
