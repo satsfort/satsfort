@@ -161,4 +161,40 @@ describe("XpubRequests", () => {
         await requests.add(xpub, "Original Wallet", "P2WPKH");
         await expect(requests.add(xpub, "Duplicate Wallet", "P2WPKH")).rejects.toThrow("already being tracked");
     });
+
+    it("saveBalance aggregates derived address balances and snapshots to xpub_balances", async () => {
+        const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
+        const result = await requests.add(xpub, "Aggregation Wallet", "P2WPKH");
+
+        const db = dbRef.current!;
+        db.prepare(
+            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_tx_count = ? WHERE address_index IN (0, 1)",
+        ).run(0.5, 3);
+        db.prepare(
+            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_tx_count = ? WHERE address_index = 2",
+        ).run(0.25, 1);
+
+        const totals = await requests.saveBalance(result.xpub.id);
+        expect(totals.btc).toBeCloseTo(1.25, 8);
+        expect(totals.txCount).toBe(7);
+
+        const xpubRow = db.prepare("SELECT latest_balance_btc, latest_tx_count FROM xpubs WHERE uuid = ?").get(result.xpub.id) as {
+            latest_balance_btc: number;
+            latest_tx_count: number;
+        };
+        expect(xpubRow.latest_balance_btc).toBeCloseTo(1.25, 8);
+        expect(xpubRow.latest_tx_count).toBe(7);
+
+        const snapshots = db.prepare("SELECT balance_btc, tx_count FROM xpub_balances").all() as {
+            balance_btc: number;
+            tx_count: number;
+        }[];
+        expect(snapshots).toHaveLength(1);
+        expect(snapshots[0].balance_btc).toBeCloseTo(1.25, 8);
+        expect(snapshots[0].tx_count).toBe(7);
+    });
+
+    it("saveBalance throws when xpub is unknown", async () => {
+        await expect(requests.saveBalance("00000000-0000-0000-0000-000000000000")).rejects.toThrow("xpub not found");
+    });
 });

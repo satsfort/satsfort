@@ -77,6 +77,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
             }
             return next;
         });
+        const xpubIds = new Set(addresses.map((a) => a.xpubId));
+        await Promise.all(Array.from(xpubIds).map((xpubId) => xpubRequests.saveBalance(xpubId)));
     };
 
     const toggleXpubExpanded = (xpubId: string) => {

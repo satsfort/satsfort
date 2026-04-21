@@ -1,13 +1,54 @@
-import { describe, it, expect } from "vitest";
-import { AddressBalanceRequests } from "./AddressBalanceRequests";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import Database from "better-sqlite3";
+import type { Database as SqliteDatabase } from "better-sqlite3";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
-// Note: These tests hit real APIs and are integration tests
-// They verify that the Electrum-compatible APIs are working correctly
+const dbRef = vi.hoisted<{ current: SqliteDatabase | null }>(() => ({ current: null }));
+
+vi.mock("@tauri-apps/api/core", () => ({
+    invoke: vi.fn(async (command: string, args: { query: string; values?: unknown[] }) => {
+        const db = dbRef.current;
+        if (!db) throw new Error("Test database is not initialized");
+        const values = args.values ?? [];
+        if (command === "db_execute") {
+            const info = db.prepare(args.query).run(...values);
+            return info.changes;
+        }
+        if (command === "db_select") {
+            return db.prepare(args.query).all(...values);
+        }
+        throw new Error(`Unhandled invoke command: ${command}`);
+    }),
+}));
+
+import { AddressBalanceRequests } from "./AddressBalanceRequests";
+import { TrackedAddressesRequests } from "./TrackedAddressesRequests";
+import { XpubRequests } from "./XpubRequests";
+
+const migrationsDir = join(process.cwd(), "src-tauri", "migrations");
+const migrationSql = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => readFileSync(join(migrationsDir, f), "utf8"))
+    .join("\n");
+
+beforeEach(() => {
+    const db = new Database(":memory:");
+    db.pragma("foreign_keys = ON");
+    db.exec(migrationSql);
+    dbRef.current = db;
+});
+
+afterEach(() => {
+    dbRef.current?.close();
+    dbRef.current = null;
+});
+
+// Note: Tests that hit real APIs are integration tests gated by network availability.
 
 describe("AddressBalanceRequests (integration)", () => {
-    // A well-known Bitcoin address with transaction history (Satoshi's genesis block address)
     const GENESIS_ADDRESS = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
-    // A well-known SegWit address with balance
     const SEGWIT_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
 
     const requests = new AddressBalanceRequests();
@@ -19,7 +60,7 @@ describe("AddressBalanceRequests (integration)", () => {
         expect(typeof result.btc).toBe("number");
         expect(result.btc).toBeGreaterThanOrEqual(0);
         expect(typeof result.txCount).toBe("number");
-        expect(result.txCount).toBeGreaterThan(0); // Genesis address has many donations
+        expect(result.txCount).toBeGreaterThan(0);
         expect(result.lastSeen).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
@@ -33,7 +74,6 @@ describe("AddressBalanceRequests (integration)", () => {
     });
 
     it("returns zero balance for an address with no transactions", async () => {
-        // Generate a valid but unused address (theoretically never used)
         const unusedAddress = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
         const result = await requests.execute(unusedAddress);
 
@@ -52,7 +92,122 @@ describe("AddressBalanceRequests (integration)", () => {
     });
 
     it("throws an error for invalid addresses", async () => {
-        // The API should return an error for invalid addresses
         await expect(requests.execute("not-a-valid-address")).rejects.toThrow();
+    });
+});
+
+describe("AddressBalanceRequests persistence", () => {
+    const fetchMock = vi.fn();
+    const originalFetch = globalThis.fetch;
+
+    beforeEach(() => {
+        fetchMock.mockReset();
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+    });
+
+    afterEach(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    const mockMempoolResponse = (confirmed: number, unconfirmed: number, txCount: number) => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+            chain_stats: { funded_txo_sum: confirmed, spent_txo_sum: 0, tx_count: txCount },
+            mempool_stats: { funded_txo_sum: unconfirmed, spent_txo_sum: 0, tx_count: 0 },
+        }),
+    });
+
+    it("updates the tracked address row and appends a snapshot to address_balances", async () => {
+        const tracked = await new TrackedAddressesRequests().add(
+            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            "Hot wallet",
+        );
+
+        fetchMock.mockResolvedValueOnce(mockMempoolResponse(25_000_000, 0, 5));
+
+        const result = await new AddressBalanceRequests().execute(tracked.address);
+        expect(result.btc).toBeCloseTo(0.25, 8);
+        expect(result.txCount).toBe(5);
+
+        const db = dbRef.current!;
+        const row = db
+            .prepare("SELECT latest_balance_btc, latest_tx_count, latest_balance_fetched_at FROM addresses WHERE address = ?")
+            .get(tracked.address) as { latest_balance_btc: number; latest_tx_count: number; latest_balance_fetched_at: string };
+        expect(row.latest_balance_btc).toBeCloseTo(0.25, 8);
+        expect(row.latest_tx_count).toBe(5);
+        expect(row.latest_balance_fetched_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+        const snapshots = db.prepare("SELECT balance_btc, tx_count FROM address_balances").all() as {
+            balance_btc: number;
+            tx_count: number;
+        }[];
+        expect(snapshots).toHaveLength(1);
+        expect(snapshots[0].balance_btc).toBeCloseTo(0.25, 8);
+        expect(snapshots[0].tx_count).toBe(5);
+    });
+
+    it("appends a new row for every fetch on the same address", async () => {
+        const tracked = await new TrackedAddressesRequests().add(
+            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+            "Hot wallet",
+        );
+
+        fetchMock.mockResolvedValueOnce(mockMempoolResponse(10_000_000, 0, 2));
+        fetchMock.mockResolvedValueOnce(mockMempoolResponse(20_000_000, 0, 3));
+
+        const balances = new AddressBalanceRequests();
+        await balances.execute(tracked.address);
+        await balances.execute(tracked.address);
+
+        const db = dbRef.current!;
+        const snapshots = db
+            .prepare("SELECT balance_btc, tx_count FROM address_balances ORDER BY id")
+            .all() as { balance_btc: number; tx_count: number }[];
+        expect(snapshots).toHaveLength(2);
+        expect(snapshots[0].balance_btc).toBeCloseTo(0.1, 8);
+        expect(snapshots[1].balance_btc).toBeCloseTo(0.2, 8);
+
+        const row = db
+            .prepare("SELECT latest_balance_btc, latest_tx_count FROM addresses WHERE address = ?")
+            .get(tracked.address) as { latest_balance_btc: number; latest_tx_count: number };
+        expect(row.latest_balance_btc).toBeCloseTo(0.2, 8);
+        expect(row.latest_tx_count).toBe(3);
+    });
+
+    it("updates an xpub-derived address and writes to xpub_address_balances", async () => {
+        const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
+        const { addresses } = await new XpubRequests().add(xpub, "Native SegWit", "P2WPKH");
+        const target = addresses[0];
+
+        fetchMock.mockResolvedValueOnce(mockMempoolResponse(30_000_000, 0, 4));
+
+        const result = await new AddressBalanceRequests().execute(target.address);
+        expect(result.btc).toBeCloseTo(0.3, 8);
+
+        const db = dbRef.current!;
+        const row = db
+            .prepare("SELECT latest_balance_btc, latest_tx_count FROM xpub_addresses WHERE address = ?")
+            .get(target.address) as { latest_balance_btc: number; latest_tx_count: number };
+        expect(row.latest_balance_btc).toBeCloseTo(0.3, 8);
+        expect(row.latest_tx_count).toBe(4);
+
+        const snapshots = db
+            .prepare("SELECT balance_btc, tx_count FROM xpub_address_balances")
+            .all() as { balance_btc: number; tx_count: number }[];
+        expect(snapshots).toHaveLength(1);
+        expect(snapshots[0].balance_btc).toBeCloseTo(0.3, 8);
+        expect(snapshots[0].tx_count).toBe(4);
+    });
+
+    it("is a no-op for addresses that are not tracked", async () => {
+        fetchMock.mockResolvedValueOnce(mockMempoolResponse(50_000_000, 0, 1));
+
+        await new AddressBalanceRequests().execute("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+
+        const db = dbRef.current!;
+        const count = db.prepare("SELECT COUNT(*) AS c FROM address_balances").get() as { c: number };
+        expect(count.c).toBe(0);
     });
 });

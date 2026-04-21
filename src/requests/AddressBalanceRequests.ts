@@ -1,4 +1,5 @@
 import { Config } from "../lib/Config";
+import { dbExecute, dbSelect } from "../db";
 
 export type AddressBalance = {
     address: string;
@@ -222,25 +223,9 @@ export class AddressBalanceRequests {
     }
 
     async execute(address: string): Promise<AddressBalance> {
-        if (Config.useMockData) {
-            const mock = MOCK_BALANCES[address];
-            if (!mock) {
-                return {
-                    address,
-                    btc: 0,
-                    txCount: 0,
-                    lastSeen: "-",
-                };
-            }
-            return {
-                address,
-                btc: mock.btc,
-                txCount: mock.txCount,
-                lastSeen: mock.lastSeen,
-            };
-        }
-
-        return this.fetchBalanceFromElectrum(address);
+        const balance = Config.useMockData ? this.mockBalance(address) : await this.fetchBalanceFromElectrum(address);
+        await persistAddressBalance(balance);
+        return balance;
     }
 
     /**
@@ -249,5 +234,41 @@ export class AddressBalanceRequests {
      */
     async executeAll(addresses: string[]): Promise<AddressBalance[]> {
         return Promise.all(addresses.map((address) => this.execute(address)));
+    }
+
+    private mockBalance(address: string): AddressBalance {
+        const mock = MOCK_BALANCES[address];
+        if (!mock) {
+            return { address, btc: 0, txCount: 0, lastSeen: "-" };
+        }
+        return { address, btc: mock.btc, txCount: mock.txCount, lastSeen: mock.lastSeen };
+    }
+}
+
+async function persistAddressBalance(balance: AddressBalance): Promise<void> {
+    const fetchedAt = new Date().toISOString();
+
+    const addressRows = await dbSelect<{ id: number }>("SELECT id FROM addresses WHERE address = ?", [balance.address]);
+    for (const row of addressRows) {
+        await dbExecute(
+            "UPDATE addresses SET latest_balance_btc = ?, latest_tx_count = ?, latest_balance_fetched_at = ?, updated_at = ? WHERE id = ?",
+            [balance.btc, balance.txCount, fetchedAt, fetchedAt, row.id],
+        );
+        await dbExecute(
+            "INSERT INTO address_balances (uuid, address_id, balance_btc, tx_count, fetched_at) VALUES (?, ?, ?, ?, ?)",
+            [crypto.randomUUID(), row.id, balance.btc, balance.txCount, fetchedAt],
+        );
+    }
+
+    const xpubAddressRows = await dbSelect<{ id: number }>("SELECT id FROM xpub_addresses WHERE address = ?", [balance.address]);
+    for (const row of xpubAddressRows) {
+        await dbExecute(
+            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_tx_count = ?, latest_balance_fetched_at = ?, updated_at = ? WHERE id = ?",
+            [balance.btc, balance.txCount, fetchedAt, fetchedAt, row.id],
+        );
+        await dbExecute(
+            "INSERT INTO xpub_address_balances (uuid, xpub_address_id, balance_btc, tx_count, fetched_at) VALUES (?, ?, ?, ?, ?)",
+            [crypto.randomUUID(), row.id, balance.btc, balance.txCount, fetchedAt],
+        );
     }
 }

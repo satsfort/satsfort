@@ -225,4 +225,33 @@ export class XpubRequests {
         );
         await dbExecute("DELETE FROM xpubs WHERE uuid = ?", [id]);
     }
+
+    /**
+     * Recomputes an xpub's aggregate balance from its derived addresses' latest balances,
+     * updates the xpub row, and records a snapshot in xpub_balances.
+     */
+    async saveBalance(id: string): Promise<{ btc: number; txCount: number }> {
+        const xpubRows = await dbSelect<{ id: number }>("SELECT id FROM xpubs WHERE uuid = ?", [id]);
+        if (xpubRows.length === 0) throw new Error("xpub not found");
+        const xpubId = xpubRows[0].id;
+
+        const [totals] = await dbSelect<{ total_btc: number | null; total_tx: number | null }>(
+            "SELECT COALESCE(SUM(latest_balance_btc), 0) AS total_btc, COALESCE(SUM(latest_tx_count), 0) AS total_tx FROM xpub_addresses WHERE xpub_id = ?",
+            [xpubId],
+        );
+        const btc = totals.total_btc ?? 0;
+        const txCount = totals.total_tx ?? 0;
+        const fetchedAt = new Date().toISOString();
+
+        await dbExecute(
+            "UPDATE xpubs SET latest_balance_btc = ?, latest_tx_count = ?, latest_balance_fetched_at = ?, updated_at = ? WHERE id = ?",
+            [btc, txCount, fetchedAt, fetchedAt, xpubId],
+        );
+        await dbExecute(
+            "INSERT INTO xpub_balances (uuid, xpub_id, balance_btc, tx_count, fetched_at) VALUES (?, ?, ?, ?, ?)",
+            [crypto.randomUUID(), xpubId, btc, txCount, fetchedAt],
+        );
+
+        return { btc, txCount };
+    }
 }
