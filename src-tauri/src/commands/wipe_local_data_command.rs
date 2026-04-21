@@ -2,8 +2,7 @@ use tauri::{AppHandle, Manager, State};
 
 use crate::structs::AppState;
 
-#[tauri::command]
-pub async fn wipe_local_data(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn wipe_local_data_for_path(db_path: &std::path::Path, state: &AppState) -> Result<(), String> {
     let pool = {
         let mut lock = state.pool.write().await;
         lock.take()
@@ -16,15 +15,17 @@ pub async fn wipe_local_data(app: AppHandle, state: State<'_, AppState>) -> Resu
     *password_lock = None;
     drop(password_lock);
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("Unable to resolve app data directory: {error}"))?;
+    let db_file_name = db_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "Invalid database path".to_string())?;
+    let wal_name = format!("{db_file_name}-wal");
+    let shm_name = format!("{db_file_name}-shm");
 
     let db_files = [
-        app_data_dir.join("portfolio.db"),
-        app_data_dir.join("portfolio.db-wal"),
-        app_data_dir.join("portfolio.db-shm"),
+        db_path.to_path_buf(),
+        db_path.with_file_name(wal_name),
+        db_path.with_file_name(shm_name),
     ];
 
     for db_file in db_files {
@@ -41,5 +42,15 @@ pub async fn wipe_local_data(app: AppHandle, state: State<'_, AppState>) -> Resu
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn wipe_local_data(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Unable to resolve app data directory: {error}"))?;
+    let db_path = app_data_dir.join("portfolio.db");
+    wipe_local_data_for_path(db_path.as_path(), &state).await
 }
 

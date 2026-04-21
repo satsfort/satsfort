@@ -5,11 +5,10 @@ use tauri::State;
 use crate::structs::AppState;
 use crate::utils::db_query::{bind_json_values, decode_row_value};
 
-#[tauri::command]
-pub async fn db_select(
+pub async fn db_select_with_state(
     query: String,
     values: Vec<JsonValue>,
-    state: State<'_, AppState>,
+    state: &AppState,
 ) -> Result<Vec<JsonMap<String, JsonValue>>, String> {
     let pool = {
         let lock = state.pool.read().await;
@@ -35,5 +34,14 @@ pub async fn db_select(
     }
 
     Ok(result_rows)
+}
+
+#[tauri::command]
+pub async fn db_select(
+    query: String,
+    values: Vec<JsonValue>,
+    state: State<'_, AppState>,
+) -> Result<Vec<JsonMap<String, JsonValue>>, String> {
+    db_select_with_state(query, values, &state).await
 }
 

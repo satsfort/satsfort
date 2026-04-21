@@ -1,6 +1,6 @@
-mod commands;
-mod structs;
-mod utils;
+pub mod commands;
+pub mod structs;
+pub mod utils;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;

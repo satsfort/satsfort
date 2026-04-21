@@ -3,11 +3,10 @@ use tauri::State;
 use crate::structs::AppState;
 use crate::utils::sqlcipher::sqlcipher_pragma_key;
 
-#[tauri::command]
-pub async fn change_vault_password(
+pub async fn change_vault_password_for_state(
     current_password: String,
     new_password: String,
-    state: State<'_, AppState>,
+    state: &AppState,
 ) -> Result<(), String> {
     if current_password.trim().is_empty() {
         return Err("Current password is required".to_string());
@@ -48,5 +47,14 @@ pub async fn change_vault_password(
     *password_lock = None;
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn change_vault_password(
+    current_password: String,
+    new_password: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    change_vault_password_for_state(current_password, new_password, &state).await
 }
 
