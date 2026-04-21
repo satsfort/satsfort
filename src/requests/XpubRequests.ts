@@ -1,6 +1,8 @@
 import { dbExecute, dbSelect } from "../db";
-import { deriveAddressesFromExtendedKey, validateExtendedKey } from "../services/XpubDerivationService";
+import { XpubDerivationService } from "../services/XpubDerivationService";
 import type { AddressDerivationType } from "../services/XpubDerivationService";
+
+const xpubDerivationService = new XpubDerivationService();
 
 /**
  * Supported address derivation types from an xpub/zpub.
@@ -104,7 +106,7 @@ export function validateXpub(xpub: string): string | null {
     }
 
     // Validate that the key can be parsed and used for derivation
-    const derivationError = validateExtendedKey(trimmed);
+    const derivationError = xpubDerivationService.validateExtendedKey(trimmed);
     if (derivationError) {
         return derivationError;
     }
@@ -198,7 +200,7 @@ export class XpubRequests {
         );
         const xpubId = xpubRows[0].id;
 
-        const derivedInfos = deriveAddressesFromExtendedKey(trimmedXpub, derivationType, addressCount);
+        const derivedInfos = xpubDerivationService.deriveAddressesFromExtendedKey(trimmedXpub, derivationType, addressCount);
         const derivedAddresses: DerivedAddress[] = [];
         for (const info of derivedInfos) {
             const addressUuid = crypto.randomUUID();

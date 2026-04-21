@@ -1,8 +1,9 @@
 import { dbExecute, dbSelect } from "../db";
-import { validateBitcoinAddress, detectAddressType } from "../services/BitcoinAddressValidationService";
+import { BitcoinAddressValidationService } from "../services/BitcoinAddressValidationService";
 import type { AddressType } from "../services/BitcoinAddressValidationService";
 
-export { validateBitcoinAddress, detectAddressType };
+const bitcoinAddressValidationService = new BitcoinAddressValidationService();
+
 export type { AddressType };
 
 export type TrackedAddressMeta = {
@@ -42,7 +43,7 @@ export class TrackedAddressesRequests {
         const trimmedAddress = address.trim();
         const trimmedLabel = label.trim();
 
-        const error = await validateBitcoinAddress(trimmedAddress);
+        const error = await bitcoinAddressValidationService.validateBitcoinAddress(trimmedAddress);
         if (error) throw new Error(error);
 
         if (trimmedLabel.length === 0) throw new Error("Label is required");
@@ -53,7 +54,7 @@ export class TrackedAddressesRequests {
         }
 
         const uuid = crypto.randomUUID();
-        const type = detectAddressType(trimmedAddress);
+        const type = bitcoinAddressValidationService.detectAddressType(trimmedAddress);
 
         await dbExecute("INSERT INTO addresses (uuid, label, address, address_type) VALUES (?, ?, ?, ?)", [
             uuid,

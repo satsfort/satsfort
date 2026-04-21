@@ -1,7 +1,9 @@
 import { useState } from "react";
 import "./Modal.css";
-import { validateBitcoinAddress } from "../requests/TrackedAddressesRequests";
+import { BitcoinAddressValidationService } from "../services/BitcoinAddressValidationService";
 import { useEscapeKey } from "../lib/useEscapeKey";
+
+const bitcoinAddressValidationService = new BitcoinAddressValidationService();
 
 type AddAddressModalProps = {
     onClose: () => void;
@@ -19,7 +21,7 @@ export function AddAddressModal({ onClose, onAdd }: AddAddressModalProps) {
         e.preventDefault();
         setError(null);
 
-        const validationError = await validateBitcoinAddress(address);
+        const validationError = await bitcoinAddressValidationService.validateBitcoinAddress(address);
         if (validationError) {
             setError(validationError);
             return;

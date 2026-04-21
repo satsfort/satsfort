@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { validateBitcoinAddress } from "./BitcoinAddressValidationService";
+import { BitcoinAddressValidationService } from "./BitcoinAddressValidationService";
+
+const bitcoinAddressValidationService = new BitcoinAddressValidationService();
 
 describe("validateBitcoinAddress", () => {
     describe("valid addresses", () => {
@@ -17,7 +19,7 @@ describe("validateBitcoinAddress", () => {
 
         for (const addr of validAddresses) {
             it(`accepts ${addr.slice(0, 12)}...`, async () => {
-                expect(await validateBitcoinAddress(addr)).toBeNull();
+                expect(await bitcoinAddressValidationService.validateBitcoinAddress(addr)).toBeNull();
             });
         }
     });
@@ -46,7 +48,7 @@ describe("validateBitcoinAddress", () => {
 
         for (const [addr, expectedSubstring] of invalidCases) {
             it(`rejects "${addr.slice(0, 20)}..." — ${expectedSubstring}`, async () => {
-                const result = await validateBitcoinAddress(addr);
+                const result = await bitcoinAddressValidationService.validateBitcoinAddress(addr);
                 expect(result).not.toBeNull();
                 expect(result).toContain(expectedSubstring);
             });
