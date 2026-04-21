@@ -55,7 +55,7 @@ function App() {
                     <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
                     <main className="content">
                         <div className="content-inner">
-                            {route === "portfolio" && (
+                            <div hidden={route !== "portfolio"}>
                                 <PortfolioPage
                                     unit={unit}
                                     setUnit={setUnit}
@@ -63,17 +63,21 @@ function App() {
                                     onToggleBalances={toggleBalances}
                                     onNavigate={setRoute}
                                 />
-                            )}
-                            {route === "addresses" && (
+                            </div>
+                            <div hidden={route !== "addresses"}>
                                 <AddressesPage
                                     unit={unit}
                                     setUnit={setUnit}
                                     balancesHidden={balancesHidden}
                                     onToggleBalances={toggleBalances}
                                 />
-                            )}
-                            {route === "settings" && <SettingsPage username={user} onLogout={handleLogout} />}
-                            {route === "account" && <AccountPage username={user} onLogout={handleLogout} />}
+                            </div>
+                            <div hidden={route !== "settings"}>
+                                <SettingsPage username={user} onLogout={handleLogout} />
+                            </div>
+                            <div hidden={route !== "account"}>
+                                <AccountPage username={user} onLogout={handleLogout} />
+                            </div>
                         </div>
                     </main>
                     <BottomNav route={route} onNavigate={setRoute} />
