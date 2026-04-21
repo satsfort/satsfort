@@ -103,6 +103,24 @@
     z-index: 40;
 }
 
+@media (max-width: 720px) {
+    .task-popover {
+        position: fixed;
+        top: calc(3.5rem + env(safe-area-inset-top, 0px));
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+        max-height: calc(100vh - 8rem);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .task-list {
+        flex: 1;
+        max-height: none;
+    }
+}
+
 .task-popover-head {
     display: flex;
     justify-content: space-between;
