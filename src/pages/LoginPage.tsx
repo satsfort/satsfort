@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./LoginPage.css";
 import { EyeIcon, EyeOffIcon } from "../components/icons";
 import { getVaultStatus, unlockDb } from "../db";
+import logo from "../img/128x128.png";
 
 type Props = {
     onLogin: (username: string) => void;
@@ -67,7 +68,7 @@ export function LoginPage({ onLogin }: Props) {
             <div className="login-card">
                 <div className="login-brand">
                     <div className="brand-mark">
-                        <span>₿</span>
+                        <img src={logo} alt="Sats Fort" />
                     </div>
                     <div>
                         <div className="brand-name">SATS&nbsp;FORT</div>

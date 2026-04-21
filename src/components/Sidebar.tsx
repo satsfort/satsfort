@@ -1,6 +1,7 @@
 import { AddressIcon, ChartIcon, ChevronLeft, ChevronRight, SettingsIcon, UserIcon } from "./icons";
 import "./Sidebar.css";
 import type { ReactNode } from "react";
+import logo from "../img/128x128.png";
 
 export type Route = "portfolio" | "addresses" | "settings" | "account";
 
@@ -25,7 +26,7 @@ export function Sidebar({ route, onNavigate, collapsed, onToggle }: Props) {
         <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`}>
             <div className="sidebar-brand">
                 <div className="brand-mark">
-                    <span>₿</span>
+                    <img src={logo} alt="Sats Fort" />
                 </div>
                 {!collapsed && <div className="brand-name">SATS&nbsp;FORT</div>}
             </div>

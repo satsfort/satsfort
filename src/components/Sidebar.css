@@ -24,18 +24,17 @@
     width: 2rem;
     height: 2rem;
     flex: 0 0 auto;
-    border: 1px solid var(--orange);
     border-radius: var(--radius);
     display: grid;
     place-items: center;
-    color: var(--orange);
-    font-family: var(--font-mono);
-    font-weight: 600;
-    box-shadow: 0 0 12px var(--orange-glow);
+    overflow: hidden;
 }
 
-.brand-mark span {
-    text-shadow: 0 0 8px var(--orange-glow);
+.brand-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }
 
 .brand-name {
