@@ -1,4 +1,8 @@
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { Config } from "../lib/Config";
+
+const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const httpFetch: typeof fetch = inTauri ? (tauriFetch as unknown as typeof fetch) : fetch;
 
 export type SpotPrice = {
     usd: number;
@@ -15,7 +19,7 @@ const PRICE_SOURCES: PriceFetcher[] = [
     {
         name: "coingecko",
         fetch: async () => {
-            const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+            const res = await httpFetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
             if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
             const data = await res.json();
             return data.bitcoin.usd;
@@ -24,7 +28,7 @@ const PRICE_SOURCES: PriceFetcher[] = [
     {
         name: "coinbase",
         fetch: async () => {
-            const res = await fetch("https://api.coinbase.com/v2/prices/BTC-USD/spot");
+            const res = await httpFetch("https://api.coinbase.com/v2/prices/BTC-USD/spot");
             if (!res.ok) throw new Error(`Coinbase HTTP ${res.status}`);
             const data = await res.json();
             return parseFloat(data.data.amount);
@@ -33,7 +37,7 @@ const PRICE_SOURCES: PriceFetcher[] = [
     {
         name: "kraken",
         fetch: async () => {
-            const res = await fetch("https://api.kraken.com/0/public/Ticker?pair=XBTUSD");
+            const res = await httpFetch("https://api.kraken.com/0/public/Ticker?pair=XBTUSD");
             if (!res.ok) throw new Error(`Kraken HTTP ${res.status}`);
             const data = await res.json();
             const pair = data.result.XXBTZUSD ?? data.result.XBTUSD;
@@ -43,7 +47,7 @@ const PRICE_SOURCES: PriceFetcher[] = [
     {
         name: "blockchain.info",
         fetch: async () => {
-            const res = await fetch("https://blockchain.info/ticker");
+            const res = await httpFetch("https://blockchain.info/ticker");
             if (!res.ok) throw new Error(`Blockchain.info HTTP ${res.status}`);
             const data = await res.json();
             return data.USD.last;

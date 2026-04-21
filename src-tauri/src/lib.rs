@@ -15,6 +15,7 @@ use commands::{
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_http::init())
         .manage(AppState {
             pool: Arc::new(RwLock::new(None)),
             master_password: Arc::new(RwLock::new(None)),

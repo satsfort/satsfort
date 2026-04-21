@@ -3,5 +3,17 @@
     "identifier": "default",
     "description": "Capability for the main window",
     "windows": ["main"],
-    "permissions": ["core:default", "opener:default"]
+    "permissions": [
+        "core:default",
+        "opener:default",
+        {
+            "identifier": "http:default",
+            "allow": [
+                { "url": "https://api.coingecko.com/*" },
+                { "url": "https://api.coinbase.com/*" },
+                { "url": "https://api.kraken.com/*" },
+                { "url": "https://blockchain.info/*" }
+            ]
+        }
+    ]
 }
