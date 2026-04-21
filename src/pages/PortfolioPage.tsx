@@ -35,6 +35,11 @@ type Props = {
 };
 
 export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances }: Props) {
+    const spotPriceRequests = new SpotPriceRequests();
+    const exchangeRateRequests = new ExchangeRateRequests();
+    const portfolioHistoryRequests = new PortfolioHistoryRequests();
+    const transactionHistoryService = new TransactionHistoryService();
+
     const [history, setHistory] = useState<HistoryPoint[] | null>(null);
     const [transactions, setTransactions] = useState<Transaction[] | null>(null);
     const [spot, setSpot] = useState<SpotPrice | null>(null);
@@ -46,15 +51,15 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
     useEffect(() => {
         // TEMP: artificial delay to preview loading state
         const timer = setTimeout(() => {
-            new PortfolioHistoryRequests().execute().then(setHistory);
-            new TransactionHistoryService().execute().then(setTransactions);
-            track("Spot price", () => new SpotPriceRequests().execute())
+            portfolioHistoryRequests.execute().then(setHistory);
+            transactionHistoryService.execute().then(setTransactions);
+            track("Spot price", () => spotPriceRequests.execute())
                 .then(setSpot)
                 .catch((err) => {
                     console.error("Failed to fetch spot price", err);
                     setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
                 });
-            track("Exchange rates", () => new ExchangeRateRequests().execute()).catch(() => {});
+            track("Exchange rates", () => exchangeRateRequests.execute()).catch(() => {});
         }, 2000);
         return () => clearTimeout(timer);
     }, [track]);

@@ -15,6 +15,8 @@ export type AppSettings = {
 const SettingsContext = createContext<AppSettings | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+    const settingsRequests = new SettingsRequests();
+
     const [currency, setCurrency] = useState<FiatCurrency>(() => {
         return SettingsRequests.loadSync().currency;
     });
@@ -24,7 +26,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     const persistSettings = (nextCurrency: FiatCurrency, nextDenomination: Denomination) => {
         const current = SettingsRequests.loadSync();
-        void new SettingsRequests().save({
+        void settingsRequests.save({
             ...current,
             currency: nextCurrency,
             denomination: nextDenomination,

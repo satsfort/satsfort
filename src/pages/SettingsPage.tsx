@@ -13,6 +13,8 @@ type Props = {
 };
 
 export function SettingsPage({ username, onLogout }: Props) {
+    const settingsRequests = new SettingsRequests();
+
     const initialSettings = SettingsRequests.loadSync();
     const { currency, setCurrency, denomination, setDenomination } = useSettings();
     const [useOwnNode, setUseOwnNode] = useState(initialSettings.useOwnNode);
@@ -35,7 +37,7 @@ export function SettingsPage({ username, onLogout }: Props) {
     };
 
     const handleSave = async () => {
-        await new SettingsRequests().save({
+        await settingsRequests.save({
             currency,
             denomination,
             useOwnNode,

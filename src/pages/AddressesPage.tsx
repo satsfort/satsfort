@@ -42,6 +42,12 @@ function shortenXpub(xpub: string) {
 }
 
 export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances }: Props) {
+    const trackedAddressesService = new TrackedAddressesService();
+    const addressBalanceRequests = new AddressBalanceRequests();
+    const trackedAddressesRequests = new TrackedAddressesRequests();
+    const xpubRequests = new XpubRequests();
+    const spotPriceRequests = new SpotPriceRequests();
+
     const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
     const [xpubs, setXpubs] = useState<TrackedXpubMeta[]>([]);
     const [derivedAddresses, setDerivedAddresses] = useState<DerivedAddress[]>([]);
@@ -61,35 +67,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
 
-    useEffect(() => {
-        // TEMP: artificial delay to preview loading state
-        const timer = setTimeout(() => {
-            new TrackedAddressesService().execute().then(setAddresses);
-
-            // Load xpubs and derived addresses, then fetch their balances
-            const xpubRequests = new XpubRequests();
-            void Promise.all([xpubRequests.execute(), xpubRequests.getAllDerivedAddresses()]).then(([loadedXpubs, loadedDerived]) => {
-                setXpubs(loadedXpubs);
-                setDerivedAddresses(loadedDerived);
-                if (loadedDerived.length > 0) {
-                    void fetchDerivedBalances(loadedDerived);
-                }
-            });
-
-            track("Spot price", () => new SpotPriceRequests().execute())
-                .then(setSpot)
-                .catch((err) => {
-                    console.error("Failed to fetch spot price", err);
-                    setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
-                });
-        }, 2000);
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [track]);
-
     /** Fetches balances for a list of derived addresses and merges them into state. */
     const fetchDerivedBalances = async (addresses: DerivedAddress[]) => {
-        const balanceResults = await new AddressBalanceRequests().executeAll(addresses.map((a) => a.address));
+        const balanceResults = await addressBalanceRequests.executeAll(addresses.map((a) => a.address));
         setDerivedBalances((prev) => {
             const next = new Map(prev);
             for (const result of balanceResults) {
@@ -111,7 +91,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const refreshOne = async (addr: TrackedAddress) => {
         setRefreshing(addr.id);
         try {
-            const next = await track(`Fetching balance for ${addr.label}`, () => new AddressBalanceRequests().execute(addr.address));
+            const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceRequests.execute(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
         } catch (err) {
             console.error("Failed to refresh address balance", err);
@@ -139,7 +119,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
             if (addresses && addresses.length > 0) {
                 allTasks.push(
                     track(`Refreshing ${addresses.length} individual addresses`, () =>
-                        new AddressBalanceRequests().executeAll(addresses.map((a) => a.address)),
+                        addressBalanceRequests.executeAll(addresses.map((a) => a.address)),
                     ).then((balances) => {
                         setAddresses((prev) =>
                             (prev ?? []).map((addr) => {
@@ -164,14 +144,14 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     };
 
     const handleAddAddress = async (address: string, label: string) => {
-        const meta = await new TrackedAddressesRequests().add(address, label);
-        const balance = await track(`Fetching balance for ${label}`, () => new AddressBalanceRequests().execute(meta.address));
+        const meta = await trackedAddressesRequests.add(address, label);
+        const balance = await track(`Fetching balance for ${label}`, () => addressBalanceRequests.execute(meta.address));
         const tracked: TrackedAddress = { ...meta, btc: balance.btc, txCount: balance.txCount };
         setAddresses((prev) => [...(prev ?? []), tracked]);
     };
 
     const handleRemove = async (id: string) => {
-        await new TrackedAddressesRequests().remove(id);
+        await trackedAddressesRequests.remove(id);
         setAddresses((prev) => (prev ?? []).filter((a) => a.id !== id));
     };
 
@@ -205,6 +185,31 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const totalAddressCount = (addresses?.length ?? 0) + derivedAddresses.length;
     const hasAnyData = totalAddressCount > 0 || xpubs.length > 0;
     const xpubTotal = Array.from(derivedBalances.values()).reduce((s, b) => s + b.btc, 0);
+
+    useEffect(() => {
+        // TEMP: artificial delay to preview loading state
+        const timer = setTimeout(() => {
+            trackedAddressesService.execute().then(setAddresses);
+
+            // Load xpubs and derived addresses, then fetch their balances
+            void Promise.all([xpubRequests.execute(), xpubRequests.getAllDerivedAddresses()]).then(([loadedXpubs, loadedDerived]) => {
+                setXpubs(loadedXpubs);
+                setDerivedAddresses(loadedDerived);
+                if (loadedDerived.length > 0) {
+                    void fetchDerivedBalances(loadedDerived);
+                }
+            });
+
+            track("Spot price", () => spotPriceRequests.execute())
+                .then(setSpot)
+                .catch((err) => {
+                    console.error("Failed to fetch spot price", err);
+                    setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+                });
+        }, 2000);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [track]);
 
     if (addresses === null || !spot) {
         return (
