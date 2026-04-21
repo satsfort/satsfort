@@ -168,29 +168,36 @@ describe("XpubRequests", () => {
 
         const db = dbRef.current!;
         db.prepare(
-            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_tx_count = ? WHERE address_index IN (0, 1)",
-        ).run(0.5, 3);
+            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_balance_usd = ?, latest_tx_count = ? WHERE address_index IN (0, 1)",
+        ).run(0.5, 50_000, 3);
         db.prepare(
-            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_tx_count = ? WHERE address_index = 2",
-        ).run(0.25, 1);
+            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_balance_usd = ?, latest_tx_count = ? WHERE address_index = 2",
+        ).run(0.25, 25_000, 1);
 
         const totals = await requests.saveBalance(result.xpub.id);
         expect(totals.btc).toBeCloseTo(1.25, 8);
+        expect(totals.usd).toBeCloseTo(125_000, 4);
         expect(totals.txCount).toBe(7);
 
-        const xpubRow = db.prepare("SELECT latest_balance_btc, latest_tx_count FROM xpubs WHERE uuid = ?").get(result.xpub.id) as {
+        const xpubRow = db
+            .prepare("SELECT latest_balance_btc, latest_balance_usd, latest_tx_count FROM xpubs WHERE uuid = ?")
+            .get(result.xpub.id) as {
             latest_balance_btc: number;
+            latest_balance_usd: number;
             latest_tx_count: number;
         };
         expect(xpubRow.latest_balance_btc).toBeCloseTo(1.25, 8);
+        expect(xpubRow.latest_balance_usd).toBeCloseTo(125_000, 4);
         expect(xpubRow.latest_tx_count).toBe(7);
 
-        const snapshots = db.prepare("SELECT balance_btc, tx_count FROM xpub_balances").all() as {
+        const snapshots = db.prepare("SELECT balance_btc, balance_usd, tx_count FROM xpub_balances").all() as {
             balance_btc: number;
+            balance_usd: number;
             tx_count: number;
         }[];
         expect(snapshots).toHaveLength(1);
         expect(snapshots[0].balance_btc).toBeCloseTo(1.25, 8);
+        expect(snapshots[0].balance_usd).toBeCloseTo(125_000, 4);
         expect(snapshots[0].tx_count).toBe(7);
     });
 

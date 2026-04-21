@@ -1,5 +1,6 @@
 import { Config } from "../lib/Config";
 import { dbExecute, dbSelect } from "../db";
+import { SpotPriceRequests } from "./SpotPriceRequests";
 
 export type AddressBalance = {
     address: string;
@@ -222,18 +223,20 @@ export class AddressBalanceRequests {
         throw new Error(`Failed to fetch balance from all endpoints: ${errorMessages}`);
     }
 
-    async execute(address: string): Promise<AddressBalance> {
+    async execute(address: string, spotUsd?: number): Promise<AddressBalance> {
+        const spot = spotUsd ?? (await new SpotPriceRequests().execute()).usd;
         const balance = Config.useMockData ? this.mockBalance(address) : await this.fetchBalanceFromElectrum(address);
-        await persistAddressBalance(balance);
+        await persistAddressBalance(balance, spot);
         return balance;
     }
 
     /**
      * Fetches balances for multiple addresses in parallel.
-     * Useful for refreshing all addresses at once.
+     * Fetches spot price once so every address is valued against the same price.
      */
     async executeAll(addresses: string[]): Promise<AddressBalance[]> {
-        return Promise.all(addresses.map((address) => this.execute(address)));
+        const spot = (await new SpotPriceRequests().execute()).usd;
+        return Promise.all(addresses.map((address) => this.execute(address, spot)));
     }
 
     private mockBalance(address: string): AddressBalance {
@@ -245,30 +248,31 @@ export class AddressBalanceRequests {
     }
 }
 
-async function persistAddressBalance(balance: AddressBalance): Promise<void> {
+async function persistAddressBalance(balance: AddressBalance, spotUsd: number): Promise<void> {
     const fetchedAt = new Date().toISOString();
+    const usd = balance.btc * spotUsd;
 
     const addressRows = await dbSelect<{ id: number }>("SELECT id FROM addresses WHERE address = ?", [balance.address]);
     for (const row of addressRows) {
         await dbExecute(
-            "UPDATE addresses SET latest_balance_btc = ?, latest_tx_count = ?, latest_balance_fetched_at = ?, updated_at = ? WHERE id = ?",
-            [balance.btc, balance.txCount, fetchedAt, fetchedAt, row.id],
+            "UPDATE addresses SET latest_balance_btc = ?, latest_balance_usd = ?, latest_tx_count = ?, latest_balance_fetched_at = ?, updated_at = ? WHERE id = ?",
+            [balance.btc, usd, balance.txCount, fetchedAt, fetchedAt, row.id],
         );
         await dbExecute(
-            "INSERT INTO address_balances (uuid, address_id, balance_btc, tx_count, fetched_at) VALUES (?, ?, ?, ?, ?)",
-            [crypto.randomUUID(), row.id, balance.btc, balance.txCount, fetchedAt],
+            "INSERT INTO address_balances (uuid, address_id, balance_btc, balance_usd, tx_count, fetched_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [crypto.randomUUID(), row.id, balance.btc, usd, balance.txCount, fetchedAt],
         );
     }
 
     const xpubAddressRows = await dbSelect<{ id: number }>("SELECT id FROM xpub_addresses WHERE address = ?", [balance.address]);
     for (const row of xpubAddressRows) {
         await dbExecute(
-            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_tx_count = ?, latest_balance_fetched_at = ?, updated_at = ? WHERE id = ?",
-            [balance.btc, balance.txCount, fetchedAt, fetchedAt, row.id],
+            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_balance_usd = ?, latest_tx_count = ?, latest_balance_fetched_at = ?, updated_at = ? WHERE id = ?",
+            [balance.btc, usd, balance.txCount, fetchedAt, fetchedAt, row.id],
         );
         await dbExecute(
-            "INSERT INTO xpub_address_balances (uuid, xpub_address_id, balance_btc, tx_count, fetched_at) VALUES (?, ?, ?, ?, ?)",
-            [crypto.randomUUID(), row.id, balance.btc, balance.txCount, fetchedAt],
+            "INSERT INTO xpub_address_balances (uuid, xpub_address_id, balance_btc, balance_usd, tx_count, fetched_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [crypto.randomUUID(), row.id, balance.btc, usd, balance.txCount, fetchedAt],
         );
     }
 }

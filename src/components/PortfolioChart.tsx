@@ -51,7 +51,8 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
     const tickValues = Array.from({ length: yTicks + 1 }, (_, i) => minBtc + (i * (maxBtc - minBtc)) / yTicks);
 
     const xTickCount = Math.min(6, points.length);
-    const xTickIndexes = Array.from({ length: xTickCount }, (_, i) => Math.round((i * (points.length - 1)) / (xTickCount - 1)));
+    const tickDivisor = Math.max(1, xTickCount - 1);
+    const xTickIndexes = Array.from({ length: xTickCount }, (_, i) => Math.round((i * (points.length - 1)) / tickDivisor));
 
     const hovered = hover !== null ? points[hover] : null;
 

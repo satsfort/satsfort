@@ -4,6 +4,7 @@ import { dbExecute, dbSelect } from "../db";
 export type HistoryPoint = {
     date: string;
     btc: number;
+    usd: number;
 };
 
 const TARGET_BTC = 2.1;
@@ -12,6 +13,7 @@ const END_DATE = new Date("2026-04-18T00:00:00Z");
 
 type PortfolioValueRow = {
     balance_btc: number;
+    balance_usd: number;
     fetched_at: string;
 };
 
@@ -20,33 +22,40 @@ export class PortfolioHistoryRequests {
         if (Config.useMockData) return this.buildMock();
 
         const rows = await dbSelect<PortfolioValueRow>(
-            "SELECT balance_btc, fetched_at FROM portfolio_value ORDER BY fetched_at ASC",
+            "SELECT balance_btc, balance_usd, fetched_at FROM portfolio_value ORDER BY fetched_at ASC",
         );
-        return rows.map((row) => ({ date: row.fetched_at.slice(0, 10), btc: row.balance_btc }));
+        return rows.map((row) => ({ date: row.fetched_at.slice(0, 10), btc: row.balance_btc, usd: row.balance_usd }));
     }
 
     /**
      * Computes the current total portfolio value as the sum of the latest known
      * balances for all tracked addresses and xpubs, and records a snapshot in
-     * the portfolio_value table.
+     * the portfolio_value table. Skips writing a snapshot when nothing is tracked
+     * so an empty database stays empty rather than accumulating zero-valued rows.
      */
-    async snapshot(): Promise<HistoryPoint> {
-        const [totals] = await dbSelect<{ total_btc: number | null }>(
-            "SELECT COALESCE((SELECT SUM(latest_balance_btc) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_btc) FROM xpubs), 0) AS total_btc",
+    async snapshot(): Promise<HistoryPoint | null> {
+        const [counts] = await dbSelect<{ tracked: number }>(
+            "SELECT (SELECT COUNT(*) FROM addresses) + (SELECT COUNT(*) FROM xpubs) AS tracked",
+        );
+        if (counts.tracked === 0) return null;
+
+        const [totals] = await dbSelect<{ total_btc: number | null; total_usd: number | null }>(
+            "SELECT COALESCE((SELECT SUM(latest_balance_btc) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_btc) FROM xpubs), 0) AS total_btc, COALESCE((SELECT SUM(latest_balance_usd) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_usd) FROM xpubs), 0) AS total_usd",
         );
         const btc = totals.total_btc ?? 0;
+        const usd = totals.total_usd ?? 0;
         const fetchedAt = new Date().toISOString();
 
         await dbExecute(
-            "INSERT INTO portfolio_value (uuid, balance_btc, fetched_at) VALUES (?, ?, ?)",
-            [crypto.randomUUID(), btc, fetchedAt],
+            "INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)",
+            [crypto.randomUUID(), btc, usd, fetchedAt],
         );
 
-        return { date: fetchedAt.slice(0, 10), btc };
+        return { date: fetchedAt.slice(0, 10), btc, usd };
     }
 
     private buildMock(): HistoryPoint[] {
-        const raw: HistoryPoint[] = [];
+        const raw: { date: string; btc: number }[] = [];
         let btc = 0;
 
         for (let i = 0; i <= WEEKS; i++) {
@@ -64,9 +73,15 @@ export class PortfolioHistoryRequests {
         }
 
         const scale = TARGET_BTC / raw[raw.length - 1].btc;
-        return raw.map((p) => ({
-            date: p.date,
-            btc: Math.round(p.btc * scale * 1e8) / 1e8,
-        }));
+        return raw.map((p) => {
+            const scaledBtc = Math.round(p.btc * scale * 1e8) / 1e8;
+            return {
+                date: p.date,
+                btc: scaledBtc,
+                usd: scaledBtc * MOCK_SPOT_USD,
+            };
+        });
     }
 }
+
+const MOCK_SPOT_USD = 94_820;

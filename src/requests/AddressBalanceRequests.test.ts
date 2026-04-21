@@ -22,6 +22,16 @@ vi.mock("@tauri-apps/api/core", () => ({
     }),
 }));
 
+const TEST_SPOT_USD = 100_000;
+
+vi.mock("./SpotPriceRequests", () => ({
+    SpotPriceRequests: class {
+        async execute() {
+            return { usd: TEST_SPOT_USD, source: "test", asOf: new Date().toISOString() };
+        }
+    },
+}));
+
 import { AddressBalanceRequests } from "./AddressBalanceRequests";
 import { TrackedAddressesRequests } from "./TrackedAddressesRequests";
 import { XpubRequests } from "./XpubRequests";
@@ -133,18 +143,28 @@ describe("AddressBalanceRequests persistence", () => {
 
         const db = dbRef.current!;
         const row = db
-            .prepare("SELECT latest_balance_btc, latest_tx_count, latest_balance_fetched_at FROM addresses WHERE address = ?")
-            .get(tracked.address) as { latest_balance_btc: number; latest_tx_count: number; latest_balance_fetched_at: string };
+            .prepare(
+                "SELECT latest_balance_btc, latest_balance_usd, latest_tx_count, latest_balance_fetched_at FROM addresses WHERE address = ?",
+            )
+            .get(tracked.address) as {
+            latest_balance_btc: number;
+            latest_balance_usd: number;
+            latest_tx_count: number;
+            latest_balance_fetched_at: string;
+        };
         expect(row.latest_balance_btc).toBeCloseTo(0.25, 8);
+        expect(row.latest_balance_usd).toBeCloseTo(0.25 * TEST_SPOT_USD, 4);
         expect(row.latest_tx_count).toBe(5);
         expect(row.latest_balance_fetched_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
-        const snapshots = db.prepare("SELECT balance_btc, tx_count FROM address_balances").all() as {
+        const snapshots = db.prepare("SELECT balance_btc, balance_usd, tx_count FROM address_balances").all() as {
             balance_btc: number;
+            balance_usd: number;
             tx_count: number;
         }[];
         expect(snapshots).toHaveLength(1);
         expect(snapshots[0].balance_btc).toBeCloseTo(0.25, 8);
+        expect(snapshots[0].balance_usd).toBeCloseTo(0.25 * TEST_SPOT_USD, 4);
         expect(snapshots[0].tx_count).toBe(5);
     });
 
@@ -188,16 +208,18 @@ describe("AddressBalanceRequests persistence", () => {
 
         const db = dbRef.current!;
         const row = db
-            .prepare("SELECT latest_balance_btc, latest_tx_count FROM xpub_addresses WHERE address = ?")
-            .get(target.address) as { latest_balance_btc: number; latest_tx_count: number };
+            .prepare("SELECT latest_balance_btc, latest_balance_usd, latest_tx_count FROM xpub_addresses WHERE address = ?")
+            .get(target.address) as { latest_balance_btc: number; latest_balance_usd: number; latest_tx_count: number };
         expect(row.latest_balance_btc).toBeCloseTo(0.3, 8);
+        expect(row.latest_balance_usd).toBeCloseTo(0.3 * TEST_SPOT_USD, 4);
         expect(row.latest_tx_count).toBe(4);
 
         const snapshots = db
-            .prepare("SELECT balance_btc, tx_count FROM xpub_address_balances")
-            .all() as { balance_btc: number; tx_count: number }[];
+            .prepare("SELECT balance_btc, balance_usd, tx_count FROM xpub_address_balances")
+            .all() as { balance_btc: number; balance_usd: number; tx_count: number }[];
         expect(snapshots).toHaveLength(1);
         expect(snapshots[0].balance_btc).toBeCloseTo(0.3, 8);
+        expect(snapshots[0].balance_usd).toBeCloseTo(0.3 * TEST_SPOT_USD, 4);
         expect(snapshots[0].tx_count).toBe(4);
     });
 

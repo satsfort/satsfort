@@ -5,6 +5,7 @@ CREATE TABLE addresses (
     address TEXT NOT NULL UNIQUE,
     address_type TEXT NOT NULL,
     latest_balance_btc REAL,
+    latest_balance_usd REAL,
     latest_tx_count INTEGER,
     latest_balance_fetched_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -19,6 +20,7 @@ CREATE TABLE xpubs (
     derivation_type TEXT NOT NULL,
     address_count INTEGER NOT NULL,
     latest_balance_btc REAL,
+    latest_balance_usd REAL,
     latest_tx_count INTEGER,
     latest_balance_fetched_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -33,6 +35,7 @@ CREATE TABLE xpub_addresses (
     derivation_path TEXT NOT NULL,
     address_index INTEGER NOT NULL,
     latest_balance_btc REAL,
+    latest_balance_usd REAL,
     latest_tx_count INTEGER,
     latest_balance_fetched_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -44,6 +47,7 @@ CREATE TABLE address_balances (
     uuid TEXT NOT NULL UNIQUE,
     address_id INTEGER NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
     balance_btc REAL NOT NULL,
+    balance_usd REAL NOT NULL,
     tx_count INTEGER NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -53,6 +57,7 @@ CREATE TABLE xpub_balances (
     uuid TEXT NOT NULL UNIQUE,
     xpub_id INTEGER NOT NULL REFERENCES xpubs(id) ON DELETE CASCADE,
     balance_btc REAL NOT NULL,
+    balance_usd REAL NOT NULL,
     tx_count INTEGER NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -62,6 +67,7 @@ CREATE TABLE xpub_address_balances (
     uuid TEXT NOT NULL UNIQUE,
     xpub_address_id INTEGER NOT NULL REFERENCES xpub_addresses(id) ON DELETE CASCADE,
     balance_btc REAL NOT NULL,
+    balance_usd REAL NOT NULL,
     tx_count INTEGER NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -70,5 +76,6 @@ CREATE TABLE portfolio_value (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uuid TEXT NOT NULL UNIQUE,
     balance_btc REAL NOT NULL,
+    balance_usd REAL NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
