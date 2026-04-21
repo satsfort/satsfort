@@ -12,10 +12,12 @@ export type Transaction = {
 const SOURCES = ["Coldcard", "Jade", "Strike", "Kraken", "River"];
 
 export class TransactionHistoryService {
+    private readonly portfolioHistoryRequests = new PortfolioHistoryRequests();
+
     constructor(private limit: number = 6) {}
 
     async execute(): Promise<Transaction[]> {
-        const history = await new PortfolioHistoryRequests().execute();
+        const history = await this.portfolioHistoryRequests.execute();
         return this.buildMock(history);
     }
 
