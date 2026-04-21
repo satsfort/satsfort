@@ -10,7 +10,6 @@ import { AccountPage } from "./pages/AccountPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SettingsProvider } from "./lib/SettingsContext";
 import { TaskNotificationsProvider } from "./lib/TaskNotificationsContext";
-import { TaskNotifications } from "./components/TaskNotifications";
 import { PortfolioHistoryRequests } from "./requests/PortfolioHistoryRequests";
 import type { Unit } from "./lib/format";
 import { lockDb } from "./db";
@@ -81,7 +80,6 @@ function App() {
                         </div>
                     </main>
                     <BottomNav route={route} onNavigate={setRoute} />
-                    <TaskNotifications />
                 </div>
             </TaskNotificationsProvider>
         </SettingsProvider>

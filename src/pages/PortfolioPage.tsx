@@ -16,6 +16,7 @@ import { formatAmount, formatBtcLabel, formatNumber, formatSecondary, formatSymb
 import { useSettings } from "../lib/SettingsContext";
 import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
 import { LoadingIndicator } from "../components/LoadingIndicator";
+import { TaskNotifications } from "../components/TaskNotifications";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
 
 type Props = {
@@ -88,6 +89,9 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         <div className="eyebrow">Dashboard</div>
                         <h1 className="page-title">Portfolio</h1>
                     </div>
+                    <div className="page-actions">
+                        <TaskNotifications />
+                    </div>
                 </header>
                 <EmptyState
                     icon={<BarChartIcon size={56} />}
@@ -148,6 +152,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                             {formatSymbol("FIAT", currency)} {currency}
                         </button>
                     </div>
+                    <TaskNotifications />
                 </div>
             </header>
 

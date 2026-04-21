@@ -1,4 +1,5 @@
 import "./AccountPage.css";
+import { TaskNotifications } from "../components/TaskNotifications";
 
 type Props = {
     username: string;
@@ -18,6 +19,7 @@ export function AccountPage({ username, onLogout }: Props) {
                     <button className="btn btn-danger" onClick={onLogout}>
                         Log Out
                     </button>
+                    <TaskNotifications />
                 </div>
             </header>
 

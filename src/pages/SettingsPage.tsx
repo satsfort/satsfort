@@ -5,6 +5,7 @@ import type { FiatCurrency } from "../lib/SettingsContext";
 import { SettingsRequests, type PriceSource } from "../requests/SettingsRequests";
 import { ChangePasswordModal } from "../components/ChangePasswordModal";
 import { ConfirmWipeLocalDataModal } from "../components/ConfirmWipeLocalDataModal";
+import { TaskNotifications } from "../components/TaskNotifications";
 import { wipeLocalData } from "../db";
 
 type Props = {
@@ -67,6 +68,7 @@ export function SettingsPage({ username, onLogout }: Props) {
                     <button className="btn btn-primary" onClick={() => void handleSave()}>
                         Save Changes
                     </button>
+                    <TaskNotifications />
                 </div>
             </header>
 

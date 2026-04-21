@@ -21,6 +21,7 @@ import { ConfirmRemoveAddressModal } from "../components/ConfirmRemoveAddressMod
 import { ImportXpubModal } from "../components/ImportXpubModal";
 import { ConfirmRemoveXpubModal } from "../components/ConfirmRemoveXpubModal";
 import { LoadingIndicator } from "../components/LoadingIndicator";
+import { TaskNotifications } from "../components/TaskNotifications";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
 
 type Props = {
@@ -246,6 +247,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                             + Add Address
                         </button>
+                        <TaskNotifications />
                     </div>
                 </header>
                 <EmptyState
@@ -313,6 +315,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
                     <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                         + Add Address
                     </button>
+                    <TaskNotifications />
                 </div>
             </header>
 
