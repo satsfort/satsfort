@@ -1,5 +1,75 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+type DbRow = Record<string, unknown>;
+
+const xpubRows: DbRow[] = [];
+const xpubAddressRows: DbRow[] = [];
+
+vi.mock("../db", () => ({
+    dbExecute: vi.fn(async (query: string, values: unknown[] = []) => {
+        if (query.startsWith("INSERT INTO xpubs")) {
+            const [uuid, label, xpub, derivation_type, address_count] = values as [string, string, string, string, number];
+            xpubRows.push({
+                uuid,
+                label,
+                xpub,
+                derivation_type,
+                address_count,
+                created_at: new Date().toISOString().replace("T", " ").slice(0, 19),
+            });
+            return 1;
+        }
+        if (query.startsWith("INSERT INTO xpub_addresses")) {
+            const [uuid, xpub_uuid, address, derivation_path, address_index] = values as [string, string, string, string, number];
+            xpubAddressRows.push({ uuid, xpub_uuid, address, derivation_path, address_index });
+            return 1;
+        }
+        if (query.startsWith("DELETE FROM xpub_addresses")) {
+            const [xpub_uuid] = values as [string];
+            for (let i = xpubAddressRows.length - 1; i >= 0; i--) {
+                if (xpubAddressRows[i].xpub_uuid === xpub_uuid) xpubAddressRows.splice(i, 1);
+            }
+            return 1;
+        }
+        if (query.startsWith("DELETE FROM xpubs")) {
+            const [uuid] = values as [string];
+            const index = xpubRows.findIndex((row) => row.uuid === uuid);
+            if (index !== -1) xpubRows.splice(index, 1);
+            return 1;
+        }
+        return 0;
+    }),
+    dbSelect: vi.fn(async (query: string, values: unknown[] = []) => {
+        if (query.includes("FROM xpubs WHERE xpub = ?")) {
+            const [xpub] = values as [string];
+            return xpubRows.filter((row) => row.xpub === xpub);
+        }
+        if (query.includes("FROM xpubs WHERE uuid = ?")) {
+            const [uuid] = values as [string];
+            return xpubRows.filter((row) => row.uuid === uuid);
+        }
+        if (query.includes("FROM xpubs")) {
+            return [...xpubRows];
+        }
+        if (query.includes("FROM xpub_addresses WHERE xpub_uuid = ?")) {
+            const [xpub_uuid] = values as [string];
+            return xpubAddressRows
+                .filter((row) => row.xpub_uuid === xpub_uuid)
+                .sort((a, b) => (a.address_index as number) - (b.address_index as number));
+        }
+        if (query.includes("FROM xpub_addresses")) {
+            return [...xpubAddressRows];
+        }
+        return [];
+    }),
+}));
+
 import { validateXpub, getDefaultDerivationType, XpubRequests } from "./XpubRequests";
+
+beforeEach(() => {
+    xpubRows.length = 0;
+    xpubAddressRows.length = 0;
+});
 
 describe("validateXpub", () => {
     describe("valid xpubs", () => {
@@ -98,8 +168,8 @@ describe("XpubRequests", () => {
     });
 
     it("throws error for duplicate xpub", async () => {
-        // Use the same zpub that was already added in the first test
         const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
+        await requests.add(xpub, "Original Wallet", "P2WPKH");
         await expect(requests.add(xpub, "Duplicate Wallet", "P2WPKH")).rejects.toThrow("already being tracked");
     });
 });

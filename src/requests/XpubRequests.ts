@@ -1,4 +1,4 @@
-import { Config } from "../lib/Config";
+import { dbExecute, dbSelect } from "../db";
 import { deriveAddressesFromExtendedKey, validateExtendedKey } from "../services/XpubDerivationService";
 import type { AddressDerivationType } from "../services/XpubDerivationService";
 
@@ -30,39 +30,43 @@ export type DerivedAddress = {
     index: number;
 };
 
-// In-memory store for user-added xpubs
-const userXpubs: TrackedXpubMeta[] = [];
-const derivedAddresses: DerivedAddress[] = [];
+type XpubRow = {
+    uuid: string;
+    label: string;
+    xpub: string;
+    derivation_type: string;
+    address_count: number;
+    created_at: string;
+};
 
-let nextXpubId = 1;
+type XpubAddressRow = {
+    uuid: string;
+    xpub_uuid: string;
+    address: string;
+    derivation_path: string;
+    address_index: number;
+};
 
-const MOCK_XPUBS: TrackedXpubMeta[] = [
-    {
-        id: "xpub-mock-1",
-        label: "Hardware Wallet · Ledger",
-        xpub: "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs",
-        derivationType: "P2WPKH",
-        added: "2024-03-15",
-        addressCount: 20,
-    },
-];
+function rowToXpubMeta(row: XpubRow): TrackedXpubMeta {
+    return {
+        id: row.uuid,
+        label: row.label,
+        xpub: row.xpub,
+        derivationType: row.derivation_type as DerivationType,
+        added: row.created_at.slice(0, 10),
+        addressCount: row.address_count,
+    };
+}
 
-const MOCK_DERIVED_ADDRESSES: DerivedAddress[] = [
-    {
-        id: "derived-mock-1",
-        xpubId: "xpub-mock-1",
-        address: "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu",
-        derivationPath: "m/84'/0'/0'/0/0",
-        index: 0,
-    },
-    {
-        id: "derived-mock-2",
-        xpubId: "xpub-mock-1",
-        address: "bc1qnjg0jd8228aq7ez4a38sma2lj0ywk7xj8wvqef",
-        derivationPath: "m/84'/0'/0'/0/1",
-        index: 1,
-    },
-];
+function rowToDerivedAddress(row: XpubAddressRow): DerivedAddress {
+    return {
+        id: row.uuid,
+        xpubId: row.xpub_uuid,
+        address: row.address,
+        derivationPath: row.derivation_path,
+        index: row.address_index,
+    };
+}
 
 /**
  * Validates an xpub/zpub/ypub format.
@@ -123,50 +127,36 @@ export function getDefaultDerivationType(xpub: string): DerivationType {
     }
 }
 
-/**
- * Derives addresses from an xpub using proper BIP32 derivation.
- */
-function deriveAddressesFromXpub(xpubId: string, xpub: string, derivationType: DerivationType, count: number): DerivedAddress[] {
-    const derivedInfos = deriveAddressesFromExtendedKey(xpub, derivationType, count);
-
-    return derivedInfos.map((info) => ({
-        id: `derived-${xpubId}-${info.index}`,
-        xpubId,
-        address: info.address,
-        derivationPath: info.derivationPath,
-        index: info.index,
-    }));
-}
-
 export class XpubRequests {
     /**
      * Gets all tracked xpubs.
      */
     async execute(): Promise<TrackedXpubMeta[]> {
-        if (Config.useMockData) {
-            return [...MOCK_XPUBS, ...userXpubs];
-        }
-        return [...userXpubs];
+        const rows = await dbSelect<XpubRow>(
+            "SELECT uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs ORDER BY id",
+        );
+        return rows.map(rowToXpubMeta);
     }
 
     /**
      * Gets all derived addresses for a specific xpub.
      */
     async getDerivedAddresses(xpubId: string): Promise<DerivedAddress[]> {
-        if (Config.useMockData && xpubId.startsWith("xpub-mock")) {
-            return MOCK_DERIVED_ADDRESSES.filter((a) => a.xpubId === xpubId);
-        }
-        return derivedAddresses.filter((a) => a.xpubId === xpubId);
+        const rows = await dbSelect<XpubAddressRow>(
+            "SELECT uuid, xpub_uuid, address, derivation_path, address_index FROM xpub_addresses WHERE xpub_uuid = ? ORDER BY address_index",
+            [xpubId],
+        );
+        return rows.map(rowToDerivedAddress);
     }
 
     /**
      * Gets all derived addresses for all xpubs.
      */
     async getAllDerivedAddresses(): Promise<DerivedAddress[]> {
-        if (Config.useMockData) {
-            return [...MOCK_DERIVED_ADDRESSES, ...derivedAddresses];
-        }
-        return [...derivedAddresses];
+        const rows = await dbSelect<XpubAddressRow>(
+            "SELECT uuid, xpub_uuid, address, derivation_path, address_index FROM xpub_addresses ORDER BY xpub_uuid, address_index",
+        );
+        return rows.map(rowToDerivedAddress);
     }
 
     /**
@@ -185,47 +175,49 @@ export class XpubRequests {
 
         if (trimmedLabel.length === 0) throw new Error("Label is required");
 
-        // Check for duplicates
-        const allXpubs = Config.useMockData ? [...MOCK_XPUBS, ...userXpubs] : [...userXpubs];
-        if (allXpubs.some((x) => x.xpub === trimmedXpub)) {
+        const existing = await dbSelect<{ uuid: string }>("SELECT uuid FROM xpubs WHERE xpub = ?", [trimmedXpub]);
+        if (existing.length > 0) {
             throw new Error("This extended public key is already being tracked");
         }
 
         const addressCount = 20;
-        const id = `xpub-${nextXpubId++}`;
+        const xpubUuid = crypto.randomUUID();
 
-        const meta: TrackedXpubMeta = {
-            id,
-            label: trimmedLabel,
-            xpub: trimmedXpub,
-            derivationType,
-            added: new Date().toISOString().slice(0, 10),
-            addressCount,
-        };
+        await dbExecute(
+            "INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)",
+            [xpubUuid, trimmedLabel, trimmedXpub, derivationType, addressCount],
+        );
 
-        // Derive addresses using proper BIP32 derivation
-        const newAddresses = deriveAddressesFromXpub(id, trimmedXpub, derivationType, addressCount);
+        const derivedInfos = deriveAddressesFromExtendedKey(trimmedXpub, derivationType, addressCount);
+        const derivedAddresses: DerivedAddress[] = [];
+        for (const info of derivedInfos) {
+            const addressUuid = crypto.randomUUID();
+            await dbExecute(
+                "INSERT INTO xpub_addresses (uuid, xpub_uuid, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)",
+                [addressUuid, xpubUuid, info.address, info.derivationPath, info.index],
+            );
+            derivedAddresses.push({
+                id: addressUuid,
+                xpubId: xpubUuid,
+                address: info.address,
+                derivationPath: info.derivationPath,
+                index: info.index,
+            });
+        }
 
-        userXpubs.push(meta);
-        derivedAddresses.push(...newAddresses);
+        const xpubRows = await dbSelect<XpubRow>(
+            "SELECT uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs WHERE uuid = ?",
+            [xpubUuid],
+        );
 
-        return { xpub: meta, addresses: newAddresses };
+        return { xpub: rowToXpubMeta(xpubRows[0]), addresses: derivedAddresses };
     }
 
     /**
      * Removes an xpub and all its derived addresses.
      */
     async remove(id: string): Promise<void> {
-        const xpubIndex = userXpubs.findIndex((x) => x.id === id);
-        if (xpubIndex !== -1) {
-            userXpubs.splice(xpubIndex, 1);
-        }
-
-        // Remove all derived addresses for this xpub
-        for (let i = derivedAddresses.length - 1; i >= 0; i--) {
-            if (derivedAddresses[i].xpubId === id) {
-                derivedAddresses.splice(i, 1);
-            }
-        }
+        await dbExecute("DELETE FROM xpub_addresses WHERE xpub_uuid = ?", [id]);
+        await dbExecute("DELETE FROM xpubs WHERE uuid = ?", [id]);
     }
 }

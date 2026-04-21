@@ -1,4 +1,4 @@
-import { Config } from "../lib/Config";
+import { dbExecute, dbSelect } from "../db";
 import { validateBitcoinAddress, detectAddressType } from "../services/BitcoinAddressValidationService";
 import type { AddressType } from "../services/BitcoinAddressValidationService";
 
@@ -14,56 +14,30 @@ export type TrackedAddressMeta = {
     xpub?: boolean;
 };
 
-const MOCK_ADDRESSES: TrackedAddressMeta[] = [
-    {
-        id: "a1",
-        label: "Cold Storage · Coldcard Mk4",
-        address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-        type: "Segwit",
-        added: "2024-05-02",
-        xpub: true,
-    },
-    {
-        id: "a2",
-        label: "Savings · Jade",
-        address: "bc1pqqqsyqcyq5rqwzqfpg9scrgwpugpzysnzs23v9ccrydpk8qarc0sj9hjuh",
-        type: "Taproot",
-        added: "2024-09-14",
-    },
-    {
-        id: "a3",
-        label: "Hot Wallet · Strike",
-        address: "bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c",
-        type: "Segwit",
-        added: "2025-01-10",
-    },
-    {
-        id: "a4",
-        label: "Legacy Stack",
-        address: "1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX",
-        type: "Legacy",
-        added: "2024-04-18",
-    },
-    {
-        id: "a5",
-        label: "Lightning Collateral",
-        address: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
-        type: "Segwit",
-        added: "2025-07-22",
-    },
-];
+type AddressRow = {
+    uuid: string;
+    label: string;
+    address: string;
+    address_type: string;
+    created_at: string;
+};
 
-// In-memory store for user-added addresses
-const userAddresses: TrackedAddressMeta[] = [];
-
-let nextId = 1;
+function rowToMeta(row: AddressRow): TrackedAddressMeta {
+    return {
+        id: row.uuid,
+        label: row.label,
+        address: row.address,
+        type: row.address_type as AddressType,
+        added: row.created_at.slice(0, 10),
+    };
+}
 
 export class TrackedAddressesRequests {
     async execute(): Promise<TrackedAddressMeta[]> {
-        if (Config.useMockData) {
-            return [...MOCK_ADDRESSES, ...userAddresses];
-        }
-        return [...userAddresses];
+        const rows = await dbSelect<AddressRow>(
+            "SELECT uuid, label, address, address_type, created_at FROM addresses ORDER BY id",
+        );
+        return rows.map(rowToMeta);
     }
 
     async add(address: string, label: string): Promise<TrackedAddressMeta> {
@@ -75,28 +49,27 @@ export class TrackedAddressesRequests {
 
         if (trimmedLabel.length === 0) throw new Error("Label is required");
 
-        // Check for duplicates
-        const all = Config.useMockData ? [...MOCK_ADDRESSES, ...userAddresses] : [...userAddresses];
-        if (all.some((a) => a.address === trimmedAddress)) {
+        const existing = await dbSelect<{ uuid: string }>("SELECT uuid FROM addresses WHERE address = ?", [trimmedAddress]);
+        if (existing.length > 0) {
             throw new Error("This address is already being tracked");
         }
 
-        const meta: TrackedAddressMeta = {
-            id: `user-${nextId++}`,
-            label: trimmedLabel,
-            address: trimmedAddress,
-            type: detectAddressType(trimmedAddress),
-            added: new Date().toISOString().slice(0, 10),
-        };
+        const uuid = crypto.randomUUID();
+        const type = detectAddressType(trimmedAddress);
 
-        userAddresses.push(meta);
-        return meta;
+        await dbExecute(
+            "INSERT INTO addresses (uuid, label, address, address_type) VALUES (?, ?, ?, ?)",
+            [uuid, trimmedLabel, trimmedAddress, type],
+        );
+
+        const rows = await dbSelect<AddressRow>(
+            "SELECT uuid, label, address, address_type, created_at FROM addresses WHERE uuid = ?",
+            [uuid],
+        );
+        return rowToMeta(rows[0]);
     }
 
     async remove(id: string): Promise<void> {
-        const index = userAddresses.findIndex((a) => a.id === id);
-        if (index !== -1) {
-            userAddresses.splice(index, 1);
-        }
+        await dbExecute("DELETE FROM addresses WHERE uuid = ?", [id]);
     }
 }
