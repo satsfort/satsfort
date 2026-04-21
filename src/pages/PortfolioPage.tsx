@@ -17,16 +17,6 @@ import { useSettings } from "../lib/SettingsContext";
 import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
-import { dbExecute, dbSelect } from "../db";
-
-type HoldingRow = {
-    id: number;
-    amount_btc: number;
-    purchase_price: number | null;
-    purchase_date: string | null;
-    notes: string | null;
-    created_at: string;
-};
 
 type Props = {
     unit: Unit;
@@ -48,8 +38,6 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [spot, setSpot] = useState<SpotPrice | null>(null);
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
-    const [holdings, setHoldings] = useState<HoldingRow[]>([]);
-    const [holdingsError, setHoldingsError] = useState<string | null>(null);
 
     useEffect(() => {
         // TEMP: artificial delay to preview loading state
@@ -77,34 +65,6 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
         }, 2000);
         return () => clearTimeout(timer);
     }, [track]);
-
-    useEffect(() => {
-        const upsertAndLoadHoldings = async () => {
-            setHoldingsError(null);
-
-            try {
-                const existing = await dbSelect<{ total: number }>("SELECT COUNT(*) AS total FROM holdings WHERE notes = $1", ["DCA buy"]);
-
-                if ((existing[0]?.total ?? 0) === 0) {
-                    await dbExecute(
-                        "INSERT INTO holdings (uuid, amount_btc, purchase_price, purchase_date, notes) VALUES ($1, $2, $3, $4, $5)",
-                        [crypto.randomUUID(), 0.5, 64000, "2025-01-15", "DCA buy"],
-                    );
-                }
-
-                const rows = await dbSelect<HoldingRow>(
-                    "SELECT id, amount_btc, purchase_price, purchase_date, notes, created_at FROM holdings ORDER BY created_at DESC",
-                );
-                setHoldings(rows);
-                console.log("Encrypted holdings", rows);
-            } catch (error) {
-                console.error("Failed to run holdings query example", error);
-                setHoldingsError("Failed to load local encrypted holdings.");
-            }
-        };
-
-        void upsertAndLoadHoldings();
-    }, []);
 
     if (history === null || hasTrackedItems === null || transactions === null || !spot) {
         return (
@@ -291,18 +251,6 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         ))
                     )}
                 </div>
-            </section>
-
-            <section className="section">
-                <div className="section-head">
-                    <h2 className="section-title">// Encrypted DB Example</h2>
-                    <span className="small muted mono">{holdings.length} holdings</span>
-                </div>
-                {holdingsError ? (
-                    <div className="tx-row muted mono">{holdingsError}</div>
-                ) : (
-                    <pre className="mono small">{JSON.stringify(holdings, null, 2)}</pre>
-                )}
             </section>
         </div>
     );
