@@ -5,3 +5,4 @@ pub struct VaultStatus {
     pub database_exists: bool,
 }
 
+

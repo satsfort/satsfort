@@ -1,6 +1,6 @@
 use tauri::{AppHandle, Manager};
 
-use crate::vault_status::VaultStatus;
+use crate::structs::VaultStatus;
 
 #[tauri::command]
 pub fn get_vault_status(app: AppHandle) -> Result<VaultStatus, String> {

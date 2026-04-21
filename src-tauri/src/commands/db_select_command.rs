@@ -2,8 +2,8 @@ use serde_json::{Map as JsonMap, Value as JsonValue};
 use sqlx::{Column, Row, TypeInfo};
 use tauri::State;
 
-use crate::app_state::AppState;
-use crate::db_query::{bind_json_values, decode_row_value};
+use crate::structs::AppState;
+use crate::utils::db_query::{bind_json_values, decode_row_value};
 
 #[tauri::command]
 pub async fn db_select(

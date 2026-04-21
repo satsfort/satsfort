@@ -1,7 +1,7 @@
 use tauri::State;
 
-use crate::app_state::AppState;
-use crate::sqlcipher::sqlcipher_pragma_key;
+use crate::structs::AppState;
+use crate::utils::sqlcipher::sqlcipher_pragma_key;
 
 #[tauri::command]
 pub async fn change_vault_password(

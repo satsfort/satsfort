@@ -1,9 +1,9 @@
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use tauri::{AppHandle, Manager, State};
 
-use crate::app_state::AppState;
-use crate::migrations::run_pending_migrations;
-use crate::sqlcipher::{log_unlock_failure, sqlcipher_pragma_key};
+use crate::structs::AppState;
+use crate::utils::migrations::run_pending_migrations;
+use crate::utils::sqlcipher::{log_unlock_failure, sqlcipher_pragma_key};
 
 #[tauri::command]
 pub async fn unlock_db(password: String, app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {

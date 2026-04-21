@@ -7,3 +7,4 @@ pub struct AppState {
     pub master_password: Arc<RwLock<Option<String>>>,
 }
 
+

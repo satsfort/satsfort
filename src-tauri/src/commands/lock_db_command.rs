@@ -1,6 +1,6 @@
 use tauri::State;
 
-use crate::app_state::AppState;
+use crate::structs::AppState;
 
 #[tauri::command]
 pub async fn lock_db(state: State<'_, AppState>) -> Result<(), String> {

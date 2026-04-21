@@ -63,3 +63,4 @@ pub fn decode_row_value(row: &sqlx::sqlite::SqliteRow, column_name: &str, db_typ
     JsonValue::Null
 }
 
+

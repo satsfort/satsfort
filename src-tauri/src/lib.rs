@@ -1,14 +1,11 @@
-mod app_state;
 mod commands;
-mod db_query;
-mod migrations;
-mod sqlcipher;
-mod vault_status;
+mod structs;
+mod utils;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use app_state::AppState;
+use structs::AppState;
 use commands::{
     change_vault_password, db_execute, db_select, get_vault_status, lock_db, unlock_db,
     wipe_local_data,

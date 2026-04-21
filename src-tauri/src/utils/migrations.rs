@@ -3,23 +3,23 @@ use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
 
-use crate::sqlcipher::log_unlock_failure;
+use crate::utils::sqlcipher::log_unlock_failure;
 
 const MIGRATIONS: [DbMigration; 3] = [
     DbMigration {
         version: 1,
         script_name: "V001__create_holdings.sql",
-        sql: include_str!("../migrations/V001__create_holdings.sql"),
+        sql: include_str!("../../migrations/V001__create_holdings.sql"),
     },
     DbMigration {
         version: 2,
         script_name: "V002__create_tracked_addresses.sql",
-        sql: include_str!("../migrations/V002__create_tracked_addresses.sql"),
+        sql: include_str!("../../migrations/V002__create_tracked_addresses.sql"),
     },
     DbMigration {
         version: 3,
         script_name: "V003__create_tracked_xpubs.sql",
-        sql: include_str!("../migrations/V003__create_tracked_xpubs.sql"),
+        sql: include_str!("../../migrations/V003__create_tracked_xpubs.sql"),
     },
 ];
 
@@ -176,4 +176,5 @@ pub async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path
 
     Ok(())
 }
+
 

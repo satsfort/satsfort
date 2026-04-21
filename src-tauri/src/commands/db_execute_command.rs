@@ -1,8 +1,8 @@
 use serde_json::Value as JsonValue;
 use tauri::State;
 
-use crate::app_state::AppState;
-use crate::db_query::bind_json_values;
+use crate::structs::AppState;
+use crate::utils::db_query::bind_json_values;
 
 #[tauri::command]
 pub async fn db_execute(query: String, values: Vec<JsonValue>, state: State<'_, AppState>) -> Result<u64, String> {

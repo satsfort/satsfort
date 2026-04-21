@@ -11,3 +11,4 @@ pub fn sqlcipher_pragma_key(password: &str) -> String {
     format!("'{escaped}'")
 }
 
+

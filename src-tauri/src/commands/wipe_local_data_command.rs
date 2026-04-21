@@ -1,6 +1,6 @@
 use tauri::{AppHandle, Manager, State};
 
-use crate::app_state::AppState;
+use crate::structs::AppState;
 
 #[tauri::command]
 pub async fn wipe_local_data(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
