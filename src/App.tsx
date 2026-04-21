@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { Sidebar } from "./components/Sidebar";
 import type { Route } from "./components/Sidebar";
@@ -11,6 +11,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { SettingsProvider } from "./lib/SettingsContext";
 import { TaskNotificationsProvider } from "./lib/TaskNotificationsContext";
 import { TaskNotifications } from "./components/TaskNotifications";
+import { PortfolioHistoryRequests } from "./requests/PortfolioHistoryRequests";
 import type { Unit } from "./lib/format";
 import { lockDb } from "./db";
 
@@ -21,6 +22,13 @@ function App() {
     const [unit, setUnit] = useState<Unit>("BTC");
     const [balancesHidden, setBalancesHidden] = useState(false);
     const toggleBalances = () => setBalancesHidden((h) => !h);
+
+    useEffect(() => {
+        if (!user) return;
+        void new PortfolioHistoryRequests()
+            .ensureBaseline()
+            .catch((err) => console.error("Failed to seed portfolio baseline", err));
+    }, [user]);
 
     if (!user) {
         return <LoginPage onLogin={setUser} />;

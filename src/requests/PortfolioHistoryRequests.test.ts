@@ -62,6 +62,30 @@ function insertXpub(label: string, xpubKey: string, balanceBtc: number | null, b
     ).run(crypto.randomUUID(), label, xpubKey, "P2WPKH", 20, balanceBtc, balanceUsd);
 }
 
+describe("PortfolioHistoryRequests.ensureBaseline", () => {
+    it("inserts a zero-valued row when portfolio_value is empty", async () => {
+        await new PortfolioHistoryRequests().ensureBaseline();
+
+        const rows = dbRef.current!.prepare("SELECT balance_btc, balance_usd FROM portfolio_value").all() as {
+            balance_btc: number;
+            balance_usd: number;
+        }[];
+        expect(rows).toHaveLength(1);
+        expect(rows[0].balance_btc).toBe(0);
+        expect(rows[0].balance_usd).toBe(0);
+    });
+
+    it("is a no-op when a row already exists", async () => {
+        insertAddress("bc1qaddr1", "Addr 1", 0.5, 50_000);
+        await new PortfolioHistoryRequests().snapshot();
+
+        await new PortfolioHistoryRequests().ensureBaseline();
+
+        const count = dbRef.current!.prepare("SELECT COUNT(*) AS c FROM portfolio_value").get() as { c: number };
+        expect(count.c).toBe(1);
+    });
+});
+
 describe("PortfolioHistoryRequests.snapshot", () => {
     it("skips writing a snapshot when nothing is tracked", async () => {
         const point = await new PortfolioHistoryRequests().snapshot();

@@ -28,6 +28,22 @@ export class PortfolioHistoryRequests {
     }
 
     /**
+     * Writes a zero-valued baseline row into portfolio_value when the table is
+     * empty. Called on login so the chart has a starting point to compare future
+     * additions against. Idempotent — a no-op once any row exists.
+     */
+    async ensureBaseline(): Promise<void> {
+        const [existing] = await dbSelect<{ c: number }>("SELECT COUNT(*) AS c FROM portfolio_value");
+        if (existing.c > 0) return;
+        await dbExecute("INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)", [
+            crypto.randomUUID(),
+            0,
+            0,
+            new Date().toISOString(),
+        ]);
+    }
+
+    /**
      * Computes the current total portfolio value as the sum of the latest known
      * balances for all tracked addresses and xpubs, and records a snapshot in
      * the portfolio_value table. Skips writing a snapshot when nothing is tracked
