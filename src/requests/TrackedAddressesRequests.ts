@@ -34,9 +34,7 @@ function rowToMeta(row: AddressRow): TrackedAddressMeta {
 
 export class TrackedAddressesRequests {
     async execute(): Promise<TrackedAddressMeta[]> {
-        const rows = await dbSelect<AddressRow>(
-            "SELECT uuid, label, address, address_type, created_at FROM addresses ORDER BY id",
-        );
+        const rows = await dbSelect<AddressRow>("SELECT uuid, label, address, address_type, created_at FROM addresses ORDER BY id");
         return rows.map(rowToMeta);
     }
 
@@ -57,15 +55,16 @@ export class TrackedAddressesRequests {
         const uuid = crypto.randomUUID();
         const type = detectAddressType(trimmedAddress);
 
-        await dbExecute(
-            "INSERT INTO addresses (uuid, label, address, address_type) VALUES (?, ?, ?, ?)",
-            [uuid, trimmedLabel, trimmedAddress, type],
-        );
+        await dbExecute("INSERT INTO addresses (uuid, label, address, address_type) VALUES (?, ?, ?, ?)", [
+            uuid,
+            trimmedLabel,
+            trimmedAddress,
+            type,
+        ]);
 
-        const rows = await dbSelect<AddressRow>(
-            "SELECT uuid, label, address, address_type, created_at FROM addresses WHERE uuid = ?",
-            [uuid],
-        );
+        const rows = await dbSelect<AddressRow>("SELECT uuid, label, address, address_type, created_at FROM addresses WHERE uuid = ?", [
+            uuid,
+        ]);
         return rowToMeta(rows[0]);
     }
 

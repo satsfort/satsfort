@@ -46,10 +46,12 @@ export class PortfolioHistoryRequests {
         const usd = totals.total_usd ?? 0;
         const fetchedAt = new Date().toISOString();
 
-        await dbExecute(
-            "INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)",
-            [crypto.randomUUID(), btc, usd, fetchedAt],
-        );
+        await dbExecute("INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)", [
+            crypto.randomUUID(),
+            btc,
+            usd,
+            fetchedAt,
+        ]);
 
         return { date: fetchedAt.slice(0, 10), btc, usd };
     }

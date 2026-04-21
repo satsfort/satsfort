@@ -130,10 +130,7 @@ describe("AddressBalanceRequests persistence", () => {
     });
 
     it("updates the tracked address row and appends a snapshot to address_balances", async () => {
-        const tracked = await new TrackedAddressesRequests().add(
-            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-            "Hot wallet",
-        );
+        const tracked = await new TrackedAddressesRequests().add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(25_000_000, 0, 5));
 
@@ -169,10 +166,7 @@ describe("AddressBalanceRequests persistence", () => {
     });
 
     it("appends a new row for every fetch on the same address", async () => {
-        const tracked = await new TrackedAddressesRequests().add(
-            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-            "Hot wallet",
-        );
+        const tracked = await new TrackedAddressesRequests().add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(10_000_000, 0, 2));
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(20_000_000, 0, 3));
@@ -182,16 +176,18 @@ describe("AddressBalanceRequests persistence", () => {
         await balances.execute(tracked.address);
 
         const db = dbRef.current!;
-        const snapshots = db
-            .prepare("SELECT balance_btc, tx_count FROM address_balances ORDER BY id")
-            .all() as { balance_btc: number; tx_count: number }[];
+        const snapshots = db.prepare("SELECT balance_btc, tx_count FROM address_balances ORDER BY id").all() as {
+            balance_btc: number;
+            tx_count: number;
+        }[];
         expect(snapshots).toHaveLength(2);
         expect(snapshots[0].balance_btc).toBeCloseTo(0.1, 8);
         expect(snapshots[1].balance_btc).toBeCloseTo(0.2, 8);
 
-        const row = db
-            .prepare("SELECT latest_balance_btc, latest_tx_count FROM addresses WHERE address = ?")
-            .get(tracked.address) as { latest_balance_btc: number; latest_tx_count: number };
+        const row = db.prepare("SELECT latest_balance_btc, latest_tx_count FROM addresses WHERE address = ?").get(tracked.address) as {
+            latest_balance_btc: number;
+            latest_tx_count: number;
+        };
         expect(row.latest_balance_btc).toBeCloseTo(0.2, 8);
         expect(row.latest_tx_count).toBe(3);
     });
@@ -214,9 +210,11 @@ describe("AddressBalanceRequests persistence", () => {
         expect(row.latest_balance_usd).toBeCloseTo(0.3 * TEST_SPOT_USD, 4);
         expect(row.latest_tx_count).toBe(4);
 
-        const snapshots = db
-            .prepare("SELECT balance_btc, balance_usd, tx_count FROM xpub_address_balances")
-            .all() as { balance_btc: number; balance_usd: number; tx_count: number }[];
+        const snapshots = db.prepare("SELECT balance_btc, balance_usd, tx_count FROM xpub_address_balances").all() as {
+            balance_btc: number;
+            balance_usd: number;
+            tx_count: number;
+        }[];
         expect(snapshots).toHaveLength(1);
         expect(snapshots[0].balance_btc).toBeCloseTo(0.3, 8);
         expect(snapshots[0].balance_usd).toBeCloseTo(0.3 * TEST_SPOT_USD, 4);

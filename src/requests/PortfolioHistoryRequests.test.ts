@@ -131,8 +131,7 @@ describe("PortfolioHistoryRequests.execute", () => {
 
     it("returns rows sorted by fetched_at ascending", async () => {
         const db = dbRef.current!;
-        const insertSql =
-            "INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)";
+        const insertSql = "INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)";
         db.prepare(insertSql).run(crypto.randomUUID(), 0.3, 30_000, "2026-03-01T12:00:00.000Z");
         db.prepare(insertSql).run(crypto.randomUUID(), 0.1, 10_000, "2026-01-01T12:00:00.000Z");
         db.prepare(insertSql).run(crypto.randomUUID(), 0.2, 20_000, "2026-02-01T12:00:00.000Z");

@@ -184,10 +184,13 @@ export class XpubRequests {
         const addressCount = 20;
         const xpubUuid = crypto.randomUUID();
 
-        await dbExecute(
-            "INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)",
-            [xpubUuid, trimmedLabel, trimmedXpub, derivationType, addressCount],
-        );
+        await dbExecute("INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)", [
+            xpubUuid,
+            trimmedLabel,
+            trimmedXpub,
+            derivationType,
+            addressCount,
+        ]);
 
         const xpubRows = await dbSelect<XpubRow>(
             "SELECT id, uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs WHERE uuid = ?",
@@ -199,10 +202,13 @@ export class XpubRequests {
         const derivedAddresses: DerivedAddress[] = [];
         for (const info of derivedInfos) {
             const addressUuid = crypto.randomUUID();
-            await dbExecute(
-                "INSERT INTO xpub_addresses (uuid, xpub_id, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)",
-                [addressUuid, xpubId, info.address, info.derivationPath, info.index],
-            );
+            await dbExecute("INSERT INTO xpub_addresses (uuid, xpub_id, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)", [
+                addressUuid,
+                xpubId,
+                info.address,
+                info.derivationPath,
+                info.index,
+            ]);
             derivedAddresses.push({
                 id: addressUuid,
                 xpubId: xpubUuid,
@@ -219,10 +225,7 @@ export class XpubRequests {
      * Removes an xpub and all its derived addresses.
      */
     async remove(id: string): Promise<void> {
-        await dbExecute(
-            "DELETE FROM xpub_addresses WHERE xpub_id = (SELECT id FROM xpubs WHERE uuid = ?)",
-            [id],
-        );
+        await dbExecute("DELETE FROM xpub_addresses WHERE xpub_id = (SELECT id FROM xpubs WHERE uuid = ?)", [id]);
         await dbExecute("DELETE FROM xpubs WHERE uuid = ?", [id]);
     }
 
