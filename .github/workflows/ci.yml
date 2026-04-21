@@ -39,4 +39,3 @@ jobs:
 
             - name: Rust tests
               run: cargo test --manifest-path src-tauri/Cargo.toml
-
