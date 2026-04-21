@@ -17,11 +17,13 @@ const REASONABLE_RANGES: Record<string, { min: number; max: number }> = {
     AUD: { min: 0.9, max: 2.5 },
 };
 
+const exchangeRateRequests = new ExchangeRateRequests();
+
 describe("ExchangeRateRequests (integration)", () => {
     let rates: Record<string, number>;
 
     beforeAll(async () => {
-        rates = await new ExchangeRateRequests().execute();
+        rates = await exchangeRateRequests.execute();
     }, 15_000);
 
     it("returns all supported currencies", () => {
@@ -44,7 +46,7 @@ describe("ExchangeRateRequests (integration)", () => {
     }
 
     it("rotates source on a second call and still returns valid rates", async () => {
-        const rates2 = await new ExchangeRateRequests().execute();
+        const rates2 = await exchangeRateRequests.execute();
         for (const cur of CURRENCIES) {
             const range = REASONABLE_RANGES[cur];
             expect(rates2[cur]).toBeGreaterThanOrEqual(range.min);

@@ -5,11 +5,13 @@ import { Config } from "../lib/Config";
 // Force real API calls
 (Config as { useMockData: boolean }).useMockData = false;
 
+const spotPriceRequests = new SpotPriceRequests();
+
 describe("SpotPriceRequests (integration)", () => {
     let spot: { usd: number; source: string; asOf: string };
 
     beforeAll(async () => {
-        spot = await new SpotPriceRequests().execute();
+        spot = await spotPriceRequests.execute();
     }, 15_000);
 
     it("returns a positive USD price", () => {
@@ -34,7 +36,7 @@ describe("SpotPriceRequests (integration)", () => {
     });
 
     it("rotates source on a second call and still returns a valid price", async () => {
-        const spot2 = await new SpotPriceRequests().execute();
+        const spot2 = await spotPriceRequests.execute();
         expect(spot2.usd).toBeGreaterThanOrEqual(1_000);
         expect(spot2.usd).toBeLessThanOrEqual(10_000_000);
         expect(spot2.source).not.toBe(spot.source);

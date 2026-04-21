@@ -16,6 +16,8 @@ import type { Unit } from "./lib/format";
 import { lockDb } from "./db";
 
 function App() {
+    const portfolioHistoryRequests = new PortfolioHistoryRequests();
+
     const [user, setUser] = useState<string | null>(null);
     const [route, setRoute] = useState<Route>("portfolio");
     const [collapsed, setCollapsed] = useState(false);
@@ -25,9 +27,10 @@ function App() {
 
     useEffect(() => {
         if (!user) return;
-        void new PortfolioHistoryRequests()
+        void portfolioHistoryRequests
             .ensureBaseline()
             .catch((err) => console.error("Failed to seed portfolio baseline", err));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     if (!user) {

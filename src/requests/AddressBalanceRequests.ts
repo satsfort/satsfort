@@ -110,6 +110,8 @@ const ELECTRUM_API_ENDPOINTS: ElectrumApiEndpoint[] = [
 const FAILURE_COOLDOWN_MS = 60_000; // 1 minute cooldown after failure
 
 export class AddressBalanceRequests {
+    private readonly spotPriceRequests = new SpotPriceRequests();
+
     /**
      * Tracks the current endpoint index for round-robin rotation.
      * This helps distribute load across APIs and avoid rate limits.
@@ -224,7 +226,7 @@ export class AddressBalanceRequests {
     }
 
     async execute(address: string, spotUsd?: number): Promise<AddressBalance> {
-        const spot = spotUsd ?? (await new SpotPriceRequests().execute()).usd;
+        const spot = spotUsd ?? (await this.spotPriceRequests.execute()).usd;
         const balance = Config.useMockData ? this.mockBalance(address) : await this.fetchBalanceFromElectrum(address);
         await persistAddressBalance(balance, spot);
         return balance;
@@ -235,7 +237,7 @@ export class AddressBalanceRequests {
      * Fetches spot price once so every address is valued against the same price.
      */
     async executeAll(addresses: string[]): Promise<AddressBalance[]> {
-        const spot = (await new SpotPriceRequests().execute()).usd;
+        const spot = (await this.spotPriceRequests.execute()).usd;
         return Promise.all(addresses.map((address) => this.execute(address, spot)));
     }
 

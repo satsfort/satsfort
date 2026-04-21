@@ -62,9 +62,11 @@ function insertXpub(label: string, xpubKey: string, balanceBtc: number | null, b
     ).run(crypto.randomUUID(), label, xpubKey, "P2WPKH", 20, balanceBtc, balanceUsd);
 }
 
+const portfolioHistoryRequests = new PortfolioHistoryRequests();
+
 describe("PortfolioHistoryRequests.ensureBaseline", () => {
     it("inserts a zero-valued row when portfolio_value is empty", async () => {
-        await new PortfolioHistoryRequests().ensureBaseline();
+        await portfolioHistoryRequests.ensureBaseline();
 
         const rows = dbRef.current!.prepare("SELECT balance_btc, balance_usd FROM portfolio_value").all() as {
             balance_btc: number;
@@ -77,9 +79,9 @@ describe("PortfolioHistoryRequests.ensureBaseline", () => {
 
     it("is a no-op when a row already exists", async () => {
         insertAddress("bc1qaddr1", "Addr 1", 0.5, 50_000);
-        await new PortfolioHistoryRequests().snapshot();
+        await portfolioHistoryRequests.snapshot();
 
-        await new PortfolioHistoryRequests().ensureBaseline();
+        await portfolioHistoryRequests.ensureBaseline();
 
         const count = dbRef.current!.prepare("SELECT COUNT(*) AS c FROM portfolio_value").get() as { c: number };
         expect(count.c).toBe(1);
@@ -88,7 +90,7 @@ describe("PortfolioHistoryRequests.ensureBaseline", () => {
 
 describe("PortfolioHistoryRequests.snapshot", () => {
     it("skips writing a snapshot when nothing is tracked", async () => {
-        const point = await new PortfolioHistoryRequests().snapshot();
+        const point = await portfolioHistoryRequests.snapshot();
         expect(point).toBeNull();
 
         const count = dbRef.current!.prepare("SELECT COUNT(*) AS c FROM portfolio_value").get() as { c: number };
@@ -101,7 +103,7 @@ describe("PortfolioHistoryRequests.snapshot", () => {
         insertXpub("Xpub A", "zpub-a", 1.0, 100_000);
         insertXpub("Xpub B", "zpub-b", 0.125, 12_500);
 
-        const point = await new PortfolioHistoryRequests().snapshot();
+        const point = await portfolioHistoryRequests.snapshot();
         expect(point).not.toBeNull();
         expect(point!.btc).toBeCloseTo(1.875, 8);
         expect(point!.usd).toBeCloseTo(187_500, 4);
@@ -120,7 +122,7 @@ describe("PortfolioHistoryRequests.snapshot", () => {
         insertXpub("Unseen xpub", "zpub-unseen", null, null);
         insertXpub("Xpub B", "zpub-b", 0.25, 25_000);
 
-        const point = await new PortfolioHistoryRequests().snapshot();
+        const point = await portfolioHistoryRequests.snapshot();
         expect(point).not.toBeNull();
         expect(point!.btc).toBeCloseTo(0.75, 8);
         expect(point!.usd).toBeCloseTo(75_000, 4);
@@ -129,10 +131,9 @@ describe("PortfolioHistoryRequests.snapshot", () => {
     it("appends a new row on each invocation", async () => {
         insertAddress("bc1qaddr1", "Addr 1", 0.1);
 
-        const requests = new PortfolioHistoryRequests();
-        await requests.snapshot();
-        await requests.snapshot();
-        await requests.snapshot();
+        await portfolioHistoryRequests.snapshot();
+        await portfolioHistoryRequests.snapshot();
+        await portfolioHistoryRequests.snapshot();
 
         const count = dbRef.current!.prepare("SELECT COUNT(*) AS c FROM portfolio_value").get() as { c: number };
         expect(count.c).toBe(3);
@@ -143,10 +144,9 @@ describe("PortfolioHistoryRequests.execute", () => {
     it("returns the portfolio_value rows when mock is disabled", async () => {
         insertAddress("bc1qaddr1", "Addr 1", 0.5, 50_000);
 
-        const requests = new PortfolioHistoryRequests();
-        await requests.snapshot();
+        await portfolioHistoryRequests.snapshot();
 
-        const history = await requests.execute();
+        const history = await portfolioHistoryRequests.execute();
         expect(history).toHaveLength(1);
         expect(history[0].btc).toBeCloseTo(0.5, 8);
         expect(history[0].usd).toBeCloseTo(50_000, 4);
@@ -160,14 +160,14 @@ describe("PortfolioHistoryRequests.execute", () => {
         db.prepare(insertSql).run(crypto.randomUUID(), 0.1, 10_000, "2026-01-01T12:00:00.000Z");
         db.prepare(insertSql).run(crypto.randomUUID(), 0.2, 20_000, "2026-02-01T12:00:00.000Z");
 
-        const history = await new PortfolioHistoryRequests().execute();
+        const history = await portfolioHistoryRequests.execute();
         expect(history.map((p) => p.btc)).toEqual([0.1, 0.2, 0.3]);
         expect(history.map((p) => p.usd)).toEqual([10_000, 20_000, 30_000]);
     });
 
     it("returns the mock history when mock is enabled", async () => {
         (Config as { useMockData: boolean }).useMockData = true;
-        const history = await new PortfolioHistoryRequests().execute();
+        const history = await portfolioHistoryRequests.execute();
         expect(history.length).toBeGreaterThan(0);
     });
 });

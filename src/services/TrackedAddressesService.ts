@@ -8,9 +8,12 @@ export type TrackedAddress = TrackedAddressMeta & {
 };
 
 export class TrackedAddressesService {
+    private readonly trackedAddressesRequests = new TrackedAddressesRequests();
+    private readonly addressBalanceRequests = new AddressBalanceRequests();
+
     async execute(): Promise<TrackedAddress[]> {
-        const metas = await new TrackedAddressesRequests().execute();
-        const balances = await new AddressBalanceRequests().executeAll(metas.map((meta) => meta.address));
+        const metas = await this.trackedAddressesRequests.execute();
+        const balances = await this.addressBalanceRequests.executeAll(metas.map((meta) => meta.address));
         return metas.map((meta, i) => ({
             ...meta,
             btc: balances[i].btc,

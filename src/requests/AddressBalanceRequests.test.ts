@@ -109,10 +109,16 @@ describe("AddressBalanceRequests (integration)", () => {
 describe("AddressBalanceRequests persistence", () => {
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
+    let addressBalanceRequests: AddressBalanceRequests;
+    let trackedAddressesRequests: TrackedAddressesRequests;
+    let xpubRequests: XpubRequests;
 
     beforeEach(() => {
         fetchMock.mockReset();
         globalThis.fetch = fetchMock as unknown as typeof fetch;
+        addressBalanceRequests = new AddressBalanceRequests();
+        trackedAddressesRequests = new TrackedAddressesRequests();
+        xpubRequests = new XpubRequests();
     });
 
     afterEach(() => {
@@ -130,11 +136,11 @@ describe("AddressBalanceRequests persistence", () => {
     });
 
     it("updates the tracked address row and appends a snapshot to address_balances", async () => {
-        const tracked = await new TrackedAddressesRequests().add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
+        const tracked = await trackedAddressesRequests.add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(25_000_000, 0, 5));
 
-        const result = await new AddressBalanceRequests().execute(tracked.address);
+        const result = await addressBalanceRequests.execute(tracked.address);
         expect(result.btc).toBeCloseTo(0.25, 8);
         expect(result.txCount).toBe(5);
 
@@ -166,14 +172,13 @@ describe("AddressBalanceRequests persistence", () => {
     });
 
     it("appends a new row for every fetch on the same address", async () => {
-        const tracked = await new TrackedAddressesRequests().add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
+        const tracked = await trackedAddressesRequests.add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(10_000_000, 0, 2));
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(20_000_000, 0, 3));
 
-        const balances = new AddressBalanceRequests();
-        await balances.execute(tracked.address);
-        await balances.execute(tracked.address);
+        await addressBalanceRequests.execute(tracked.address);
+        await addressBalanceRequests.execute(tracked.address);
 
         const db = dbRef.current!;
         const snapshots = db.prepare("SELECT balance_btc, tx_count FROM address_balances ORDER BY id").all() as {
@@ -194,12 +199,12 @@ describe("AddressBalanceRequests persistence", () => {
 
     it("updates an xpub-derived address and writes to xpub_address_balances", async () => {
         const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
-        const { addresses } = await new XpubRequests().add(xpub, "Native SegWit", "P2WPKH");
+        const { addresses } = await xpubRequests.add(xpub, "Native SegWit", "P2WPKH");
         const target = addresses[0];
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(30_000_000, 0, 4));
 
-        const result = await new AddressBalanceRequests().execute(target.address);
+        const result = await addressBalanceRequests.execute(target.address);
         expect(result.btc).toBeCloseTo(0.3, 8);
 
         const db = dbRef.current!;
@@ -224,7 +229,7 @@ describe("AddressBalanceRequests persistence", () => {
     it("is a no-op for addresses that are not tracked", async () => {
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(50_000_000, 0, 1));
 
-        await new AddressBalanceRequests().execute("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
+        await addressBalanceRequests.execute("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh");
 
         const db = dbRef.current!;
         const count = db.prepare("SELECT COUNT(*) AS c FROM address_balances").get() as { c: number };

@@ -161,7 +161,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     };
 
     const handleImportXpub = async (xpub: string, label: string, derivationType: DerivationType) => {
-        const result = await track(`Importing ${label}`, () => new XpubRequests().add(xpub, label, derivationType));
+        const result = await track(`Importing ${label}`, () => xpubRequests.add(xpub, label, derivationType));
         setXpubs((prev) => [...prev, result.xpub]);
         setDerivedAddresses((prev) => [...prev, ...result.addresses]);
         setExpandedXpubs((prev) => new Set([...prev, result.xpub.id]));
@@ -171,7 +171,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     };
 
     const handleRemoveXpub = async (id: string) => {
-        await new XpubRequests().remove(id);
+        await xpubRequests.remove(id);
         setXpubs((prev) => prev.filter((x) => x.id !== id));
         // Remove balances for this xpub's derived addresses
         const removedAddresses = derivedAddresses.filter((a) => a.xpubId === id).map((a) => a.address);

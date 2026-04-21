@@ -106,9 +106,11 @@ export class ExchangeRateRequests {
         }
         if (!cacheLoaded) {
             // Kick off a background fetch to populate cache for next call
-            void new ExchangeRateRequests().execute().catch(() => {});
+            void backgroundLoader.execute().catch(() => {});
             return MOCK_RATES[currency];
         }
         return cachedRates[currency];
     }
 }
+
+const backgroundLoader = new ExchangeRateRequests();
