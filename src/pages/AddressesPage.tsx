@@ -9,6 +9,7 @@ import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
 import { XpubRequests } from "../requests/XpubRequests";
 import type { TrackedXpubMeta, DerivedAddress, DerivationType } from "../requests/XpubRequests";
+import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../requests/SpotPriceRequests";
 import type { Unit } from "../lib/format";
@@ -46,6 +47,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
     const addressBalanceRequests = new AddressBalanceRequests();
     const trackedAddressesRequests = new TrackedAddressesRequests();
     const xpubRequests = new XpubRequests();
+    const portfolioHistoryRequests = new PortfolioHistoryRequests();
     const spotPriceRequests = new SpotPriceRequests();
 
     const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
@@ -150,6 +152,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         const balance = await track(`Fetching balance for ${label}`, () => addressBalanceRequests.execute(meta.address));
         const tracked: TrackedAddress = { ...meta, btc: balance.btc, txCount: balance.txCount };
         setAddresses((prev) => [...(prev ?? []), tracked]);
+        await portfolioHistoryRequests.snapshot();
     };
 
     const handleRemove = async (id: string) => {
@@ -164,6 +167,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         setExpandedXpubs((prev) => new Set([...prev, result.xpub.id]));
         // Fetch balances for newly derived addresses
         await track(`Fetching balances for ${label}`, () => fetchDerivedBalances(result.addresses));
+        await portfolioHistoryRequests.snapshot();
     };
 
     const handleRemoveXpub = async (id: string) => {

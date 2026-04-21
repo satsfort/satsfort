@@ -65,3 +65,10 @@ CREATE TABLE xpub_address_balances (
     tx_count INTEGER NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE portfolio_value (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid TEXT NOT NULL UNIQUE,
+    balance_btc REAL NOT NULL,
+    fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

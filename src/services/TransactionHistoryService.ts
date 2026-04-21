@@ -1,3 +1,4 @@
+import { Config } from "../lib/Config";
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
 
@@ -17,6 +18,7 @@ export class TransactionHistoryService {
     constructor(private limit: number = 6) {}
 
     async execute(): Promise<Transaction[]> {
+        if (!Config.useMockData) return [];
         const history = await this.portfolioHistoryRequests.execute();
         return this.buildMock(history);
     }

@@ -51,7 +51,11 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
     useEffect(() => {
         // TEMP: artificial delay to preview loading state
         const timer = setTimeout(() => {
-            portfolioHistoryRequests.execute().then(setHistory);
+            void portfolioHistoryRequests
+                .snapshot()
+                .catch((err) => console.error("Failed to snapshot portfolio value", err))
+                .then(() => portfolioHistoryRequests.execute())
+                .then(setHistory);
             transactionHistoryService.execute().then(setTransactions);
             track("Spot price", () => spotPriceRequests.execute())
                 .then(setSpot)
