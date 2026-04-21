@@ -1,3 +1,4 @@
+use include_dir::{include_dir, Dir};
 use sha2::{Digest, Sha256};
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
@@ -5,23 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::utils::sqlcipher::log_unlock_failure;
 
-const MIGRATIONS: [DbMigration; 3] = [
-    DbMigration {
-        version: 1,
-        script_name: "V001__create_holdings.sql",
-        sql: include_str!("../../migrations/V001__create_holdings.sql"),
-    },
-    DbMigration {
-        version: 2,
-        script_name: "V002__create_tracked_addresses.sql",
-        sql: include_str!("../../migrations/V002__create_tracked_addresses.sql"),
-    },
-    DbMigration {
-        version: 3,
-        script_name: "V003__create_tracked_xpubs.sql",
-        sql: include_str!("../../migrations/V003__create_tracked_xpubs.sql"),
-    },
-];
+static MIGRATIONS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/migrations");
 
 const MIGRATION_HISTORY_TABLE_SQL: &str = "CREATE TABLE IF NOT EXISTS schema_migration_history (
     version INTEGER PRIMARY KEY,
@@ -36,12 +21,82 @@ struct DbMigration {
     sql: &'static str,
 }
 
+fn parse_migration_version(script_name: &str) -> i64 {
+    fn invalid(script_name: &str) -> ! {
+        panic!(
+            "Invalid migration filename '{script_name}': expected format V<digits>__<name>.sql"
+        );
+    }
+
+    let without_ext = script_name
+        .strip_suffix(".sql")
+        .unwrap_or_else(|| invalid(script_name));
+    let rest = without_ext
+        .strip_prefix('V')
+        .unwrap_or_else(|| invalid(script_name));
+    let (version_str, name) = rest
+        .split_once("__")
+        .unwrap_or_else(|| invalid(script_name));
+
+    if version_str.is_empty() || !version_str.chars().all(|c| c.is_ascii_digit()) {
+        invalid(script_name);
+    }
+    if name.is_empty() {
+        invalid(script_name);
+    }
+
+    version_str
+        .parse::<i64>()
+        .unwrap_or_else(|_| invalid(script_name))
+}
+
+fn load_migrations() -> Vec<DbMigration> {
+    let mut migrations: Vec<DbMigration> = MIGRATIONS_DIR
+        .files()
+        .map(|file| {
+            let script_name = file
+                .path()
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_else(|| {
+                    panic!("Migration file has non-UTF-8 path: {:?}", file.path())
+                });
+
+            let version = parse_migration_version(script_name);
+            let sql = file
+                .contents_utf8()
+                .unwrap_or_else(|| panic!("Migration file '{script_name}' is not valid UTF-8"));
+
+            DbMigration {
+                version,
+                script_name,
+                sql,
+            }
+        })
+        .collect();
+
+    migrations.sort_by_key(|m| m.version);
+
+    for pair in migrations.windows(2) {
+        if pair[0].version == pair[1].version {
+            panic!(
+                "Duplicate migration version {}: '{}' and '{}'",
+                pair[0].version, pair[0].script_name, pair[1].script_name
+            );
+        }
+    }
+
+    migrations
+}
+
 fn migration_checksum(sql: &str) -> String {
     let digest = Sha256::digest(sql.as_bytes());
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 pub async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path) -> Result<(), String> {
+    let migrations = load_migrations();
+
     sqlx::query(MIGRATION_HISTORY_TABLE_SQL)
         .execute(pool)
         .await
@@ -50,7 +105,7 @@ pub async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path
             format!("Failed preparing migration history: {error}")
         })?;
 
-    let migration_by_version: HashMap<i64, &DbMigration> = MIGRATIONS
+    let migration_by_version: HashMap<i64, &DbMigration> = migrations
         .iter()
         .map(|migration| (migration.version, migration))
         .collect();
@@ -108,7 +163,7 @@ pub async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path
         applied_versions.insert(version);
     }
 
-    for migration in MIGRATIONS {
+    for migration in &migrations {
         if applied_versions.contains(&migration.version) {
             continue;
         }
@@ -176,5 +231,3 @@ pub async fn run_pending_migrations(pool: &SqlitePool, db_path: &std::path::Path
 
     Ok(())
 }
-
-
