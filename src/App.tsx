@@ -27,9 +27,7 @@ function App() {
 
     useEffect(() => {
         if (!user) return;
-        void portfolioHistoryRequests
-            .ensureBaseline()
-            .catch((err) => console.error("Failed to seed portfolio baseline", err));
+        void portfolioHistoryRequests.ensureBaseline().catch((err) => console.error("Failed to seed portfolio baseline", err));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
