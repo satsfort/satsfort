@@ -52,6 +52,7 @@ function App() {
                                     setUnit={setUnit}
                                     balancesHidden={balancesHidden}
                                     onToggleBalances={toggleBalances}
+                                    onNavigate={setRoute}
                                 />
                             )}
                             {route === "addresses" && (

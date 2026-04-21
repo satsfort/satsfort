@@ -10,6 +10,7 @@ import { TransactionHistoryService } from "../services/TransactionHistoryService
 import type { Transaction } from "../services/TransactionHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../requests/SpotPriceRequests";
+import type { Route } from "../components/Sidebar";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatBtcLabel, formatNumber, formatSecondary, formatSymbol } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
@@ -32,15 +33,17 @@ type Props = {
     setUnit: (u: Unit) => void;
     balancesHidden: boolean;
     onToggleBalances: () => void;
+    onNavigate: (route: Route) => void;
 };
 
-export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances }: Props) {
+export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances, onNavigate }: Props) {
     const spotPriceRequests = new SpotPriceRequests();
     const exchangeRateRequests = new ExchangeRateRequests();
     const portfolioHistoryRequests = new PortfolioHistoryRequests();
     const transactionHistoryService = new TransactionHistoryService();
 
     const [history, setHistory] = useState<HistoryPoint[] | null>(null);
+    const [hasTrackedItems, setHasTrackedItems] = useState<boolean | null>(null);
     const [transactions, setTransactions] = useState<Transaction[] | null>(null);
     const [spot, setSpot] = useState<SpotPrice | null>(null);
     const { currency, denomination } = useSettings();
@@ -53,9 +56,16 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
         const timer = setTimeout(() => {
             void portfolioHistoryRequests
                 .snapshot()
-                .catch((err) => console.error("Failed to snapshot portfolio value", err))
-                .then(() => portfolioHistoryRequests.execute())
-                .then(setHistory);
+                .then((point) => {
+                    setHasTrackedItems(point !== null);
+                    return portfolioHistoryRequests.execute();
+                })
+                .then(setHistory)
+                .catch((err) => {
+                    console.error("Failed to load portfolio history", err);
+                    setHasTrackedItems(false);
+                    setHistory([]);
+                });
             transactionHistoryService.execute().then(setTransactions);
             track("Spot price", () => spotPriceRequests.execute())
                 .then(setSpot)
@@ -96,7 +106,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
         void upsertAndLoadHoldings();
     }, []);
 
-    if (history === null || transactions === null || !spot) {
+    if (history === null || hasTrackedItems === null || transactions === null || !spot) {
         return (
             <>
                 <header className="page-head">
@@ -110,7 +120,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
         );
     }
 
-    if (history.length === 0) {
+    if (!hasTrackedItems || history.length === 0) {
         return (
             <>
                 <header className="page-head">
@@ -118,15 +128,16 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
                         <div className="eyebrow">Dashboard</div>
                         <h1 className="page-title">Portfolio</h1>
                     </div>
-                    <div className="page-actions">
-                        <button className="btn btn-primary">+ Add Transaction</button>
-                    </div>
                 </header>
                 <EmptyState
                     icon={<BarChartIcon size={56} />}
                     title="No portfolio data yet"
-                    description="Add a transaction or import an address to start tracking your stack."
-                    action={<button className="btn btn-primary">+ Add Transaction</button>}
+                    description="Add an address to start tracking your stack."
+                    action={
+                        <button className="btn btn-primary" onClick={() => onNavigate("addresses")}>
+                            Go to Addresses
+                        </button>
+                    }
                 />
             </>
         );
@@ -177,7 +188,6 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances 
                             {formatSymbol("FIAT", currency)} {currency}
                         </button>
                     </div>
-                    <button className="btn btn-primary">+ Add Transaction</button>
                 </div>
             </header>
 
