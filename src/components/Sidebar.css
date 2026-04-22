@@ -105,24 +105,6 @@
     border-top: 1px solid var(--border);
 }
 
-.sidebar-meta {
-    padding: 0 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.node-dot {
-    display: inline-block;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background: var(--green);
-    box-shadow: 0 0 6px var(--green);
-    margin-right: 0.35rem;
-    vertical-align: middle;
-}
-
 .sidebar-toggle {
     align-self: flex-end;
     background: transparent;
@@ -163,8 +145,7 @@
 
 @media (max-width: 900px) {
     .sidebar .sidebar-label,
-    .sidebar .brand-name,
-    .sidebar .sidebar-meta {
+    .sidebar .brand-name {
         display: none;
     }
 

@@ -47,14 +47,6 @@ export function Sidebar({ route, onNavigate, collapsed, onToggle }: Props) {
             </nav>
 
             <div className="sidebar-footer">
-                {!collapsed && (
-                    <div className="sidebar-meta">
-                        <div className="eyebrow">Node</div>
-                        <div className="mono small">
-                            <span className="node-dot" /> Local Core · synced
-                        </div>
-                    </div>
-                )}
                 <button
                     className="sidebar-toggle"
                     onClick={onToggle}
