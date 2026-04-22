@@ -53,15 +53,26 @@ export class PortfolioHistoryRequests {
         const [counts] = await dbSelect<{ tracked: number }>(
             "SELECT (SELECT COUNT(*) FROM addresses) + (SELECT COUNT(*) FROM xpubs) AS tracked",
         );
-        if (counts.tracked === 0) return null;
 
-        const [totals] = await dbSelect<{ total_btc: number | null; total_usd: number | null }>(
-            "SELECT COALESCE((SELECT SUM(latest_balance_btc) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_btc) FROM xpubs), 0) AS total_btc, COALESCE((SELECT SUM(latest_balance_usd) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_usd) FROM xpubs), 0) AS total_usd",
-        );
-        const btc = totals.total_btc ?? 0;
-        const usd = totals.total_usd ?? 0;
+        let btc = 0;
+        let usd = 0;
+        if (counts.tracked > 0) {
+            const [totals] = await dbSelect<{ total_btc: number | null; total_usd: number | null }>(
+                "SELECT COALESCE((SELECT SUM(latest_balance_btc) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_btc) FROM xpubs), 0) AS total_btc, COALESCE((SELECT SUM(latest_balance_usd) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_usd) FROM xpubs), 0) AS total_usd",
+            );
+            btc = totals.total_btc ?? 0;
+            usd = totals.total_usd ?? 0;
+        } else {
+            // No tracked items. Only record a zero snapshot if we previously held a
+            // non-zero balance, so the chart drops to zero after the last removal.
+            // Skip otherwise to avoid piling redundant zero rows.
+            const [latest] = await dbSelect<{ balance_btc: number } | undefined>(
+                "SELECT balance_btc FROM portfolio_value ORDER BY fetched_at DESC LIMIT 1",
+            );
+            if (!latest || latest.balance_btc === 0) return null;
+        }
+
         const fetchedAt = new Date().toISOString();
-
         await dbExecute("INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)", [
             crypto.randomUUID(),
             btc,

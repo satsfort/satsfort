@@ -87,7 +87,8 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
         );
     }
 
-    if (!hasTrackedItems || history.length === 0) {
+    const hasNonBaselineHistory = history.some((h) => h.btc > 0);
+    if (history.length === 0 || (!hasTrackedItems && !hasNonBaselineHistory)) {
         return (
             <>
                 <header className="page-head">
