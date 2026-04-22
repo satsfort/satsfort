@@ -22,7 +22,9 @@ function App() {
     const [collapsed, setCollapsed] = useState(false);
     const [unit, setUnit] = useState<Unit>("BTC");
     const [balancesHidden, setBalancesHidden] = useState(false);
+    const [portfolioVersion, setPortfolioVersion] = useState(0);
     const toggleBalances = () => setBalancesHidden((h) => !h);
+    const refreshPortfolio = () => setPortfolioVersion((v) => v + 1);
 
     useEffect(() => {
         if (!user) return;
@@ -61,6 +63,7 @@ function App() {
                                     balancesHidden={balancesHidden}
                                     onToggleBalances={toggleBalances}
                                     onNavigate={setRoute}
+                                    version={portfolioVersion}
                                 />
                             </div>
                             <div hidden={route !== "addresses"}>
@@ -69,6 +72,7 @@ function App() {
                                     setUnit={setUnit}
                                     balancesHidden={balancesHidden}
                                     onToggleBalances={toggleBalances}
+                                    onPortfolioChanged={refreshPortfolio}
                                 />
                             </div>
                             <div hidden={route !== "settings"}>

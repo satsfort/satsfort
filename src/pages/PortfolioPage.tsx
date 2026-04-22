@@ -25,9 +25,10 @@ type Props = {
     balancesHidden: boolean;
     onToggleBalances: () => void;
     onNavigate: (route: Route) => void;
+    version: number;
 };
 
-export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances, onNavigate }: Props) {
+export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances, onNavigate, version }: Props) {
     const spotPriceRequests = new SpotPriceRequests();
     const exchangeRateRequests = new ExchangeRateRequests();
     const portfolioHistoryRequests = new PortfolioHistoryRequests();
@@ -41,7 +42,9 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const { track } = useTaskNotifications();
 
     useEffect(() => {
+        const isInitial = version === 0;
         // TEMP: artificial delay to preview loading state
+        const delay = isInitial ? 2000 : 0;
         const timer = setTimeout(() => {
             void portfolioHistoryRequests
                 .snapshot()
@@ -56,16 +59,19 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     setHistory([]);
                 });
             transactionHistoryService.execute().then(setTransactions);
-            track("Spot price", () => spotPriceRequests.execute())
-                .then(setSpot)
-                .catch((err) => {
-                    console.error("Failed to fetch spot price", err);
-                    setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
-                });
-            track("Exchange rates", () => exchangeRateRequests.execute()).catch(() => {});
-        }, 2000);
+            if (isInitial) {
+                track("Spot price", () => spotPriceRequests.execute())
+                    .then(setSpot)
+                    .catch((err) => {
+                        console.error("Failed to fetch spot price", err);
+                        setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+                    });
+                track("Exchange rates", () => exchangeRateRequests.execute()).catch(() => {});
+            }
+        }, delay);
         return () => clearTimeout(timer);
-    }, [track]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [track, version]);
 
     if (history === null || hasTrackedItems === null || transactions === null || !spot) {
         return (

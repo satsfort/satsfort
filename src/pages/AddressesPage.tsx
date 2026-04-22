@@ -29,6 +29,7 @@ type Props = {
     setUnit: (u: Unit) => void;
     balancesHidden: boolean;
     onToggleBalances: () => void;
+    onPortfolioChanged: () => void;
 };
 
 type DerivedBalance = { btc: number; txCount: number };
@@ -43,7 +44,7 @@ function shortenXpub(xpub: string) {
     return `${xpub.slice(0, 12)}…${xpub.slice(-8)}`;
 }
 
-export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances }: Props) {
+export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances, onPortfolioChanged }: Props) {
     const trackedAddressesService = new TrackedAddressesService();
     const addressBalanceRequests = new AddressBalanceRequests();
     const trackedAddressesRequests = new TrackedAddressesRequests();
@@ -98,6 +99,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         try {
             const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceRequests.execute(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
+            await portfolioHistoryRequests.snapshot();
+            onPortfolioChanged();
         } catch (err) {
             console.error("Failed to refresh address balance", err);
         } finally {
@@ -109,6 +112,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         setRefreshingXpub(xpub.id);
         try {
             await track(`Refreshing ${xpub.label}`, () => fetchDerivedBalances(xpubDerived));
+            await portfolioHistoryRequests.snapshot();
+            onPortfolioChanged();
         } catch (err) {
             console.error("Failed to refresh xpub balances", err);
         } finally {
@@ -141,6 +146,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
             }
 
             await Promise.all(allTasks);
+            await portfolioHistoryRequests.snapshot();
+            onPortfolioChanged();
         } catch (err) {
             console.error("Failed to refresh all balances", err);
         } finally {
@@ -154,11 +161,14 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         const tracked: TrackedAddress = { ...meta, btc: balance.btc, txCount: balance.txCount };
         setAddresses((prev) => [...(prev ?? []), tracked]);
         await portfolioHistoryRequests.snapshot();
+        onPortfolioChanged();
     };
 
     const handleRemove = async (id: string) => {
         await trackedAddressesRequests.remove(id);
         setAddresses((prev) => (prev ?? []).filter((a) => a.id !== id));
+        await portfolioHistoryRequests.snapshot();
+        onPortfolioChanged();
     };
 
     const handleImportXpub = async (xpub: string, label: string, derivationType: DerivationType) => {
@@ -169,6 +179,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
         // Fetch balances for newly derived addresses
         await track(`Fetching balances for ${label}`, () => fetchDerivedBalances(result.addresses));
         await portfolioHistoryRequests.snapshot();
+        onPortfolioChanged();
     };
 
     const handleRemoveXpub = async (id: string) => {
@@ -187,6 +198,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances 
             next.delete(id);
             return next;
         });
+        await portfolioHistoryRequests.snapshot();
+        onPortfolioChanged();
     };
 
     const totalAddressCount = (addresses?.length ?? 0) + derivedAddresses.length;
