@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "sats-fort-app",
+    "productName": "SatsFort",
     "version": "0.1.0",
     "identifier": "com.satsfort.app",
     "build": {
@@ -13,9 +13,11 @@
         "withGlobalTauri": true,
         "windows": [
             {
-                "title": "sats-fort-app",
+                "title": "SatsFort",
                 "width": 800,
-                "height": 600
+                "height": 600,
+                "minWidth": 500,
+                "minHeight": 600
             }
         ],
         "security": {

@@ -14,6 +14,12 @@ export default defineConfig(async () => ({
     //
     // 1. prevent Vite from obscuring rust errors
     clearScreen: false,
+    build: {
+        target: "esnext",
+        minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
+        sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    },
+    envPrefix: ["VITE_", "TAURI_ENV_*"],
     // 2. tauri expects a fixed port, fail if that port is not available
     server: {
         port: 1420,
