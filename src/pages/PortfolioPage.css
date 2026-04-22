@@ -27,6 +27,16 @@
     margin-right: 0.4rem;
 }
 
+.hero-value .tick-suffix {
+    margin-right: 0;
+    margin-left: 0.4rem;
+    font-size: 0.5em;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
 .hero-sub {
     display: flex;
     gap: 1.25rem;

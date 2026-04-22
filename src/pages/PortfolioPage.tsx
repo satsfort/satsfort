@@ -169,6 +169,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     <div className="hero-value">
                         <span className="tick">{formatSymbol(unit, currency, denomination)}</span>
                         {heroNumber}
+                        {unit === "BTC" && denomination === "SATS" && <span className="tick tick-suffix">sats</span>}
                     </div>
                     <div className="hero-sub">
                         <span className="usd">{heroSecondary}</span>
