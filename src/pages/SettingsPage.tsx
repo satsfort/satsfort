@@ -18,35 +18,15 @@ export function SettingsPage({ username, onLogout }: Props) {
 
     const initialSettings = SettingsRequests.loadSync();
     const { currency, setCurrency, denomination, setDenomination } = useSettings();
-    const [useOwnNode, setUseOwnNode] = useState(initialSettings.useOwnNode);
-    const [nodeUrl, setNodeUrl] = useState(initialSettings.nodeUrl);
     const [priceSource, setPriceSource] = useState<PriceSource>(initialSettings.priceSource);
-    const [telemetry, setTelemetry] = useState(initialSettings.telemetry);
-    const [autoSync, setAutoSync] = useState(initialSettings.autoSync);
     const [passwordModalOpen, setPasswordModalOpen] = useState(false);
     const [wipeModalOpen, setWipeModalOpen] = useState(false);
+    const { useOwnNode, nodeUrl, telemetry, autoSync } = initialSettings;
 
-    const handleReset = () => {
-        const settings = SettingsRequests.loadSync();
-        setCurrency(settings.currency);
-        setDenomination(settings.denomination);
-        setUseOwnNode(settings.useOwnNode);
-        setNodeUrl(settings.nodeUrl);
-        setPriceSource(settings.priceSource);
-        setTelemetry(settings.telemetry);
-        setAutoSync(settings.autoSync);
-    };
-
-    const handleSave = async () => {
-        await settingsRequests.save({
-            currency,
-            denomination,
-            useOwnNode,
-            nodeUrl,
-            priceSource,
-            telemetry,
-            autoSync,
-        });
+    const handlePriceSourceChange = (next: PriceSource) => {
+        setPriceSource(next);
+        const current = SettingsRequests.loadSync();
+        void settingsRequests.save({ ...current, priceSource: next });
     };
 
     const handleWipeLocalData = async () => {
@@ -62,12 +42,6 @@ export function SettingsPage({ username, onLogout }: Props) {
                     <h1 className="page-title">Settings</h1>
                 </div>
                 <div className="page-actions">
-                    <button className="btn" onClick={handleReset}>
-                        Reset
-                    </button>
-                    <button className="btn btn-primary" onClick={() => void handleSave()}>
-                        Save Changes
-                    </button>
                     <TaskNotifications />
                 </div>
             </header>
@@ -105,7 +79,7 @@ export function SettingsPage({ username, onLogout }: Props) {
                     </Row>
 
                     <Row label="Price source" hint="Exchange used for the spot price conversion.">
-                        <select className="text-input" value={priceSource} onChange={(e) => setPriceSource(e.target.value as PriceSource)}>
+                        <select className="text-input" value={priceSource} onChange={(e) => handlePriceSourceChange(e.target.value as PriceSource)}>
                             <option value="kraken">Kraken</option>
                             <option value="bitstamp">Bitstamp</option>
                             <option value="coinbase">Coinbase</option>
