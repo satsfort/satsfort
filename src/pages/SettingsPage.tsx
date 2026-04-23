@@ -79,7 +79,11 @@ export function SettingsPage({ username, onLogout }: Props) {
                     </Row>
 
                     <Row label="Price source" hint="Exchange used for the spot price conversion.">
-                        <select className="text-input" value={priceSource} onChange={(e) => handlePriceSourceChange(e.target.value as PriceSource)}>
+                        <select
+                            className="text-input"
+                            value={priceSource}
+                            onChange={(e) => handlePriceSourceChange(e.target.value as PriceSource)}
+                        >
                             <option value="kraken">Kraken</option>
                             <option value="bitstamp">Bitstamp</option>
                             <option value="coinbase">Coinbase</option>
