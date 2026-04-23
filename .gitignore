@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# misc
+AGENTS.md
+plans/
+TODO.md
