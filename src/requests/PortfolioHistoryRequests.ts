@@ -63,13 +63,16 @@ export class PortfolioHistoryRequests {
             btc = totals.total_btc ?? 0;
             usd = totals.total_usd ?? 0;
         } else {
-            // No tracked items. Only record a zero snapshot if we previously held a
-            // non-zero balance, so the chart drops to zero after the last removal.
-            // Skip otherwise to avoid piling redundant zero rows.
-            const [latest] = await dbSelect<{ balance_btc: number } | undefined>(
-                "SELECT balance_btc FROM portfolio_value ORDER BY fetched_at DESC LIMIT 1",
+            // No tracked items. Record a zero snapshot if we previously held a
+            // non-zero balance (so the chart drops after the last removal), or if
+            // the latest zero row is from an earlier day (so the flat-zero stretch
+            // still advances on the time axis). Skip same-day zero repeats.
+            const [latest] = await dbSelect<{ balance_btc: number; fetched_at: string } | undefined>(
+                "SELECT balance_btc, fetched_at FROM portfolio_value ORDER BY fetched_at DESC LIMIT 1",
             );
-            if (!latest || latest.balance_btc === 0) return null;
+            if (!latest) return null;
+            const today = new Date().toISOString().slice(0, 10);
+            if (latest.balance_btc === 0 && latest.fetched_at.slice(0, 10) === today) return null;
         }
 
         const fetchedAt = new Date().toISOString();
