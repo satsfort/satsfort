@@ -21,6 +21,12 @@ export const config: WebdriverIO.Config = {
     runner: "local",
     tsConfigPath: "./tsconfig.wdio.json",
 
+    // Point WDIO at tauri-driver so it proxies the WebDriver session to the
+    // platform driver (WebKitWebDriver on Linux) instead of trying to launch
+    // a browser of its own.
+    hostname: "127.0.0.1",
+    port: 4444,
+
     specs: ["./e2e/**/*.spec.ts"],
     maxInstances: 1,
 

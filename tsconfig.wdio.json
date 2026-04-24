@@ -6,7 +6,7 @@
         "esModuleInterop": true,
         "resolveJsonModule": true,
         "strict": true,
-        "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework", "@types/mocha"],
+        "types": ["node", "webdriverio/async", "@wdio/mocha-framework", "@types/mocha"],
         "skipLibCheck": true
     },
     "include": ["wdio.conf.ts", "e2e/**/*.ts"]

@@ -1,4 +1,5 @@
-import { $, $$, expect } from "@wdio/globals";
+/// <reference types="@wdio/mocha-framework" />
+/// <reference types="webdriverio/async" />
 
 describe("vault flow", () => {
     it("creates a vault, navigates to Addresses, and logs out", async () => {
