@@ -1,8 +1,10 @@
 import { useState } from "react";
 import "./Modal.css";
-import { validateXpub, getDefaultDerivationType } from "../requests/XpubRequests";
 import type { DerivationType } from "../requests/XpubRequests";
+import { XpubService } from "../services/XpubService";
 import { useEscapeKey } from "../lib/useEscapeKey";
+
+const xpubService = new XpubService();
 
 type ImportXpubModalProps = {
     onClose: () => void;
@@ -28,7 +30,7 @@ export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
         setXpub(value);
         // Auto-detect derivation type based on prefix
         if (value.trim().length >= 4) {
-            setDerivationType(getDefaultDerivationType(value));
+            setDerivationType(xpubService.getDefaultDerivationType(value));
         }
     };
 
@@ -36,7 +38,7 @@ export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
         e.preventDefault();
         setError(null);
 
-        const validationError = validateXpub(xpub);
+        const validationError = xpubService.validateXpub(xpub);
         if (validationError) {
             setError(validationError);
             return;

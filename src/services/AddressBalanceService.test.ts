@@ -34,7 +34,7 @@ vi.mock("../requests/SpotPriceRequests", () => ({
 
 import { AddressBalanceService } from "./AddressBalanceService";
 import { TrackedAddressesService } from "./TrackedAddressesService";
-import { XpubRequests } from "../requests/XpubRequests";
+import { XpubService } from "./XpubService";
 
 const migrationsDir = join(process.cwd(), "src-tauri", "migrations");
 const migrationSql = readdirSync(migrationsDir)
@@ -60,14 +60,14 @@ describe("AddressBalanceService persistence", () => {
     const originalFetch = globalThis.fetch;
     let addressBalanceService: AddressBalanceService;
     let trackedAddressesService: TrackedAddressesService;
-    let xpubRequests: XpubRequests;
+    let xpubService: XpubService;
 
     beforeEach(() => {
         fetchMock.mockReset();
         globalThis.fetch = fetchMock as unknown as typeof fetch;
         addressBalanceService = new AddressBalanceService();
         trackedAddressesService = new TrackedAddressesService();
-        xpubRequests = new XpubRequests();
+        xpubService = new XpubService();
     });
 
     afterEach(() => {
@@ -148,7 +148,7 @@ describe("AddressBalanceService persistence", () => {
 
     it("updates an xpub-derived address and writes to xpub_address_balances", async () => {
         const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
-        const { addresses } = await xpubRequests.add(xpub, "Native SegWit", "P2WPKH");
+        const { addresses } = await xpubService.add(xpub, "Native SegWit", "P2WPKH");
         const target = addresses[0];
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(30_000_000, 0, 4));

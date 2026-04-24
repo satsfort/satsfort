@@ -22,7 +22,7 @@ vi.mock("@tauri-apps/api/core", () => ({
     }),
 }));
 
-import { validateXpub, getDefaultDerivationType, XpubRequests } from "./XpubRequests";
+import { XpubRequests } from "./XpubRequests";
 
 const migrationsDir = join(process.cwd(), "src-tauri", "migrations");
 const migrationSql = readdirSync(migrationsDir)
@@ -43,165 +43,177 @@ afterEach(() => {
     dbRef.current = null;
 });
 
-describe("validateXpub", () => {
-    describe("valid xpubs", () => {
-        it("accepts a valid zpub", () => {
-            const zpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
-            expect(validateXpub(zpub)).toBeNull();
-        });
+const xpubRequests = new XpubRequests();
 
-        it("accepts a valid xpub", () => {
-            const xpub = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";
-            expect(validateXpub(xpub)).toBeNull();
-        });
+async function seedXpub(label = "Wallet", xpub = "zpub-" + crypto.randomUUID()) {
+    return xpubRequests.insertXpub({
+        uuid: crypto.randomUUID(),
+        label,
+        xpub,
+        derivationType: "P2WPKH",
+        addressCount: 0,
+    });
+}
 
-        it("accepts a valid ypub", () => {
-            const ypub = "ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP";
-            expect(validateXpub(ypub)).toBeNull();
-        });
+describe("XpubRequests.getAll", () => {
+    it("returns an empty array when no xpubs exist", async () => {
+        expect(await xpubRequests.getAll()).toEqual([]);
     });
 
-    describe("invalid xpubs", () => {
-        it("rejects empty string", () => {
-            expect(validateXpub("")).toBe("Extended public key is required");
-        });
+    it("returns all inserted xpubs ordered by id", async () => {
+        await seedXpub("First");
+        await seedXpub("Second");
 
-        it("rejects whitespace-only string", () => {
-            expect(validateXpub("   ")).toBe("Extended public key is required");
-        });
-
-        it("rejects invalid prefix", () => {
-            expect(validateXpub("invalid123456789")).toContain("must start with");
-        });
-
-        it("rejects testnet keys", () => {
-            const tpub = "tpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";
-            expect(validateXpub(tpub)).toContain("Testnet");
-        });
-
-        it("rejects keys that are too short", () => {
-            expect(validateXpub("zpub6rFR7y4Q2Aij")).toContain("invalid length");
-        });
-
-        it("rejects keys with invalid characters", () => {
-            const invalidXpub =
-                "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGOI0LO";
-            expect(validateXpub(invalidXpub)).toContain("Invalid character");
-        });
+        const all = await xpubRequests.getAll();
+        expect(all.map((x) => x.label)).toEqual(["First", "Second"]);
     });
 });
 
-describe("getDefaultDerivationType", () => {
-    it("returns P2WPKH for zpub", () => {
-        expect(getDefaultDerivationType("zpub6rFR7y4Q2Aij...")).toBe("P2WPKH");
+describe("XpubRequests.findByXpub", () => {
+    it("returns null when no match", async () => {
+        expect(await xpubRequests.findByXpub("zpub-missing")).toBeNull();
     });
 
-    it("returns P2SH for ypub", () => {
-        expect(getDefaultDerivationType("ypub6Ww3ibxVfGzL...")).toBe("P2SH");
-    });
-
-    it("returns P2PKH for xpub", () => {
-        expect(getDefaultDerivationType("xpub661MyMwAqRbc...")).toBe("P2PKH");
+    it("returns the inserted xpub", async () => {
+        const meta = await seedXpub("Hello", "zpub-known");
+        const found = await xpubRequests.findByXpub("zpub-known");
+        expect(found?.id).toBe(meta.id);
     });
 });
 
-describe("XpubRequests", () => {
-    const requests = new XpubRequests();
+describe("XpubRequests.findInternalIdByUuid", () => {
+    it("returns the internal id after insert", async () => {
+        const meta = await seedXpub();
+        const id = await xpubRequests.findInternalIdByUuid(meta.id);
+        expect(typeof id).toBe("number");
+    });
 
-    it("can add and retrieve an xpub", async () => {
-        const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
-        const result = await requests.add(xpub, "Test Wallet", "P2WPKH");
+    it("returns null for an unknown uuid", async () => {
+        expect(await xpubRequests.findInternalIdByUuid("00000000-0000-0000-0000-000000000000")).toBeNull();
+    });
+});
 
-        expect(result.xpub.label).toBe("Test Wallet");
-        expect(result.xpub.xpub).toBe(xpub);
-        expect(result.xpub.derivationType).toBe("P2WPKH");
-        expect(result.addresses.length).toBe(20);
+describe("XpubRequests.insertDerivedAddress + getDerivedAddresses", () => {
+    it("persists a derived address and returns it by xpub uuid", async () => {
+        const meta = await seedXpub();
+        const internalId = (await xpubRequests.findInternalIdByUuid(meta.id))!;
 
-        const all = await requests.execute();
+        const derived = await xpubRequests.insertDerivedAddress(internalId, {
+            uuid: crypto.randomUUID(),
+            xpubUuid: meta.id,
+            address: "bc1qxpubaddr",
+            derivationPath: "m/0/0",
+            index: 0,
+        });
+
+        expect(derived.address).toBe("bc1qxpubaddr");
+
+        const all = await xpubRequests.getDerivedAddresses(meta.id);
         expect(all).toHaveLength(1);
-        expect(all[0].id).toBe(result.xpub.id);
+        expect(all[0].address).toBe("bc1qxpubaddr");
+        expect(all[0].xpubId).toBe(meta.id);
     });
+});
 
-    it("derives addresses with correct properties", async () => {
-        const xpub = "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8";
-        const result = await requests.add(xpub, "Legacy Wallet", "P2PKH");
+describe("XpubRequests.getAllDerivedAddresses", () => {
+    it("returns derived addresses across all xpubs", async () => {
+        const a = await seedXpub("A");
+        const b = await seedXpub("B");
+        const aId = (await xpubRequests.findInternalIdByUuid(a.id))!;
+        const bId = (await xpubRequests.findInternalIdByUuid(b.id))!;
 
-        const firstAddress = result.addresses[0];
-        expect(firstAddress.xpubId).toBe(result.xpub.id);
-        expect(firstAddress.index).toBe(0);
-        expect(firstAddress.derivationPath).toContain("m/44'/0'/0'/0/0");
-        expect(firstAddress.address.startsWith("1")).toBe(true);
+        await xpubRequests.insertDerivedAddress(aId, {
+            uuid: crypto.randomUUID(),
+            xpubUuid: a.id,
+            address: "bc1qa0",
+            derivationPath: "m/0/0",
+            index: 0,
+        });
+        await xpubRequests.insertDerivedAddress(bId, {
+            uuid: crypto.randomUUID(),
+            xpubUuid: b.id,
+            address: "bc1qb0",
+            derivationPath: "m/0/0",
+            index: 0,
+        });
+
+        const all = await xpubRequests.getAllDerivedAddresses();
+        expect(all.map((d) => d.address).sort()).toEqual(["bc1qa0", "bc1qb0"]);
     });
+});
 
-    it("persists derived addresses and returns them via getDerivedAddresses", async () => {
-        const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
-        const result = await requests.add(xpub, "Native SegWit", "P2WPKH");
+describe("XpubRequests.remove", () => {
+    it("deletes the xpub and its derived addresses", async () => {
+        const meta = await seedXpub();
+        const internalId = (await xpubRequests.findInternalIdByUuid(meta.id))!;
+        await xpubRequests.insertDerivedAddress(internalId, {
+            uuid: crypto.randomUUID(),
+            xpubUuid: meta.id,
+            address: "bc1qwill-go",
+            derivationPath: "m/0/0",
+            index: 0,
+        });
 
-        const derived = await requests.getDerivedAddresses(result.xpub.id);
-        expect(derived).toHaveLength(20);
-        expect(derived[0].xpubId).toBe(result.xpub.id);
-        expect(derived.map((d) => d.index)).toEqual([...Array(20).keys()]);
+        await xpubRequests.remove(meta.id);
+
+        expect(await xpubRequests.getAll()).toHaveLength(0);
+        expect(await xpubRequests.getDerivedAddresses(meta.id)).toHaveLength(0);
     });
+});
 
-    it("can remove an xpub and its derived addresses", async () => {
-        const xpub = "ypub6Ww3ibxVfGzLrAH1PNcjyAWenMTbbAosGNB6VvmSEgytSER9azLDWCxoJwW7Ke7icmizBMXrzBx9979FfaHxHcrArf3zbeJJJUZPf663zsP";
-        const result = await requests.add(xpub, "Wrapped Wallet", "P2SH");
+describe("XpubRequests.sumDerivedBalances", () => {
+    it("sums latest balances across derived addresses, treating nulls as zero", async () => {
+        const meta = await seedXpub();
+        const internalId = (await xpubRequests.findInternalIdByUuid(meta.id))!;
+        await xpubRequests.insertDerivedAddress(internalId, {
+            uuid: crypto.randomUUID(),
+            xpubUuid: meta.id,
+            address: "bc1q0",
+            derivationPath: "m/0/0",
+            index: 0,
+        });
+        await xpubRequests.insertDerivedAddress(internalId, {
+            uuid: crypto.randomUUID(),
+            xpubUuid: meta.id,
+            address: "bc1q1",
+            derivationPath: "m/0/1",
+            index: 1,
+        });
 
-        await requests.remove(result.xpub.id);
+        dbRef
+            .current!.prepare(
+                "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_balance_usd = ?, latest_tx_count = ? WHERE address_index = 0",
+            )
+            .run(0.2, 20_000, 2);
 
-        const derivedAfterRemoval = await requests.getDerivedAddresses(result.xpub.id);
-        expect(derivedAfterRemoval.length).toBe(0);
-
-        const all = await requests.execute();
-        expect(all).toHaveLength(0);
+        const totals = await xpubRequests.sumDerivedBalances(internalId);
+        expect(totals.btc).toBeCloseTo(0.2, 8);
+        expect(totals.usd).toBeCloseTo(20_000, 4);
+        expect(totals.txCount).toBe(2);
     });
+});
 
-    it("throws error for duplicate xpub", async () => {
-        const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
-        await requests.add(xpub, "Original Wallet", "P2WPKH");
-        await expect(requests.add(xpub, "Duplicate Wallet", "P2WPKH")).rejects.toThrow("already being tracked");
-    });
+describe("XpubRequests.updateLatestBalance + insertBalanceSnapshot", () => {
+    const sample = { btc: 0.4, usd: 40_000, txCount: 5, fetchedAt: "2026-04-20T08:00:00.000Z" };
 
-    it("saveBalance aggregates derived address balances and snapshots to xpub_balances", async () => {
-        const xpub = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
-        const result = await requests.add(xpub, "Aggregation Wallet", "P2WPKH");
+    it("updates the xpubs row and appends to xpub_balances", async () => {
+        const meta = await seedXpub();
+        const internalId = (await xpubRequests.findInternalIdByUuid(meta.id))!;
 
-        const db = dbRef.current!;
-        db.prepare(
-            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_balance_usd = ?, latest_tx_count = ? WHERE address_index IN (0, 1)",
-        ).run(0.5, 50_000, 3);
-        db.prepare(
-            "UPDATE xpub_addresses SET latest_balance_btc = ?, latest_balance_usd = ?, latest_tx_count = ? WHERE address_index = 2",
-        ).run(0.25, 25_000, 1);
+        await xpubRequests.updateLatestBalance(internalId, sample);
+        await xpubRequests.insertBalanceSnapshot(internalId, sample);
 
-        const totals = await requests.saveBalance(result.xpub.id);
-        expect(totals.btc).toBeCloseTo(1.25, 8);
-        expect(totals.usd).toBeCloseTo(125_000, 4);
-        expect(totals.txCount).toBe(7);
+        const row = dbRef
+            .current!.prepare("SELECT latest_balance_btc, latest_balance_usd, latest_tx_count FROM xpubs WHERE id = ?")
+            .get(internalId) as { latest_balance_btc: number; latest_balance_usd: number; latest_tx_count: number };
+        expect(row.latest_balance_btc).toBeCloseTo(0.4, 8);
+        expect(row.latest_balance_usd).toBeCloseTo(40_000, 4);
+        expect(row.latest_tx_count).toBe(5);
 
-        const xpubRow = db
-            .prepare("SELECT latest_balance_btc, latest_balance_usd, latest_tx_count FROM xpubs WHERE uuid = ?")
-            .get(result.xpub.id) as {
-            latest_balance_btc: number;
-            latest_balance_usd: number;
-            latest_tx_count: number;
-        };
-        expect(xpubRow.latest_balance_btc).toBeCloseTo(1.25, 8);
-        expect(xpubRow.latest_balance_usd).toBeCloseTo(125_000, 4);
-        expect(xpubRow.latest_tx_count).toBe(7);
-
-        const snapshots = db.prepare("SELECT balance_btc, balance_usd, tx_count FROM xpub_balances").all() as {
+        const snaps = dbRef.current!.prepare("SELECT balance_btc FROM xpub_balances WHERE xpub_id = ?").all(internalId) as {
             balance_btc: number;
-            balance_usd: number;
-            tx_count: number;
         }[];
-        expect(snapshots).toHaveLength(1);
-        expect(snapshots[0].balance_btc).toBeCloseTo(1.25, 8);
-        expect(snapshots[0].balance_usd).toBeCloseTo(125_000, 4);
-        expect(snapshots[0].tx_count).toBe(7);
-    });
-
-    it("saveBalance throws when xpub is unknown", async () => {
-        await expect(requests.saveBalance("00000000-0000-0000-0000-000000000000")).rejects.toThrow("xpub not found");
+        expect(snaps).toHaveLength(1);
+        expect(snaps[0].balance_btc).toBeCloseTo(0.4, 8);
     });
 });

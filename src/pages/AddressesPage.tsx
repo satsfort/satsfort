@@ -6,8 +6,8 @@ import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIco
 import { AddressBalanceService } from "../services/AddressBalanceService";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
-import { XpubRequests } from "../requests/XpubRequests";
 import type { TrackedXpubMeta, DerivedAddress, DerivationType } from "../requests/XpubRequests";
+import { XpubService } from "../services/XpubService";
 import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../requests/SpotPriceRequests";
@@ -46,7 +46,7 @@ function shortenXpub(xpub: string) {
 export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances, onPortfolioChanged }: Props) {
     const trackedAddressesService = new TrackedAddressesService();
     const addressBalanceService = new AddressBalanceService();
-    const xpubRequests = new XpubRequests();
+    const xpubService = new XpubService();
     const portfolioHistoryService = new PortfolioHistoryService();
     const spotPriceRequests = new SpotPriceRequests();
 
@@ -80,7 +80,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
             return next;
         });
         const xpubIds = new Set(addresses.map((a) => a.xpubId));
-        await Promise.all(Array.from(xpubIds).map((xpubId) => xpubRequests.saveBalance(xpubId)));
+        await Promise.all(Array.from(xpubIds).map((xpubId) => xpubService.saveBalance(xpubId)));
     };
 
     const toggleXpubExpanded = (xpubId: string) => {
@@ -170,7 +170,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     };
 
     const handleImportXpub = async (xpub: string, label: string, derivationType: DerivationType) => {
-        const result = await track(`Importing ${label}`, () => xpubRequests.add(xpub, label, derivationType));
+        const result = await track(`Importing ${label}`, () => xpubService.add(xpub, label, derivationType));
         setXpubs((prev) => [...prev, result.xpub]);
         setDerivedAddresses((prev) => [...prev, ...result.addresses]);
         setExpandedXpubs((prev) => new Set([...prev, result.xpub.id]));
@@ -181,7 +181,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     };
 
     const handleRemoveXpub = async (id: string) => {
-        await xpubRequests.remove(id);
+        await xpubService.remove(id);
         setXpubs((prev) => prev.filter((x) => x.id !== id));
         // Remove balances for this xpub's derived addresses
         const removedAddresses = derivedAddresses.filter((a) => a.xpubId === id).map((a) => a.address);
@@ -210,7 +210,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
             trackedAddressesService.getAll().then(setAddresses);
 
             // Load xpubs and derived addresses, then fetch their balances
-            void Promise.all([xpubRequests.execute(), xpubRequests.getAllDerivedAddresses()]).then(([loadedXpubs, loadedDerived]) => {
+            void Promise.all([xpubService.getAll(), xpubService.getAllDerivedAddresses()]).then(([loadedXpubs, loadedDerived]) => {
                 setXpubs(loadedXpubs);
                 setDerivedAddresses(loadedDerived);
                 if (loadedDerived.length > 0) {
