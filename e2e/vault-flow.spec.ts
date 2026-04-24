@@ -28,9 +28,10 @@ describe("vault flow", () => {
         await sidebar.$("button.sidebar-item*=Addresses").click();
         await $("h1*=Addresses").waitForDisplayed();
 
-        // Log out from the Account page.
-        await sidebar.$("button.sidebar-item*=Account").click();
-        await $("h1*=Account").waitForDisplayed();
+        // Log out from the Upgrade / "Support the project" page, which is
+        // where the Log Out button currently lives.
+        await sidebar.$("button.sidebar-item*=Upgrade").click();
+        await $("h1*=Support the project").waitForDisplayed();
         await $("button*=Log Out").click();
 
         // With the vault now persisted to disk, the login screen should show
