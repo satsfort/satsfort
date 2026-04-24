@@ -1,11 +1,5 @@
 import { Config } from "../lib/Config";
-
-export type AddressBalance = {
-    address: string;
-    btc: number;
-    txCount: number;
-    lastSeen: string;
-};
+import type { AddressBalance } from "../services/model/AddressBalance";
 
 const MOCK_BALANCES: Record<string, { btc: number; txCount: number; lastSeen: string }> = {
     bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh: {

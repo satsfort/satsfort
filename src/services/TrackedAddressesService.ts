@@ -1,5 +1,5 @@
 import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
-import type { TrackedAddressMeta } from "../requests/TrackedAddressesRequests";
+import type { TrackedAddressMeta } from "./model/TrackedAddressMeta";
 import { AddressBalanceService } from "./AddressBalanceService";
 import { BitcoinAddressValidationService } from "./BitcoinAddressValidationService";
 

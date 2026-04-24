@@ -6,11 +6,13 @@ import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIco
 import { AddressBalanceService } from "../services/AddressBalanceService";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
-import type { TrackedXpubMeta, DerivedAddress, DerivationType } from "../requests/XpubRequests";
+import type { TrackedXpubMeta } from "../services/model/TrackedXpubMeta";
+import type { DerivedAddress } from "../services/model/DerivedAddress";
+import type { AddressDerivationType } from "../services/XpubDerivationService";
 import { XpubService } from "../services/XpubService";
 import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
-import type { SpotPrice } from "../requests/SpotPriceRequests";
+import type { SpotPrice } from "../services/model/SpotPrice";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatBtcLabel, formatSecondary, formatSymbol } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
@@ -169,7 +171,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         onPortfolioChanged();
     };
 
-    const handleImportXpub = async (xpub: string, label: string, derivationType: DerivationType) => {
+    const handleImportXpub = async (xpub: string, label: string, derivationType: AddressDerivationType) => {
         const result = await track(`Importing ${label}`, () => xpubService.add(xpub, label, derivationType));
         setXpubs((prev) => [...prev, result.xpub]);
         setDerivedAddresses((prev) => [...prev, ...result.addresses]);

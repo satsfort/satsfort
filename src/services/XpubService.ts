@@ -1,6 +1,8 @@
 import { XpubRequests } from "../requests/XpubRequests";
-import type { DerivationType, DerivedAddress, TrackedXpubMeta } from "../requests/XpubRequests";
+import type { TrackedXpubMeta } from "./model/TrackedXpubMeta";
+import type { DerivedAddress } from "./model/DerivedAddress";
 import { XpubDerivationService } from "./XpubDerivationService";
+import type { AddressDerivationType } from "./XpubDerivationService";
 
 const ADDRESS_DERIVATION_COUNT = 20;
 
@@ -40,7 +42,7 @@ export class XpubService {
     }
 
     /** Default address derivation type based on the xpub prefix. */
-    getDefaultDerivationType(xpub: string): DerivationType {
+    getDefaultDerivationType(xpub: string): AddressDerivationType {
         const prefix = xpub.trim().slice(0, 4);
         switch (prefix) {
             case "zpub":
@@ -68,7 +70,7 @@ export class XpubService {
     async add(
         xpub: string,
         label: string,
-        derivationType: DerivationType,
+        derivationType: AddressDerivationType,
     ): Promise<{ xpub: TrackedXpubMeta; addresses: DerivedAddress[] }> {
         const trimmedXpub = xpub.trim();
         const trimmedLabel = label.trim();

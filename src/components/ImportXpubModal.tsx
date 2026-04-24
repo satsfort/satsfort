@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./Modal.css";
-import type { DerivationType } from "../requests/XpubRequests";
+import type { AddressDerivationType } from "../services/XpubDerivationService";
 import { XpubService } from "../services/XpubService";
 import { useEscapeKey } from "../lib/useEscapeKey";
 
@@ -8,10 +8,10 @@ const xpubService = new XpubService();
 
 type ImportXpubModalProps = {
     onClose: () => void;
-    onImport: (xpub: string, label: string, derivationType: DerivationType) => Promise<void>;
+    onImport: (xpub: string, label: string, derivationType: AddressDerivationType) => Promise<void>;
 };
 
-const DERIVATION_TYPE_OPTIONS: { value: DerivationType; label: string; description: string }[] = [
+const DERIVATION_TYPE_OPTIONS: { value: AddressDerivationType; label: string; description: string }[] = [
     { value: "P2WPKH", label: "Native SegWit (P2WPKH)", description: "bc1q... addresses — Recommended" },
     { value: "P2TR", label: "Taproot (P2TR)", description: "bc1p... addresses" },
     { value: "P2SH", label: "Wrapped SegWit (P2SH)", description: "3... addresses" },
@@ -22,7 +22,7 @@ export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
     useEscapeKey(onClose);
     const [xpub, setXpub] = useState("");
     const [label, setLabel] = useState("");
-    const [derivationType, setDerivationType] = useState<DerivationType>("P2WPKH");
+    const [derivationType, setDerivationType] = useState<AddressDerivationType>("P2WPKH");
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
@@ -112,7 +112,7 @@ export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
                             id="derivation-type"
                             className="text-input"
                             value={derivationType}
-                            onChange={(e) => setDerivationType(e.target.value as DerivationType)}
+                            onChange={(e) => setDerivationType(e.target.value as AddressDerivationType)}
                         >
                             {DERIVATION_TYPE_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>

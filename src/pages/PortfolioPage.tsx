@@ -9,7 +9,7 @@ import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { TransactionHistoryService } from "../services/TransactionHistoryService";
 import type { Transaction } from "../services/TransactionHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
-import type { SpotPrice } from "../requests/SpotPriceRequests";
+import type { SpotPrice } from "../services/model/SpotPrice";
 import type { Route } from "../components/Sidebar";
 import type { Unit } from "../lib/format";
 import { formatAmount, formatBtcLabel, formatNumber, formatSecondary, formatSymbol } from "../lib/format";

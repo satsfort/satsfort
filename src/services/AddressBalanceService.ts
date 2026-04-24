@@ -1,9 +1,7 @@
 import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
 import { BlockchainBalanceRequests } from "../requests/BlockchainBalanceRequests";
-import type { AddressBalance } from "../requests/BlockchainBalanceRequests";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
-
-export type { AddressBalance };
+import type { AddressBalance } from "./model/AddressBalance";
 
 export class AddressBalanceService {
     private readonly addressBalanceRequests = new AddressBalanceRequests();

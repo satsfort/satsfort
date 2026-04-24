@@ -4,9 +4,6 @@ import type { TrackedXpubMeta } from "../services/model/TrackedXpubMeta";
 import type { DerivedAddress } from "../services/model/DerivedAddress";
 import type { XpubBalanceUpdate } from "../services/model/XpubBalanceUpdate";
 
-export type DerivationType = AddressDerivationType;
-export type { TrackedXpubMeta, DerivedAddress, XpubBalanceUpdate };
-
 type XpubRow = {
     id: number;
     uuid: string;
@@ -65,7 +62,7 @@ export class XpubRequests {
         uuid: string;
         label: string;
         xpub: string;
-        derivationType: DerivationType;
+        derivationType: AddressDerivationType;
         addressCount: number;
     }): Promise<TrackedXpubMeta> {
         await dbExecute("INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)", [
@@ -134,7 +131,7 @@ export class XpubRequests {
             id: row.uuid,
             label: row.label,
             xpub: row.xpub,
-            derivationType: row.derivation_type as DerivationType,
+            derivationType: row.derivation_type as AddressDerivationType,
             added: row.created_at.slice(0, 10),
             addressCount: row.address_count,
         };
