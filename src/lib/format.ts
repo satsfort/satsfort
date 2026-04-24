@@ -14,8 +14,10 @@ const FIAT_SYMBOLS: Record<FiatCurrency, string> = {
 
 const SATS_PER_BTC = 100_000_000;
 
+const exchangeRateRequests = ExchangeRateRequests.getInstance();
+
 function toFiat(usdValue: number, fiat: FiatCurrency): number {
-    return usdValue * ExchangeRateRequests.rateFromUsd(fiat);
+    return usdValue * exchangeRateRequests.rateFromUsd(fiat);
 }
 
 function btcToDisplay(btc: number, denom: Denomination): number {

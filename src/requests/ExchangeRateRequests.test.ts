@@ -17,13 +17,13 @@ const REASONABLE_RANGES: Record<string, { min: number; max: number }> = {
     AUD: { min: 0.9, max: 2.5 },
 };
 
-const exchangeRateRequests = new ExchangeRateRequests();
+const exchangeRateRequests = ExchangeRateRequests.getInstance();
 
 describe("ExchangeRateRequests (integration)", () => {
     let rates: Record<string, number>;
 
     beforeAll(async () => {
-        rates = await exchangeRateRequests.execute();
+        rates = await exchangeRateRequests.loadCache();
     }, 15_000);
 
     it("returns all supported currencies", () => {
@@ -46,7 +46,7 @@ describe("ExchangeRateRequests (integration)", () => {
     }
 
     it("rotates source on a second call and still returns valid rates", async () => {
-        const rates2 = await exchangeRateRequests.execute();
+        const rates2 = await exchangeRateRequests.loadCache();
         for (const cur of CURRENCIES) {
             const range = REASONABLE_RANGES[cur];
             expect(rates2[cur]).toBeGreaterThanOrEqual(range.min);
@@ -56,7 +56,7 @@ describe("ExchangeRateRequests (integration)", () => {
 
     it("populates the synchronous rateFromUsd cache", () => {
         for (const cur of CURRENCIES) {
-            const rate = ExchangeRateRequests.rateFromUsd(cur);
+            const rate = exchangeRateRequests.rateFromUsd(cur);
             const range = REASONABLE_RANGES[cur];
             expect(rate).toBeGreaterThanOrEqual(range.min);
             expect(rate).toBeLessThanOrEqual(range.max);

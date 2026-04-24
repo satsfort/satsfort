@@ -70,26 +70,37 @@ const RATE_SOURCES: RateFetcher[] = [
     },
 ];
 
-let lastSourceIndex = -1;
-let cachedRates: Record<FiatCurrency, number> = { ...MOCK_RATES };
-let cacheLoaded = false;
-
 export class ExchangeRateRequests {
-    async execute(): Promise<Record<FiatCurrency, number>> {
+    private static instance: ExchangeRateRequests | null = null;
+
+    private lastSourceIndex = -1;
+    private cachedRates: Record<FiatCurrency, number> = { ...MOCK_RATES };
+    private cacheLoaded = false;
+
+    private constructor() {}
+
+    static getInstance(): ExchangeRateRequests {
+        if (!ExchangeRateRequests.instance) {
+            ExchangeRateRequests.instance = new ExchangeRateRequests();
+        }
+        return ExchangeRateRequests.instance;
+    }
+
+    async loadCache(): Promise<Record<FiatCurrency, number>> {
         if (Config.useMockData) {
             return { ...MOCK_RATES };
         }
 
-        const startIndex = (lastSourceIndex + 1) % RATE_SOURCES.length;
+        const startIndex = (this.lastSourceIndex + 1) % RATE_SOURCES.length;
 
         for (let attempt = 0; attempt < RATE_SOURCES.length; attempt++) {
             const index = (startIndex + attempt) % RATE_SOURCES.length;
             const source = RATE_SOURCES[index];
             try {
                 const rates = await source.fetch();
-                lastSourceIndex = index;
-                cachedRates = rates;
-                cacheLoaded = true;
+                this.lastSourceIndex = index;
+                this.cachedRates = rates;
+                this.cacheLoaded = true;
                 return rates;
             } catch (error) {
                 console.warn(`ExchangeRateRequests: ${source.name} failed, trying next`, error);
@@ -99,18 +110,10 @@ export class ExchangeRateRequests {
         throw new Error("ExchangeRateRequests: all exchange rate sources failed");
     }
 
-    /** Synchronous accessor — returns cached real rates or mock fallback. */
-    static rateFromUsd(currency: FiatCurrency): number {
-        if (Config.useMockData) {
-            return MOCK_RATES[currency];
-        }
-        if (!cacheLoaded) {
-            // Kick off a background fetch to populate cache for next call
-            void backgroundLoader.execute().catch(() => {});
-            return MOCK_RATES[currency];
-        }
-        return cachedRates[currency];
+    /** Synchronous accessor — returns the cached rate, 0 if not yet loaded. */
+    rateFromUsd(currency: FiatCurrency): number {
+        if (Config.useMockData) return MOCK_RATES[currency];
+        if (!this.cacheLoaded) return 0;
+        return this.cachedRates[currency];
     }
 }
-
-const backgroundLoader = new ExchangeRateRequests();

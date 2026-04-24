@@ -30,7 +30,7 @@ type Props = {
 
 export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances, onNavigate, version }: Props) {
     const spotPriceRequests = new SpotPriceRequests();
-    const exchangeRateRequests = new ExchangeRateRequests();
+    const exchangeRateRequests = ExchangeRateRequests.getInstance();
     const portfolioHistoryService = new PortfolioHistoryService();
     const transactionHistoryService = new TransactionHistoryService();
 
@@ -66,7 +66,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         console.error("Failed to fetch spot price", err);
                         setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
                     });
-                track("Exchange rates", () => exchangeRateRequests.execute()).catch(() => {});
+                track("Exchange rates", () => exchangeRateRequests.loadCache()).catch(() => {});
             }
         }, delay);
         return () => clearTimeout(timer);
@@ -119,7 +119,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const yearAgo = history[history.length - 53] ?? history[0];
     const monthAgo = history[history.length - 5] ?? history[0];
 
-    const rate = ExchangeRateRequests.rateFromUsd(currency);
+    const rate = exchangeRateRequests.rateFromUsd(currency);
     const fiatSymbol = formatSymbol("FIAT", currency);
 
     const usdValue = latest.btc * priceUsd;
