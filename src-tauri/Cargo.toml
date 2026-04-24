@@ -36,3 +36,9 @@ tokio = { version = "1", features = ["full"] }
 version = "0.30"
 features = ["bundled-sqlcipher-vendored-openssl"]
 
+[features]
+# Enabled by `tauri build` — embeds the frontend assets and serves them via
+# the custom tauri:// protocol instead of loading `devUrl`. Required for any
+# release/cargo-build scenario where the vite dev server isn't running.
+custom-protocol = ["tauri/custom-protocol"]
+

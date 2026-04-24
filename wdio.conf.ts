@@ -3,10 +3,14 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Options, Capabilities } from "@wdio/types";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const APPLICATION = path.resolve(__dirname, "src-tauri", "target", "debug", "SatsFort");
+// Tauri loads from `devUrl` when cfg(debug_assertions), which requires the
+// vite dev server running. In CI/Docker we want the bundled frontend, so we
+// build release and point WDIO at the release binary.
+const APPLICATION = path.resolve(__dirname, "src-tauri", "target", "release", "SatsFort");
 const TAURI_DRIVER = path.resolve(os.homedir(), ".cargo", "bin", "tauri-driver");
 
 // Holds the tauri-driver child process for the duration of a session so that
@@ -17,9 +21,8 @@ let tauriDriver: ChildProcess | null = null;
 // portfolio.db) is fresh for every test invocation.
 let tempDataHome: string | null = null;
 
-export const config: WebdriverIO.Config = {
+export const config: Options.Testrunner = {
     runner: "local",
-    tsConfigPath: "./tsconfig.wdio.json",
 
     // Point WDIO at tauri-driver so it proxies the WebDriver session to the
     // platform driver (WebKitWebDriver on Linux) instead of trying to launch
@@ -36,10 +39,8 @@ export const config: WebdriverIO.Config = {
             "tauri:options": {
                 application: APPLICATION,
             },
-            // tauri-driver proxies to the underlying platform WebDriver; on
-            // Linux this is WebKitWebDriver (package: webkit2gtk-driver).
-        } as unknown as WebdriverIO.Capabilities,
-    ],
+        },
+    ] as unknown as Capabilities.RemoteCapabilities,
 
     logLevel: "info",
     framework: "mocha",
@@ -47,6 +48,14 @@ export const config: WebdriverIO.Config = {
     mochaOpts: {
         ui: "bdd",
         timeout: 60_000,
+    },
+
+    autoCompileOpts: {
+        autoCompile: true,
+        tsNodeOpts: {
+            project: "./tsconfig.wdio.json",
+            transpileOnly: true,
+        },
     },
 
     // Give the spawned Tauri binary a fresh data dir so the vault file is
@@ -68,8 +77,12 @@ export const config: WebdriverIO.Config = {
         mkdirSync(artifactsDir, { recursive: true });
         const safe = `${test.parent}-${test.title}`.replace(/[^a-z0-9]+/gi, "_").slice(0, 120);
         try {
-            await browser.saveScreenshot(path.join(artifactsDir, `${safe}.png`));
-            const html = await browser.getPageSource();
+            // `browser` is injected as a global by the WDIO runner at test time.
+            const b = (globalThis as { browser?: { saveScreenshot: (p: string) => Promise<unknown>; getPageSource: () => Promise<string> } })
+                .browser;
+            if (!b) return;
+            await b.saveScreenshot(path.join(artifactsDir, `${safe}.png`));
+            const html = await b.getPageSource();
             writeFileSync(path.join(artifactsDir, `${safe}.html`), html);
         } catch (err) {
             console.warn("failed to capture failure artifacts", err);

@@ -1,5 +1,4 @@
-/// <reference types="@wdio/mocha-framework" />
-/// <reference types="webdriverio/async" />
+import { $, $$, browser } from "@wdio/globals";
 
 describe("vault flow", () => {
     it("creates a vault, navigates to Addresses, and logs out", async () => {
