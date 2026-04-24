@@ -171,8 +171,6 @@ function formatTick(iso: string, style: "day" | "year") {
     const d = new Date(iso + "T00:00:00Z");
     return d.toLocaleDateString(
         undefined,
-        style === "day"
-            ? { month: "short", day: "numeric", timeZone: "UTC" }
-            : { month: "short", year: "numeric", timeZone: "UTC" },
+        style === "day" ? { month: "short", day: "numeric", timeZone: "UTC" } : { month: "short", year: "numeric", timeZone: "UTC" },
     );
 }

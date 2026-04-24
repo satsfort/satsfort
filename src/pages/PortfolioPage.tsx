@@ -4,7 +4,6 @@ import "./BalancePrivacy.css";
 import { PortfolioChart } from "../components/PortfolioChart";
 import { EyeIcon, EyeOffIcon, BarChartIcon } from "../components/icons";
 import { EmptyState } from "../components/EmptyState";
-import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
 import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { TransactionHistoryService } from "../services/TransactionHistoryService";

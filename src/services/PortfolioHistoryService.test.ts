@@ -64,9 +64,9 @@ function insertXpub(label: string, xpubKey: string, balanceBtc: number | null, b
 }
 
 function insertPortfolioValue(balanceBtc: number, balanceUsd: number, fetchedAt: string) {
-    dbRef.current!.prepare(
-        "INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)",
-    ).run(crypto.randomUUID(), balanceBtc, balanceUsd, fetchedAt);
+    dbRef
+        .current!.prepare("INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)")
+        .run(crypto.randomUUID(), balanceBtc, balanceUsd, fetchedAt);
 }
 
 const portfolioHistoryService = new PortfolioHistoryService();
