@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import "./BottomNav.css";
 import type { Route } from "./Sidebar";
-import { AddressIcon, ChartIcon, SettingsIcon, UserIcon } from "./icons";
+import { AddressIcon, ChartIcon, SettingsIcon, ZapIcon } from "./icons";
 
 type Item = { id: Route; label: string; icon: ReactNode };
 
@@ -9,7 +9,7 @@ const ITEMS: Item[] = [
     { id: "portfolio", label: "Portfolio", icon: <ChartIcon size={20} /> },
     { id: "addresses", label: "Addresses", icon: <AddressIcon size={20} /> },
     { id: "settings", label: "Settings", icon: <SettingsIcon size={20} /> },
-    { id: "account", label: "Account", icon: <UserIcon size={20} /> },
+    { id: "account", label: "Upgrade", icon: <ZapIcon size={20} /> },
 ];
 
 type Props = {

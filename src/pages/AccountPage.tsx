@@ -2,18 +2,87 @@ import "./AccountPage.css";
 import { TaskNotifications } from "../components/TaskNotifications";
 
 type Props = {
-    username: string;
     onLogout: () => void;
 };
 
-export function AccountPage({ username, onLogout }: Props) {
-    const initials = username.slice(0, 2).toUpperCase();
+type Plan = {
+    id: "free" | "supporter" | "sponsor";
+    name: string;
+    tagline: string;
+    price: string;
+    priceSuffix?: string;
+    features: string[];
+    highlight?: boolean;
+    badge?: string;
+    cta: string;
+    ctaDisabled?: boolean;
+};
+
+const PLANS: Plan[] = [
+    {
+        id: "free",
+        name: "Free Forever",
+        tagline: "Everything you need to track your stack",
+        price: "Free",
+        features: [
+            "Up to 10 addresses/XPUBs",
+            "XPUB/ZPUB import",
+            "UTXO management",
+            "Local encrypted storage",
+            "Basic labels",
+            "Export to CSV",
+        ],
+        cta: "Current plan",
+        ctaDisabled: true,
+    },
+    {
+        id: "supporter",
+        name: "Supporter",
+        tagline: "Support development + premium features",
+        price: "10,000",
+        priceSuffix: "sats/month",
+        badge: "Most Popular",
+        highlight: true,
+        features: [
+            "Everything in Free",
+            "Unlimited addresses/XPUBs",
+            "Connect your own node",
+            "Encrypted cloud backup",
+            "Mobile app (iOS & Android)",
+            "Wallet movement alerts",
+            "Advanced UTXO analysis",
+            "Fee estimation alerts",
+            "Multi-device sync",
+        ],
+        cta: "Coming soon",
+        ctaDisabled: true,
+    },
+    {
+        id: "sponsor",
+        name: "Sponsor",
+        tagline: "Become a visible supporter of the project",
+        price: "Custom",
+        priceSuffix: "Tailored to your needs",
+        features: [
+            "Everything in Supporter",
+            "Your logo on our website",
+            "Your logo in the app's About page",
+            "Your logo in the GitHub README",
+            "Shoutout on social media",
+            "Custom feature requests considered",
+        ],
+        cta: "Coming soon",
+        ctaDisabled: true,
+    },
+];
+
+export function AccountPage({ onLogout }: Props) {
     return (
         <>
             <header className="page-head">
                 <div>
-                    <div className="eyebrow">Your profile</div>
-                    <h1 className="page-title">Account</h1>
+                    <div className="eyebrow">Your plan</div>
+                    <h1 className="page-title">Support the project</h1>
                 </div>
                 <div className="page-actions">
                     <button className="btn btn-danger" onClick={onLogout}>
@@ -23,102 +92,38 @@ export function AccountPage({ username, onLogout }: Props) {
                 </div>
             </header>
 
-            <section className="account-grid">
-                <div className="account-card">
-                    <div className="account-head">
-                        <div className="avatar">{initials}</div>
-                        <div>
-                            <div className="account-name">{username}</div>
-                            <div className="muted mono small">{username}@proton.me</div>
-                        </div>
-                    </div>
-                    <div className="account-meta">
-                        <div>
-                            <div className="eyebrow">Member since</div>
-                            <div className="mono">2024-04-18</div>
-                        </div>
-                        <div>
-                            <div className="eyebrow">Last sync</div>
-                            <div className="mono">2m ago</div>
-                        </div>
-                        <div>
-                            <div className="eyebrow">Plan</div>
-                            <div className="mono">
-                                <span className="tx-tag buy">Free</span>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="eyebrow">Device</div>
-                            <div className="mono">Desktop · macOS</div>
-                        </div>
-                    </div>
-                </div>
+            <div className="plan-current-banner">
+                <span className="muted small">You're currently on</span>
+                <span className="tx-tag buy">Free</span>
+            </div>
 
-                <div className="plan-grid">
-                    <div className="plan-card">
-                        <div className="plan-head">
-                            <div>
-                                <div className="eyebrow">Current Plan</div>
-                                <h3 className="plan-title">Free</h3>
-                            </div>
+            <section className="plan-grid">
+                {PLANS.map((plan) => (
+                    <div key={plan.id} className={`plan-card ${plan.highlight ? "plan-highlight" : ""}`}>
+                        {plan.badge && <div className="plan-badge">{plan.badge}</div>}
+                        <div className="plan-head-col">
+                            <h3 className="plan-title">{plan.name}</h3>
+                            <div className="plan-tagline muted small">{plan.tagline}</div>
                             <div className="plan-price mono">
-                                $0<span>/mo</span>
+                                {plan.price}
+                                {plan.priceSuffix && <span> {plan.priceSuffix}</span>}
                             </div>
                         </div>
                         <ul className="plan-list">
-                            <li>Up to 5 tracked addresses</li>
-                            <li>7-day price history</li>
-                            <li>Community support</li>
-                            <li className="muted">Public price APIs only</li>
+                            {plan.features.map((f) => (
+                                <li key={f}>{f}</li>
+                            ))}
                         </ul>
-                        <button className="btn plan-btn" disabled>
-                            Current
+                        <button className={`btn plan-btn ${plan.highlight ? "btn-primary" : ""}`} disabled={plan.ctaDisabled}>
+                            {plan.cta}
                         </button>
                     </div>
-
-                    <div className="plan-card plan-highlight">
-                        <div className="plan-badge">Supporter</div>
-                        <div className="plan-head">
-                            <div>
-                                <div className="eyebrow">Upgrade</div>
-                                <h3 className="plan-title">Supporter</h3>
-                            </div>
-                            <div className="plan-price mono">
-                                21k<span> sats/mo</span>
-                            </div>
-                        </div>
-                        <ul className="plan-list">
-                            <li>Unlimited tracked addresses</li>
-                            <li>Full historical price data</li>
-                            <li>Connect your own node</li>
-                            <li>CSV &amp; JSON export</li>
-                            <li>Priority email support</li>
-                        </ul>
-                        <button className="btn btn-primary plan-btn">⚡ Upgrade with Lightning</button>
-                    </div>
-                </div>
-
-                <div className="account-card">
-                    <div className="section-head">
-                        <h3 className="settings-card-title">Sessions</h3>
-                        <button className="link-btn danger">Revoke all</button>
-                    </div>
-                    <div className="session-row">
-                        <div>
-                            <div className="mono">This device · macOS 15.1</div>
-                            <div className="muted small mono">Signed in 2026-04-12 · San José, CR</div>
-                        </div>
-                        <span className="tx-tag transfer">active</span>
-                    </div>
-                    <div className="session-row">
-                        <div>
-                            <div className="mono">iPhone · iOS 18.3</div>
-                            <div className="muted small mono">Last seen 2026-04-01 · San José, CR</div>
-                        </div>
-                        <button className="link-btn danger">Revoke</button>
-                    </div>
-                </div>
+                ))}
             </section>
+
+            <p className="plan-open-source muted small">
+                Sats Fort is free and open source. Upgrading is optional — it helps fund ongoing development.
+            </p>
         </>
     );
 }

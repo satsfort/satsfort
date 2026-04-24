@@ -79,7 +79,7 @@ function App() {
                                 <SettingsPage username={user} onLogout={handleLogout} />
                             </div>
                             <div hidden={route !== "account"}>
-                                <AccountPage username={user} onLogout={handleLogout} />
+                                <AccountPage onLogout={handleLogout} />
                             </div>
                         </div>
                     </main>

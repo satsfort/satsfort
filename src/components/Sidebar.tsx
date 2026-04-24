@@ -1,4 +1,4 @@
-import { AddressIcon, BellIcon, ChartIcon, ChevronLeft, ChevronRight, SettingsIcon, TransactionsIcon, UserIcon, UtxoIcon } from "./icons";
+import { AddressIcon, BellIcon, ChartIcon, ChevronLeft, ChevronRight, SettingsIcon, TransactionsIcon, UtxoIcon, ZapIcon } from "./icons";
 import "./Sidebar.css";
 import type { ReactNode } from "react";
 import logo from "../img/128x128.png";
@@ -12,7 +12,7 @@ const ITEMS: NavItem[] = [
     { id: "portfolio", label: "Portfolio", icon: <ChartIcon /> },
     { id: "addresses", label: "Addresses", icon: <AddressIcon /> },
     { id: "settings", label: "Settings", icon: <SettingsIcon /> },
-    { id: "account", label: "Account", icon: <UserIcon /> },
+    { id: "account", label: "Upgrade", icon: <ZapIcon /> },
 ];
 
 const COMING_SOON: ComingSoonItem[] = [
