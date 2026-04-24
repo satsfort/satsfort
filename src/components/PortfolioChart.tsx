@@ -32,7 +32,7 @@ function dateMs(iso: string) {
 }
 
 export function PortfolioChart({ history, priceUsd, unit }: Props) {
-    const [range, setRange] = useState<Range>("4Y");
+    const [range, setRange] = useState<Range>("1M");
     const [hover, setHover] = useState<number | null>(null);
     const { currency, denomination } = useSettings();
 
