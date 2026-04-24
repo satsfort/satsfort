@@ -1,12 +1,76 @@
-.plan-current-banner {
+.plan-trust {
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
     align-items: center;
-    gap: 0.6rem;
+    justify-content: center;
     padding: 0.75rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-top: 1.25rem;
+}
+
+.plan-trust span {
+    position: relative;
+    padding-left: 1.1rem;
+}
+
+.plan-trust span::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--orange);
+    font-weight: 700;
+}
+
+.plan-cycle-toggle {
+    display: flex;
+    width: fit-content;
+    margin: 0 auto 1.25rem;
+    padding: 0.25rem;
+    gap: 0.25rem;
     background: var(--bg-elev);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    margin-bottom: 1rem;
+}
+
+.plan-cycle-toggle button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.9rem;
+    background: transparent;
+    border: 0;
+    border-radius: calc(var(--radius) - 0.2rem);
+    color: var(--muted);
+    font-family: var(--font-head);
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s;
+}
+
+.plan-cycle-toggle button:hover {
+    color: var(--text);
+}
+
+.plan-cycle-toggle button.active {
+    background: rgba(247, 147, 26, 0.12);
+    color: var(--orange);
+}
+
+.plan-cycle-save {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(247, 147, 26, 0.2);
+    color: var(--orange);
+    letter-spacing: 0.05em;
 }
 
 .plan-grid {
@@ -113,7 +177,40 @@
     margin-top: auto;
 }
 
+.plan-support-free {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.plan-support-free-title {
+    font-family: var(--font-head);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+}
+
+.plan-support-free-btn {
+    text-decoration: none;
+    color: var(--text);
+    white-space: nowrap;
+}
+
 .plan-open-source {
     text-align: center;
-    margin: 1.5rem 0 0;
+    margin: 1.25rem 0 0;
+}
+
+@media (max-width: 600px) {
+    .plan-support-free {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
 }

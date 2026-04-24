@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "./AccountPage.css";
 import { TaskNotifications } from "../components/TaskNotifications";
 
@@ -5,12 +6,12 @@ type Props = {
     onLogout: () => void;
 };
 
+type BillingCycle = "monthly" | "yearly";
+
 type Plan = {
     id: "free" | "supporter" | "sponsor";
     name: string;
     tagline: string;
-    price: string;
-    priceSuffix?: string;
     features: string[];
     highlight?: boolean;
     badge?: string;
@@ -23,7 +24,6 @@ const PLANS: Plan[] = [
         id: "free",
         name: "Free Forever",
         tagline: "Everything you need to track your stack",
-        price: "Free",
         features: [
             "Up to 10 addresses/XPUBs",
             "XPUB/ZPUB import",
@@ -39,8 +39,6 @@ const PLANS: Plan[] = [
         id: "supporter",
         name: "Supporter",
         tagline: "Support development + premium features",
-        price: "10,000",
-        priceSuffix: "sats/month",
         badge: "Most Popular",
         highlight: true,
         features: [
@@ -61,8 +59,6 @@ const PLANS: Plan[] = [
         id: "sponsor",
         name: "Sponsor",
         tagline: "Become a visible supporter of the project",
-        price: "Custom",
-        priceSuffix: "Tailored to your needs",
         features: [
             "Everything in Supporter",
             "Your logo on our website",
@@ -76,7 +72,47 @@ const PLANS: Plan[] = [
     },
 ];
 
+const TRUST_BADGES = ["Open source", "No KYC", "Self-hostable", "No tracking"];
+
+const SUPPORTER_MONTHLY_SATS = 10_000;
+const YEARLY_DISCOUNT = 0.2;
+
+function formatSats(n: number): string {
+    return n.toLocaleString("en-US");
+}
+
+function renderPrice(plan: Plan, cycle: BillingCycle) {
+    if (plan.id === "free") {
+        return "Free";
+    }
+    if (plan.id === "sponsor") {
+        return (
+            <>
+                Custom
+                <span>Tailored to your needs</span>
+            </>
+        );
+    }
+    if (cycle === "yearly") {
+        const yearly = Math.round(SUPPORTER_MONTHLY_SATS * 12 * (1 - YEARLY_DISCOUNT));
+        return (
+            <>
+                {formatSats(yearly)}
+                <span>sats/year</span>
+            </>
+        );
+    }
+    return (
+        <>
+            {formatSats(SUPPORTER_MONTHLY_SATS)}
+            <span>sats/month</span>
+        </>
+    );
+}
+
 export function AccountPage({ onLogout }: Props) {
+    const [cycle, setCycle] = useState<BillingCycle>("monthly");
+
     return (
         <>
             <header className="page-head">
@@ -92,9 +128,24 @@ export function AccountPage({ onLogout }: Props) {
                 </div>
             </header>
 
-            <div className="plan-current-banner">
-                <span className="muted small">You're currently on</span>
-                <span className="tx-tag buy">Free</span>
+            <div className="plan-cycle-toggle" role="tablist" aria-label="Billing cycle">
+                <button
+                    role="tab"
+                    aria-selected={cycle === "monthly"}
+                    className={cycle === "monthly" ? "active" : ""}
+                    onClick={() => setCycle("monthly")}
+                >
+                    Monthly
+                </button>
+                <button
+                    role="tab"
+                    aria-selected={cycle === "yearly"}
+                    className={cycle === "yearly" ? "active" : ""}
+                    onClick={() => setCycle("yearly")}
+                >
+                    Yearly
+                    <span className="plan-cycle-save">−20%</span>
+                </button>
             </div>
 
             <section className="plan-grid">
@@ -104,10 +155,7 @@ export function AccountPage({ onLogout }: Props) {
                         <div className="plan-head-col">
                             <h3 className="plan-title">{plan.name}</h3>
                             <div className="plan-tagline muted small">{plan.tagline}</div>
-                            <div className="plan-price mono">
-                                {plan.price}
-                                {plan.priceSuffix && <span> {plan.priceSuffix}</span>}
-                            </div>
+                            <div className="plan-price mono">{renderPrice(plan, cycle)}</div>
                         </div>
                         <ul className="plan-list">
                             {plan.features.map((f) => (
@@ -120,6 +168,27 @@ export function AccountPage({ onLogout }: Props) {
                     </div>
                 ))}
             </section>
+
+            <div className="plan-trust">
+                {TRUST_BADGES.map((b) => (
+                    <span key={b}>{b}</span>
+                ))}
+            </div>
+
+            <div className="plan-support-free">
+                <div>
+                    <h4 className="plan-support-free-title">Support without spending</h4>
+                    <p className="muted small">A star on GitHub helps more than you think.</p>
+                </div>
+                <a
+                    className="btn plan-support-free-btn"
+                    href="https://github.com/satsfort/satsfort"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    ★ Star on GitHub
+                </a>
+            </div>
 
             <p className="plan-open-source muted small">
                 Sats Fort is free and open source. Upgrading is optional — it helps fund ongoing development.
