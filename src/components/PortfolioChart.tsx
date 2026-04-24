@@ -54,6 +54,13 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
     const tickDivisor = Math.max(1, xTickCount - 1);
     const xTickIndexes = Array.from({ length: xTickCount }, (_, i) => Math.round((i * (points.length - 1)) / tickDivisor));
 
+    const spanDays =
+        points.length > 1
+            ? (new Date(points[points.length - 1].date + "T00:00:00Z").getTime() - new Date(points[0].date + "T00:00:00Z").getTime()) /
+              86_400_000
+            : 0;
+    const tickStyle: "day" | "year" = spanDays <= 120 ? "day" : "year";
+
     const hovered = hover !== null ? points[hover] : null;
 
     const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -125,7 +132,7 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
 
                 {xTickIndexes.map((idx) => (
                     <text key={`xt-${idx}`} x={xAt(idx)} y={H - PAD.bottom + 20} textAnchor="middle" className="axis-label">
-                        {formatTick(points[idx].date)}
+                        {formatTick(points[idx].date, tickStyle)}
                     </text>
                 ))}
 
@@ -160,11 +167,12 @@ function formatDate(iso: string) {
     });
 }
 
-function formatTick(iso: string) {
+function formatTick(iso: string, style: "day" | "year") {
     const d = new Date(iso + "T00:00:00Z");
-    return d.toLocaleDateString(undefined, {
-        month: "short",
-        year: "2-digit",
-        timeZone: "UTC",
-    });
+    return d.toLocaleDateString(
+        undefined,
+        style === "day"
+            ? { month: "short", day: "numeric", timeZone: "UTC" }
+            : { month: "short", year: "numeric", timeZone: "UTC" },
+    );
 }
