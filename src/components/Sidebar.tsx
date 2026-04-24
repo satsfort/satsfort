@@ -1,14 +1,4 @@
-import {
-    AddressIcon,
-    BellIcon,
-    ChartIcon,
-    ChevronLeft,
-    ChevronRight,
-    SettingsIcon,
-    TransactionsIcon,
-    UserIcon,
-    UtxoIcon,
-} from "./icons";
+import { AddressIcon, BellIcon, ChartIcon, ChevronLeft, ChevronRight, SettingsIcon, TransactionsIcon, UserIcon, UtxoIcon } from "./icons";
 import "./Sidebar.css";
 import type { ReactNode } from "react";
 import logo from "../img/128x128.png";
