@@ -5,16 +5,18 @@ import type { Unit } from "../lib/format";
 import { formatAmount, formatAxis, formatSecondary } from "../lib/format";
 import { useSettings } from "../lib/SettingsContext";
 
-type Range = "1M" | "3M" | "1Y" | "2Y" | "ALL";
+type Range = "1W" | "1M" | "3M" | "1Y" | "4Y" | "ALL";
 
-const RANGE_WEEKS: Record<Range, number | "all"> = {
-    "1M": 4,
-    "3M": 13,
-    "1Y": 52,
-    "2Y": 104,
+const RANGE_DAYS: Record<Range, number | "all"> = {
+    "1W": 7,
+    "1M": 30,
+    "3M": 91,
+    "1Y": 365,
+    "4Y": 1460,
     ALL: "all",
 };
 
+const DAY_MS = 86_400_000;
 const W = 880;
 const H = 300;
 const PAD = { top: 20, right: 20, bottom: 36, left: 56 };
@@ -25,58 +27,85 @@ type Props = {
     unit: Unit;
 };
 
+function dateMs(iso: string) {
+    return new Date(iso + "T00:00:00Z").getTime();
+}
+
 export function PortfolioChart({ history, priceUsd, unit }: Props) {
-    const [range, setRange] = useState<Range>("2Y");
+    const [range, setRange] = useState<Range>("4Y");
     const [hover, setHover] = useState<number | null>(null);
     const { currency, denomination } = useSettings();
 
-    const points = useMemo(() => {
-        const span = RANGE_WEEKS[range];
-        if (span === "all") return history;
-        return history.slice(-span - 1);
+    const { points, domain } = useMemo(() => {
+        if (history.length === 0) return { points: [] as HistoryPoint[], domain: null };
+        const latestMs = dateMs(history[history.length - 1].date);
+        const span = RANGE_DAYS[range];
+        const startMs = span === "all" ? dateMs(history[0].date) : latestMs - span * DAY_MS;
+        const visible = span === "all" ? history : history.filter((p) => dateMs(p.date) >= startMs);
+        return { points: visible, domain: { start: startMs, end: latestMs } };
     }, [history, range]);
 
     const maxBtc = Math.max(...points.map((p) => p.btc), 0.01);
     const minBtc = 0;
 
-    const xAt = (i: number) => PAD.left + (i / Math.max(points.length - 1, 1)) * (W - PAD.left - PAD.right);
+    const plotLeft = PAD.left;
+    const plotWidth = W - PAD.left - PAD.right;
+
+    const xAt = (iso: string) => {
+        if (!domain) return plotLeft;
+        const span = Math.max(domain.end - domain.start, 1);
+        const ratio = (dateMs(iso) - domain.start) / span;
+        return plotLeft + ratio * plotWidth;
+    };
     const yAt = (btc: number) => PAD.top + (1 - (btc - minBtc) / (maxBtc - minBtc)) * (H - PAD.top - PAD.bottom);
 
-    const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${xAt(i).toFixed(2)},${yAt(p.btc).toFixed(2)}`).join(" ");
+    const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${xAt(p.date).toFixed(2)},${yAt(p.btc).toFixed(2)}`).join(" ");
 
     const areaPath =
-        `${linePath} L${xAt(points.length - 1).toFixed(2)},${yAt(0).toFixed(2)} ` + `L${xAt(0).toFixed(2)},${yAt(0).toFixed(2)} Z`;
+        points.length > 0
+            ? `${linePath} L${xAt(points[points.length - 1].date).toFixed(2)},${yAt(0).toFixed(2)} L${xAt(points[0].date).toFixed(2)},${yAt(0).toFixed(2)} Z`
+            : "";
 
     const yTicks = 4;
     const tickValues = Array.from({ length: yTicks + 1 }, (_, i) => minBtc + (i * (maxBtc - minBtc)) / yTicks);
 
-    const xTickCount = Math.min(6, points.length);
-    const tickDivisor = Math.max(1, xTickCount - 1);
-    const xTickIndexes = Array.from({ length: xTickCount }, (_, i) => Math.round((i * (points.length - 1)) / tickDivisor));
+    const xTickCount = 6;
+    const xTickDates = useMemo(() => {
+        if (!domain) return [] as string[];
+        const span = domain.end - domain.start;
+        return Array.from({ length: xTickCount }, (_, i) => {
+            const t = domain.start + (i * span) / (xTickCount - 1);
+            return new Date(t).toISOString().slice(0, 10);
+        });
+    }, [domain]);
 
-    const spanDays =
-        points.length > 1
-            ? (new Date(points[points.length - 1].date + "T00:00:00Z").getTime() - new Date(points[0].date + "T00:00:00Z").getTime()) /
-              86_400_000
-            : 0;
+    const spanDays = domain ? (domain.end - domain.start) / DAY_MS : 0;
     const tickStyle: "day" | "year" = spanDays <= 120 ? "day" : "year";
 
     const hovered = hover !== null ? points[hover] : null;
 
     const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+        if (!domain || points.length === 0) return;
         const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * W;
-        const ratio = (x - PAD.left) / (W - PAD.left - PAD.right);
-        const idx = Math.round(ratio * (points.length - 1));
-        if (idx >= 0 && idx < points.length) setHover(idx);
+        let nearest = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < points.length; i++) {
+            const dist = Math.abs(xAt(points[i].date) - x);
+            if (dist < bestDist) {
+                bestDist = dist;
+                nearest = i;
+            }
+        }
+        setHover(nearest);
     };
 
     return (
         <div className="chart-card">
             <div className="chart-head">
                 <div>
-                    <div className="muted small">{hovered ? formatDate(hovered.date) : "Last 2 years"}</div>
+                    <div className="muted small">{hovered ? formatDate(hovered.date) : "Last 4 years"}</div>
                     <div className="chart-value">
                         {formatAmount((hovered ?? points[points.length - 1]).btc, unit, priceUsd, {
                             btcDigits: 8,
@@ -89,7 +118,7 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
                     </div>
                 </div>
                 <div className="range-group">
-                    {(Object.keys(RANGE_WEEKS) as Range[]).map((r) => (
+                    {(Object.keys(RANGE_DAYS) as Range[]).map((r) => (
                         <button key={r} className={`range-btn ${range === r ? "active" : ""}`} onClick={() => setRange(r)}>
                             {r}
                         </button>
@@ -130,26 +159,33 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
                     );
                 })}
 
-                {xTickIndexes.map((idx) => (
-                    <text key={`xt-${idx}`} x={xAt(idx)} y={H - PAD.bottom + 20} textAnchor="middle" className="axis-label">
-                        {formatTick(points[idx].date, tickStyle)}
+                {xTickDates.map((iso, i) => (
+                    <text key={`xt-${i}`} x={xAt(iso)} y={H - PAD.bottom + 20} textAnchor="middle" className="axis-label">
+                        {formatTick(iso, tickStyle)}
                     </text>
                 ))}
 
                 <path d={areaPath} fill="url(#areaFill)" />
                 <path d={linePath} fill="none" stroke="#F7931A" strokeWidth="2" filter="url(#glow)" />
 
-                {hover !== null && (
+                {hover !== null && points[hover] && (
                     <g>
                         <line
-                            x1={xAt(hover)}
-                            x2={xAt(hover)}
+                            x1={xAt(points[hover].date)}
+                            x2={xAt(points[hover].date)}
                             y1={PAD.top}
                             y2={H - PAD.bottom}
                             stroke="rgba(247,147,26,0.4)"
                             strokeDasharray="3 3"
                         />
-                        <circle cx={xAt(hover)} cy={yAt(points[hover].btc)} r="5" fill="#F7931A" stroke="#0b0f1a" strokeWidth="2" />
+                        <circle
+                            cx={xAt(points[hover].date)}
+                            cy={yAt(points[hover].btc)}
+                            r="5"
+                            fill="#F7931A"
+                            stroke="#0b0f1a"
+                            strokeWidth="2"
+                        />
                     </g>
                 )}
             </svg>
