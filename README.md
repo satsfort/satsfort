@@ -1,7 +1,9 @@
-# Tauri + React + Typescript
+<p align="center">
+  <img src="images/banner-v1.png" alt="Sats Fort" width="1280"/>
+</p>
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
-
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+<h1 align="center">Sats Fort</h1>
+<p align="center">
+  <strong>Your stack. Your node. Your business.</strong><br/>
+  Bitcoin-only portfolio tracker. Local-first. Open source.
+</p>
