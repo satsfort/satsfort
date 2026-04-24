@@ -27,3 +27,8 @@ dist-ssr
 AGENTS.md
 plans/
 TODO.md
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
