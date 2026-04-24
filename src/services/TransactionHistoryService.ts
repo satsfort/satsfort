@@ -19,7 +19,7 @@ export class TransactionHistoryService {
 
     async execute(): Promise<Transaction[]> {
         if (!Config.useMockData) return [];
-        const history = await this.portfolioHistoryRequests.execute();
+        const history = await this.portfolioHistoryRequests.getAll();
         return this.buildMock(history);
     }
 

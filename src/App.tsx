@@ -10,12 +10,12 @@ import { AccountPage } from "./pages/AccountPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SettingsProvider } from "./lib/SettingsContext";
 import { TaskNotificationsProvider } from "./lib/TaskNotificationsContext";
-import { PortfolioHistoryRequests } from "./requests/PortfolioHistoryRequests";
 import type { Unit } from "./lib/format";
 import { lockDb } from "./db";
+import { PortfolioHistoryService } from "./services/PortfolioHistoryService.ts";
 
 function App() {
-    const portfolioHistoryRequests = new PortfolioHistoryRequests();
+    const portfolioHistoryService = new PortfolioHistoryService();
 
     const [user, setUser] = useState<string | null>(null);
     const [route, setRoute] = useState<Route>("portfolio");
@@ -28,7 +28,7 @@ function App() {
 
     useEffect(() => {
         if (!user) return;
-        void portfolioHistoryRequests.ensureBaseline().catch((err) => console.error("Failed to seed portfolio baseline", err));
+        void portfolioHistoryService.ensureBaseline().catch((err) => console.error("Failed to seed portfolio baseline", err));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 

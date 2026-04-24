@@ -6,6 +6,7 @@ import { EyeIcon, EyeOffIcon, BarChartIcon } from "../components/icons";
 import { EmptyState } from "../components/EmptyState";
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
+import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { TransactionHistoryService } from "../services/TransactionHistoryService";
 import type { Transaction } from "../services/TransactionHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
@@ -31,7 +32,7 @@ type Props = {
 export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances, onNavigate, version }: Props) {
     const spotPriceRequests = new SpotPriceRequests();
     const exchangeRateRequests = new ExchangeRateRequests();
-    const portfolioHistoryRequests = new PortfolioHistoryRequests();
+    const portfolioHistoryService = new PortfolioHistoryService();
     const transactionHistoryService = new TransactionHistoryService();
 
     const [history, setHistory] = useState<HistoryPoint[] | null>(null);
@@ -46,11 +47,11 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
         // TEMP: artificial delay to preview loading state
         const delay = isInitial ? 2000 : 0;
         const timer = setTimeout(() => {
-            void portfolioHistoryRequests
+            void portfolioHistoryService
                 .snapshot()
                 .then((point) => {
                     setHasTrackedItems(point !== null);
-                    return portfolioHistoryRequests.execute();
+                    return portfolioHistoryService.getAll();
                 })
                 .then(setHistory)
                 .catch((err) => {

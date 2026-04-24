@@ -9,7 +9,7 @@ import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
 import { XpubRequests } from "../requests/XpubRequests";
 import type { TrackedXpubMeta, DerivedAddress, DerivationType } from "../requests/XpubRequests";
-import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
+import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../requests/SpotPriceRequests";
 import type { Unit } from "../lib/format";
@@ -49,7 +49,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const addressBalanceRequests = new AddressBalanceRequests();
     const trackedAddressesRequests = new TrackedAddressesRequests();
     const xpubRequests = new XpubRequests();
-    const portfolioHistoryRequests = new PortfolioHistoryRequests();
+    const portfolioHistoryService = new PortfolioHistoryService();
     const spotPriceRequests = new SpotPriceRequests();
 
     const [addresses, setAddresses] = useState<TrackedAddress[] | null>(null);
@@ -99,7 +99,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         try {
             const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceRequests.execute(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
-            await portfolioHistoryRequests.snapshot();
+            await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
             console.error("Failed to refresh address balance", err);
@@ -112,7 +112,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         setRefreshingXpub(xpub.id);
         try {
             await track(`Refreshing ${xpub.label}`, () => fetchDerivedBalances(xpubDerived));
-            await portfolioHistoryRequests.snapshot();
+            await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
             console.error("Failed to refresh xpub balances", err);
@@ -146,7 +146,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
             }
 
             await Promise.all(allTasks);
-            await portfolioHistoryRequests.snapshot();
+            await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
             console.error("Failed to refresh all balances", err);
@@ -160,14 +160,14 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         const balance = await track(`Fetching balance for ${label}`, () => addressBalanceRequests.execute(meta.address));
         const tracked: TrackedAddress = { ...meta, btc: balance.btc, txCount: balance.txCount };
         setAddresses((prev) => [...(prev ?? []), tracked]);
-        await portfolioHistoryRequests.snapshot();
+        await portfolioHistoryService.snapshot();
         onPortfolioChanged();
     };
 
     const handleRemove = async (id: string) => {
         await trackedAddressesRequests.remove(id);
         setAddresses((prev) => (prev ?? []).filter((a) => a.id !== id));
-        await portfolioHistoryRequests.snapshot();
+        await portfolioHistoryService.snapshot();
         onPortfolioChanged();
     };
 
@@ -178,7 +178,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         setExpandedXpubs((prev) => new Set([...prev, result.xpub.id]));
         // Fetch balances for newly derived addresses
         await track(`Fetching balances for ${label}`, () => fetchDerivedBalances(result.addresses));
-        await portfolioHistoryRequests.snapshot();
+        await portfolioHistoryService.snapshot();
         onPortfolioChanged();
     };
 
@@ -198,7 +198,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
             next.delete(id);
             return next;
         });
-        await portfolioHistoryRequests.snapshot();
+        await portfolioHistoryService.snapshot();
         onPortfolioChanged();
     };
 

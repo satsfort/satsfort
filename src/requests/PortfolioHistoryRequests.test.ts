@@ -62,6 +62,12 @@ function insertXpub(label: string, xpubKey: string, balanceBtc: number | null, b
     ).run(crypto.randomUUID(), label, xpubKey, "P2WPKH", 20, balanceBtc, balanceUsd);
 }
 
+function insertPortfolioValue(balanceBtc: number, balanceUsd: number, fetchedAt: string) {
+    dbRef.current!.prepare(
+        "INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)",
+    ).run(crypto.randomUUID(), balanceBtc, balanceUsd, fetchedAt);
+}
+
 const portfolioHistoryRequests = new PortfolioHistoryRequests();
 
 describe("PortfolioHistoryRequests.ensureBaseline", () => {
@@ -78,8 +84,7 @@ describe("PortfolioHistoryRequests.ensureBaseline", () => {
     });
 
     it("is a no-op when a row already exists", async () => {
-        insertAddress("bc1qaddr1", "Addr 1", 0.5, 50_000);
-        await portfolioHistoryRequests.snapshot();
+        insertPortfolioValue(0.5, 50_000, "2026-04-23T12:00:00.000Z");
 
         await portfolioHistoryRequests.ensureBaseline();
 
@@ -88,65 +93,70 @@ describe("PortfolioHistoryRequests.ensureBaseline", () => {
     });
 });
 
-describe("PortfolioHistoryRequests.snapshot", () => {
-    it("skips writing a snapshot when nothing is tracked", async () => {
-        const point = await portfolioHistoryRequests.snapshot();
-        expect(point).toBeNull();
+describe("PortfolioHistoryRequests.countTracked", () => {
+    it("returns the combined count of addresses and xpubs", async () => {
+        insertAddress("bc1qaddr1", "Addr 1", 0.1);
+        insertAddress("bc1qaddr2", "Addr 2", 0.2);
+        insertXpub("Xpub A", "zpub-a", 0.5);
 
-        const count = dbRef.current!.prepare("SELECT COUNT(*) AS c FROM portfolio_value").get() as { c: number };
-        expect(count.c).toBe(0);
+        expect(await portfolioHistoryRequests.countTracked()).toBe(3);
     });
 
-    it("sums latest_balance_btc and latest_balance_usd across addresses and xpubs", async () => {
+    it("returns zero when neither table has rows", async () => {
+        expect(await portfolioHistoryRequests.countTracked()).toBe(0);
+    });
+});
+
+describe("PortfolioHistoryRequests.sumLatestBalances", () => {
+    it("sums balances across addresses and xpubs, treating nulls as zero", async () => {
         insertAddress("bc1qaddr1", "Addr 1", 0.5, 50_000);
-        insertAddress("bc1qaddr2", "Addr 2", 0.25, 25_000);
-        insertXpub("Xpub A", "zpub-a", 1.0, 100_000);
-        insertXpub("Xpub B", "zpub-b", 0.125, 12_500);
+        insertAddress("bc1qaddr2", "Unseen", null, null);
+        insertXpub("Xpub A", "zpub-a", 0.25, 25_000);
 
-        const point = await portfolioHistoryRequests.snapshot();
-        expect(point).not.toBeNull();
-        expect(point!.btc).toBeCloseTo(1.875, 8);
-        expect(point!.usd).toBeCloseTo(187_500, 4);
+        const totals = await portfolioHistoryRequests.sumLatestBalances();
+        expect(totals.btc).toBeCloseTo(0.75, 8);
+        expect(totals.usd).toBeCloseTo(75_000, 4);
+    });
+});
 
-        const row = dbRef.current!.prepare("SELECT balance_btc, balance_usd FROM portfolio_value").get() as {
+describe("PortfolioHistoryRequests.selectLatest", () => {
+    it("returns null when portfolio_value is empty", async () => {
+        expect(await portfolioHistoryRequests.selectLatest()).toBeNull();
+    });
+
+    it("returns the most recent row by fetched_at", async () => {
+        insertPortfolioValue(0.1, 10_000, "2026-01-01T12:00:00.000Z");
+        insertPortfolioValue(0.3, 30_000, "2026-03-01T12:00:00.000Z");
+        insertPortfolioValue(0.2, 20_000, "2026-02-01T12:00:00.000Z");
+
+        const latest = await portfolioHistoryRequests.selectLatest();
+        expect(latest).not.toBeNull();
+        expect(latest!.balanceBtc).toBeCloseTo(0.3, 8);
+        expect(latest!.balanceUsd).toBeCloseTo(30_000, 4);
+        expect(latest!.fetchedAt).toBe("2026-03-01T12:00:00.000Z");
+    });
+});
+
+describe("PortfolioHistoryRequests.insert", () => {
+    it("writes a new portfolio_value row with the provided fields", async () => {
+        await portfolioHistoryRequests.insert({ btc: 0.4, usd: 40_000, fetchedAt: "2026-04-20T08:00:00.000Z" });
+
+        const row = dbRef.current!.prepare("SELECT balance_btc, balance_usd, fetched_at FROM portfolio_value").get() as {
             balance_btc: number;
             balance_usd: number;
+            fetched_at: string;
         };
-        expect(row.balance_btc).toBeCloseTo(1.875, 8);
-        expect(row.balance_usd).toBeCloseTo(187_500, 4);
-    });
-
-    it("treats null latest balances as zero", async () => {
-        insertAddress("bc1qaddr1", "Addr 1", 0.5, 50_000);
-        insertAddress("bc1qaddr2", "Unseen addr", null, null);
-        insertXpub("Unseen xpub", "zpub-unseen", null, null);
-        insertXpub("Xpub B", "zpub-b", 0.25, 25_000);
-
-        const point = await portfolioHistoryRequests.snapshot();
-        expect(point).not.toBeNull();
-        expect(point!.btc).toBeCloseTo(0.75, 8);
-        expect(point!.usd).toBeCloseTo(75_000, 4);
-    });
-
-    it("appends a new row on each invocation", async () => {
-        insertAddress("bc1qaddr1", "Addr 1", 0.1);
-
-        await portfolioHistoryRequests.snapshot();
-        await portfolioHistoryRequests.snapshot();
-        await portfolioHistoryRequests.snapshot();
-
-        const count = dbRef.current!.prepare("SELECT COUNT(*) AS c FROM portfolio_value").get() as { c: number };
-        expect(count.c).toBe(3);
+        expect(row.balance_btc).toBeCloseTo(0.4, 8);
+        expect(row.balance_usd).toBeCloseTo(40_000, 4);
+        expect(row.fetched_at).toBe("2026-04-20T08:00:00.000Z");
     });
 });
 
 describe("PortfolioHistoryRequests.execute", () => {
     it("returns the portfolio_value rows when mock is disabled", async () => {
-        insertAddress("bc1qaddr1", "Addr 1", 0.5, 50_000);
+        insertPortfolioValue(0.5, 50_000, "2026-04-23T12:00:00.000Z");
 
-        await portfolioHistoryRequests.snapshot();
-
-        const history = await portfolioHistoryRequests.execute();
+        const history = await portfolioHistoryRequests.getAll();
         expect(history).toHaveLength(1);
         expect(history[0].btc).toBeCloseTo(0.5, 8);
         expect(history[0].usd).toBeCloseTo(50_000, 4);
@@ -154,20 +164,18 @@ describe("PortfolioHistoryRequests.execute", () => {
     });
 
     it("returns rows sorted by fetched_at ascending", async () => {
-        const db = dbRef.current!;
-        const insertSql = "INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)";
-        db.prepare(insertSql).run(crypto.randomUUID(), 0.3, 30_000, "2026-03-01T12:00:00.000Z");
-        db.prepare(insertSql).run(crypto.randomUUID(), 0.1, 10_000, "2026-01-01T12:00:00.000Z");
-        db.prepare(insertSql).run(crypto.randomUUID(), 0.2, 20_000, "2026-02-01T12:00:00.000Z");
+        insertPortfolioValue(0.3, 30_000, "2026-03-01T12:00:00.000Z");
+        insertPortfolioValue(0.1, 10_000, "2026-01-01T12:00:00.000Z");
+        insertPortfolioValue(0.2, 20_000, "2026-02-01T12:00:00.000Z");
 
-        const history = await portfolioHistoryRequests.execute();
+        const history = await portfolioHistoryRequests.getAll();
         expect(history.map((p) => p.btc)).toEqual([0.1, 0.2, 0.3]);
         expect(history.map((p) => p.usd)).toEqual([10_000, 20_000, 30_000]);
     });
 
     it("returns the mock history when mock is enabled", async () => {
         (Config as { useMockData: boolean }).useMockData = true;
-        const history = await portfolioHistoryRequests.execute();
+        const history = await portfolioHistoryRequests.getAll();
         expect(history.length).toBeGreaterThan(0);
     });
 });

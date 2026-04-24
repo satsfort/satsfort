@@ -1,5 +1,6 @@
 import { Config } from "../lib/Config";
 import { dbExecute, dbSelect } from "../db";
+import { PortfolioValueRecord } from "../services/model/PortfolioValueRecord.ts";
 
 export type HistoryPoint = {
     date: string;
@@ -10,6 +11,7 @@ export type HistoryPoint = {
 const TARGET_BTC = 2.1;
 const WEEKS = 104;
 const END_DATE = new Date("2026-04-18T00:00:00Z");
+const MOCK_SPOT_USD = 94_820;
 
 type PortfolioValueRow = {
     balance_btc: number;
@@ -18,7 +20,7 @@ type PortfolioValueRow = {
 };
 
 export class PortfolioHistoryRequests {
-    async execute(): Promise<HistoryPoint[]> {
+    async getAll(): Promise<HistoryPoint[]> {
         if (Config.useMockData) return this.buildMock();
 
         const rows = await dbSelect<PortfolioValueRow>(
@@ -43,47 +45,35 @@ export class PortfolioHistoryRequests {
         ]);
     }
 
-    /**
-     * Computes the current total portfolio value as the sum of the latest known
-     * balances for all tracked addresses and xpubs, and records a snapshot in
-     * the portfolio_value table. Skips writing a snapshot when nothing is tracked
-     * so an empty database stays empty rather than accumulating zero-valued rows.
-     */
-    async snapshot(): Promise<HistoryPoint | null> {
-        const [counts] = await dbSelect<{ tracked: number }>(
+    async countTracked(): Promise<number> {
+        const [row] = await dbSelect<{ tracked: number }>(
             "SELECT (SELECT COUNT(*) FROM addresses) + (SELECT COUNT(*) FROM xpubs) AS tracked",
         );
+        return row.tracked;
+    }
 
-        let btc = 0;
-        let usd = 0;
-        if (counts.tracked > 0) {
-            const [totals] = await dbSelect<{ total_btc: number | null; total_usd: number | null }>(
-                "SELECT COALESCE((SELECT SUM(latest_balance_btc) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_btc) FROM xpubs), 0) AS total_btc, COALESCE((SELECT SUM(latest_balance_usd) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_usd) FROM xpubs), 0) AS total_usd",
-            );
-            btc = totals.total_btc ?? 0;
-            usd = totals.total_usd ?? 0;
-        } else {
-            // No tracked items. Record a zero snapshot if we previously held a
-            // non-zero balance (so the chart drops after the last removal), or if
-            // the latest zero row is from an earlier day (so the flat-zero stretch
-            // still advances on the time axis). Skip same-day zero repeats.
-            const [latest] = await dbSelect<{ balance_btc: number; fetched_at: string } | undefined>(
-                "SELECT balance_btc, fetched_at FROM portfolio_value ORDER BY fetched_at DESC LIMIT 1",
-            );
-            if (!latest) return null;
-            const today = new Date().toISOString().slice(0, 10);
-            if (latest.balance_btc === 0 && latest.fetched_at.slice(0, 10) === today) return null;
-        }
+    async sumLatestBalances(): Promise<{ btc: number; usd: number }> {
+        const [totals] = await dbSelect<{ total_btc: number | null; total_usd: number | null }>(
+            "SELECT COALESCE((SELECT SUM(latest_balance_btc) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_btc) FROM xpubs), 0) AS total_btc, COALESCE((SELECT SUM(latest_balance_usd) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_usd) FROM xpubs), 0) AS total_usd",
+        );
+        return { btc: totals.total_btc ?? 0, usd: totals.total_usd ?? 0 };
+    }
 
-        const fetchedAt = new Date().toISOString();
+    async selectLatest(): Promise<PortfolioValueRecord | null> {
+        const [row] = await dbSelect<PortfolioValueRow | undefined>(
+            "SELECT balance_btc, balance_usd, fetched_at FROM portfolio_value ORDER BY fetched_at DESC LIMIT 1",
+        );
+        if (!row) return null;
+        return { balanceBtc: row.balance_btc, balanceUsd: row.balance_usd, fetchedAt: row.fetched_at };
+    }
+
+    async insert(point: { btc: number; usd: number; fetchedAt: string }): Promise<void> {
         await dbExecute("INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)", [
             crypto.randomUUID(),
-            btc,
-            usd,
-            fetchedAt,
+            point.btc,
+            point.usd,
+            point.fetchedAt,
         ]);
-
-        return { date: fetchedAt.slice(0, 10), btc, usd };
     }
 
     private buildMock(): HistoryPoint[] {
@@ -115,5 +105,3 @@ export class PortfolioHistoryRequests {
         });
     }
 }
-
-const MOCK_SPOT_USD = 94_820;
