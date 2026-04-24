@@ -3,7 +3,7 @@ import "./AddressesPage.css";
 import "./BalancePrivacy.css";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIcon, ChevronRight } from "../components/icons";
-import { AddressBalanceRequests } from "../requests/AddressBalanceRequests";
+import { AddressBalanceService } from "../services/AddressBalanceService";
 import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/TrackedAddressesService";
@@ -46,7 +46,7 @@ function shortenXpub(xpub: string) {
 
 export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances, onPortfolioChanged }: Props) {
     const trackedAddressesService = new TrackedAddressesService();
-    const addressBalanceRequests = new AddressBalanceRequests();
+    const addressBalanceService = new AddressBalanceService();
     const trackedAddressesRequests = new TrackedAddressesRequests();
     const xpubRequests = new XpubRequests();
     const portfolioHistoryService = new PortfolioHistoryService();
@@ -73,7 +73,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
 
     /** Fetches balances for a list of derived addresses and merges them into state. */
     const fetchDerivedBalances = async (addresses: DerivedAddress[]) => {
-        const balanceResults = await addressBalanceRequests.executeAll(addresses.map((a) => a.address));
+        const balanceResults = await addressBalanceService.getAll(addresses.map((a) => a.address));
         setDerivedBalances((prev) => {
             const next = new Map(prev);
             for (const result of balanceResults) {
@@ -97,7 +97,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const refreshOne = async (addr: TrackedAddress) => {
         setRefreshing(addr.id);
         try {
-            const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceRequests.execute(addr.address));
+            const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceService.get(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
             await portfolioHistoryService.snapshot();
             onPortfolioChanged();
@@ -129,7 +129,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
             if (addresses && addresses.length > 0) {
                 allTasks.push(
                     track(`Refreshing ${addresses.length} individual addresses`, () =>
-                        addressBalanceRequests.executeAll(addresses.map((a) => a.address)),
+                        addressBalanceService.getAll(addresses.map((a) => a.address)),
                     ).then((balances) => {
                         setAddresses((prev) =>
                             (prev ?? []).map((addr) => {
@@ -157,7 +157,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
 
     const handleAddAddress = async (address: string, label: string) => {
         const meta = await trackedAddressesRequests.add(address, label);
-        const balance = await track(`Fetching balance for ${label}`, () => addressBalanceRequests.execute(meta.address));
+        const balance = await track(`Fetching balance for ${label}`, () => addressBalanceService.get(meta.address));
         const tracked: TrackedAddress = { ...meta, btc: balance.btc, txCount: balance.txCount };
         setAddresses((prev) => [...(prev ?? []), tracked]);
         await portfolioHistoryService.snapshot();
