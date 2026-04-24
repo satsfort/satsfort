@@ -83,6 +83,29 @@
     box-shadow: inset 2px 0 0 var(--orange);
 }
 
+.sidebar-item.is-coming-soon {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.sidebar-item.is-coming-soon:hover {
+    color: var(--muted);
+    background: transparent;
+}
+
+.sidebar-badge {
+    margin-left: auto;
+    font-family: var(--font-head);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--muted);
+}
+
 .sidebar-icon {
     display: grid;
     place-items: center;
@@ -145,7 +168,8 @@
 
 @media (max-width: 900px) {
     .sidebar .sidebar-label,
-    .sidebar .brand-name {
+    .sidebar .brand-name,
+    .sidebar .sidebar-badge {
         display: none;
     }
 

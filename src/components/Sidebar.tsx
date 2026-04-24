@@ -1,4 +1,14 @@
-import { AddressIcon, ChartIcon, ChevronLeft, ChevronRight, SettingsIcon, UserIcon } from "./icons";
+import {
+    AddressIcon,
+    BellIcon,
+    ChartIcon,
+    ChevronLeft,
+    ChevronRight,
+    SettingsIcon,
+    TransactionsIcon,
+    UserIcon,
+    UtxoIcon,
+} from "./icons";
 import "./Sidebar.css";
 import type { ReactNode } from "react";
 import logo from "../img/128x128.png";
@@ -6,12 +16,19 @@ import logo from "../img/128x128.png";
 export type Route = "portfolio" | "addresses" | "settings" | "account";
 
 type NavItem = { id: Route; label: string; icon: ReactNode };
+type ComingSoonItem = { id: string; label: string; icon: ReactNode };
 
 const ITEMS: NavItem[] = [
     { id: "portfolio", label: "Portfolio", icon: <ChartIcon /> },
     { id: "addresses", label: "Addresses", icon: <AddressIcon /> },
     { id: "settings", label: "Settings", icon: <SettingsIcon /> },
     { id: "account", label: "Account", icon: <UserIcon /> },
+];
+
+const COMING_SOON: ComingSoonItem[] = [
+    { id: "transactions", label: "Transactions", icon: <TransactionsIcon /> },
+    { id: "utxo", label: "UTXO Management", icon: <UtxoIcon /> },
+    { id: "alerts", label: "Alerts", icon: <BellIcon /> },
 ];
 
 type Props = {
@@ -42,6 +59,24 @@ export function Sidebar({ route, onNavigate, collapsed, onToggle }: Props) {
                     >
                         <span className="sidebar-icon">{item.icon}</span>
                         {!collapsed && <span className="sidebar-label">{item.label}</span>}
+                    </button>
+                ))}
+
+                {COMING_SOON.map((item) => (
+                    <button
+                        key={item.id}
+                        className="sidebar-item is-coming-soon"
+                        disabled
+                        aria-disabled="true"
+                        title={collapsed ? `${item.label} — coming soon` : "Coming soon"}
+                    >
+                        <span className="sidebar-icon">{item.icon}</span>
+                        {!collapsed && (
+                            <>
+                                <span className="sidebar-label">{item.label}</span>
+                                <span className="sidebar-badge">Soon</span>
+                            </>
+                        )}
                     </button>
                 ))}
             </nav>

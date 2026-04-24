@@ -283,6 +283,45 @@ export function ExternalLinkIcon({ size = 14 }: IconProps) {
     );
 }
 
+export function TransactionsIcon({ size = 18 }: IconProps) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <polyline points="17 2 21 6 17 10" />
+            <path d="M3 6h18" />
+            <polyline points="7 22 3 18 7 14" />
+            <path d="M21 18H3" />
+        </svg>
+    );
+}
+
+export function UtxoIcon({ size = 18 }: IconProps) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M12 2 3 7l9 5 9-5-9-5z" />
+            <path d="M3 12l9 5 9-5" />
+            <path d="M3 17l9 5 9-5" />
+        </svg>
+    );
+}
+
 export function RefreshIcon({ size = 16 }: IconProps) {
     return (
         <svg
