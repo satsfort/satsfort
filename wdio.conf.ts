@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,6 +60,20 @@ export const config: WebdriverIO.Config = {
         tauriDriver = spawn(TAURI_DRIVER, [], {
             stdio: [null, process.stdout, process.stderr],
         });
+    },
+
+    afterTest: async (test, _context, { passed }) => {
+        if (passed) return;
+        const artifactsDir = path.resolve(__dirname, "e2e-artifacts");
+        mkdirSync(artifactsDir, { recursive: true });
+        const safe = `${test.parent}-${test.title}`.replace(/[^a-z0-9]+/gi, "_").slice(0, 120);
+        try {
+            await browser.saveScreenshot(path.join(artifactsDir, `${safe}.png`));
+            const html = await browser.getPageSource();
+            writeFileSync(path.join(artifactsDir, `${safe}.html`), html);
+        } catch (err) {
+            console.warn("failed to capture failure artifacts", err);
+        }
     },
 
     afterSession: () => {

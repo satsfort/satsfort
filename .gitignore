@@ -28,7 +28,8 @@ AGENTS.md
 plans/
 TODO.md
 
-# Playwright
+# WebdriverIO
+logs/
+wdio.log
+e2e-artifacts/
 test-results/
-playwright-report/
-playwright/.cache/

@@ -141,4 +141,5 @@ jobs:
                   path: |
                       logs/
                       wdio.log
+                      e2e-artifacts/
                   if-no-files-found: ignore

@@ -3,10 +3,15 @@
 
 describe("vault flow", () => {
     it("creates a vault, navigates to Addresses, and logs out", async () => {
-        // First boot: no vault file on disk, LoginPage should render in
-        // "Create Vault" mode. Generous timeout because the Tauri window +
-        // frontend dev/bundle takes a moment to become interactive.
-        await expect($("h1*=Create Vault")).toBeDisplayed({ wait: 20_000 });
+        // First boot: wait for the login heading to exist, then wait until it
+        // settles into "Create Vault" (LoginPage starts with vaultExists=null
+        // which renders "Unlock Vault" briefly until get_vault_status resolves).
+        const heading = $("h1.login-title");
+        await heading.waitForExist({ timeout: 30_000 });
+        await browser.waitUntil(async () => (await heading.getText()).includes("Create Vault"), {
+            timeout: 20_000,
+            timeoutMsg: `LoginPage never entered Create Vault mode (heading text was "${await heading.getText()}")`,
+        });
 
         await $("input[placeholder='admin']").setValue("alice");
         const passwords = await $$("input[type='password']");
@@ -15,22 +20,25 @@ describe("vault flow", () => {
 
         await $("button*=Create Encrypted Vault").click();
 
-        // The Portfolio page is the default landing view after unlock.
-        await expect($("h1*=Portfolio")).toBeDisplayed({ wait: 10_000 });
+        // Portfolio page is the default landing view after unlock.
+        await $("h1*=Portfolio").waitForDisplayed({ timeout: 15_000 });
 
         // Navigate to Addresses via the sidebar (the BottomNav has the same
         // label, so we scope to the <aside class="sidebar"> container).
         const sidebar = await $("aside.sidebar");
         await sidebar.$("button.sidebar-item*=Addresses").click();
-        await expect($("h1*=Addresses")).toBeDisplayed();
+        await $("h1*=Addresses").waitForDisplayed();
 
         // Log out from the Account page.
         await sidebar.$("button.sidebar-item*=Account").click();
-        await expect($("h1*=Account")).toBeDisplayed();
+        await $("h1*=Account").waitForDisplayed();
         await $("button*=Log Out").click();
 
         // With the vault now persisted to disk, the login screen should show
         // the Unlock Vault heading instead of Create Vault.
-        await expect($("h1*=Unlock Vault")).toBeDisplayed({ wait: 10_000 });
+        await browser.waitUntil(async () => (await heading.getText()).includes("Unlock Vault"), {
+            timeout: 15_000,
+            timeoutMsg: "LoginPage never returned to Unlock Vault mode after logout",
+        });
     });
 });
