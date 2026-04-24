@@ -1,8 +1,8 @@
 import { XpubRequests } from "../requests/XpubRequests";
 import type { TrackedXpubMeta } from "./model/TrackedXpubMeta";
 import type { DerivedAddress } from "./model/DerivedAddress";
+import type { AddressDerivationType } from "./model/AddressDerivationType";
 import { XpubDerivationService } from "./XpubDerivationService";
-import type { AddressDerivationType } from "./XpubDerivationService";
 
 const ADDRESS_DERIVATION_COUNT = 20;
 

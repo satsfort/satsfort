@@ -1,11 +1,5 @@
 import { dbExecute, dbSelect } from "../db";
-
-export type BalanceUpdate = {
-    btc: number;
-    usd: number;
-    txCount: number;
-    fetchedAt: string;
-};
+import type { BalanceUpdate } from "../services/model/BalanceUpdate";
 
 export class AddressBalanceRequests {
     async findAddressIds(address: string): Promise<number[]> {

@@ -2,6 +2,8 @@ import * as bitcoin from "bitcoinjs-lib";
 import BIP32Factory from "bip32";
 import * as ecc from "tiny-secp256k1";
 import bs58check from "bs58check";
+import type { AddressDerivationType } from "./model/AddressDerivationType";
+import type { DerivedAddressInfo } from "./model/DerivedAddressInfo";
 
 // Initialize ECC library for bitcoinjs-lib (required for P2TR/Taproot)
 bitcoin.initEccLib(ecc);
@@ -17,14 +19,6 @@ const VERSION_BYTES = {
     xpub: { public: 0x0488b21e, private: 0x0488ade4 }, // BIP44 - P2PKH
     ypub: { public: 0x049d7cb2, private: 0x049d7878 }, // BIP49 - P2SH-P2WPKH
     zpub: { public: 0x04b24746, private: 0x04b2430c }, // BIP84 - P2WPKH
-};
-
-export type AddressDerivationType = "P2PKH" | "P2SH" | "P2WPKH" | "P2TR";
-
-export type DerivedAddressInfo = {
-    address: string;
-    derivationPath: string;
-    index: number;
 };
 
 export class XpubDerivationService {

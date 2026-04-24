@@ -1,14 +1,7 @@
 import { Config } from "../lib/Config";
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
-import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
-
-export type Transaction = {
-    id: string;
-    date: string;
-    type: "buy" | "transfer";
-    amount: number;
-    source: string;
-};
+import type { HistoryPoint } from "./model/HistoryPoint";
+import type { Transaction } from "./model/Transaction";
 
 const SOURCES = ["Coldcard", "Jade", "Strike", "Kraken", "River"];
 

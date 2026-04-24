@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./Modal.css";
-import type { AddressDerivationType } from "../services/XpubDerivationService";
+import type { AddressDerivationType } from "../services/model/AddressDerivationType";
 import { XpubService } from "../services/XpubService";
 import { useEscapeKey } from "../lib/useEscapeKey";
 

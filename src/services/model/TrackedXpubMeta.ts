@@ -1,4 +1,4 @@
-import type { AddressDerivationType } from "../XpubDerivationService";
+import type { AddressDerivationType } from "./AddressDerivationType";
 
 export type TrackedXpubMeta = {
     id: string;

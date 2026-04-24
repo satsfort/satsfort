@@ -1,4 +1,4 @@
-export type AddressType = "Taproot" | "Segwit" | "Legacy";
+import type { AddressType } from "./model/AddressType";
 
 const BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";

@@ -1,5 +1,5 @@
 import { dbExecute, dbSelect } from "../db";
-import type { AddressDerivationType } from "../services/XpubDerivationService";
+import type { AddressDerivationType } from "../services/model/AddressDerivationType";
 import type { TrackedXpubMeta } from "../services/model/TrackedXpubMeta";
 import type { DerivedAddress } from "../services/model/DerivedAddress";
 import type { XpubBalanceUpdate } from "../services/model/XpubBalanceUpdate";

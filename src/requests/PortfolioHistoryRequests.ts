@@ -1,12 +1,7 @@
 import { Config } from "../lib/Config";
 import { dbExecute, dbSelect } from "../db";
 import { PortfolioValueRecord } from "../services/model/PortfolioValueRecord.ts";
-
-export type HistoryPoint = {
-    date: string;
-    btc: number;
-    usd: number;
-};
+import type { HistoryPoint } from "../services/model/HistoryPoint";
 
 const TARGET_BTC = 2.1;
 const WEEKS = 104;

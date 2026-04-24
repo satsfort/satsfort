@@ -1,5 +1,5 @@
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
-import type { HistoryPoint } from "../requests/PortfolioHistoryRequests";
+import type { HistoryPoint } from "./model/HistoryPoint";
 
 export class PortfolioHistoryService {
     private readonly portfolioHistoryRequests = new PortfolioHistoryRequests();

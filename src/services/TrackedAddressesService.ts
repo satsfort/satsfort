@@ -1,12 +1,8 @@
 import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
 import type { TrackedAddressMeta } from "./model/TrackedAddressMeta";
+import type { TrackedAddress } from "./model/TrackedAddress";
 import { AddressBalanceService } from "./AddressBalanceService";
 import { BitcoinAddressValidationService } from "./BitcoinAddressValidationService";
-
-export type TrackedAddress = TrackedAddressMeta & {
-    btc: number;
-    txCount: number;
-};
 
 export class TrackedAddressesService {
     private readonly trackedAddressesRequests = new TrackedAddressesRequests();

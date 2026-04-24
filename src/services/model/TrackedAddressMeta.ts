@@ -1,4 +1,4 @@
-import type { AddressType } from "../BitcoinAddressValidationService";
+import type { AddressType } from "./AddressType";
 
 export type TrackedAddressMeta = {
     id: string;

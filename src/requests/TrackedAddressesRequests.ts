@@ -1,5 +1,5 @@
 import { dbExecute, dbSelect } from "../db";
-import type { AddressType } from "../services/BitcoinAddressValidationService";
+import type { AddressType } from "../services/model/AddressType";
 import type { TrackedAddressMeta } from "../services/model/TrackedAddressMeta";
 
 type AddressRow = {
