@@ -33,7 +33,7 @@ vi.mock("../requests/SpotPriceRequests", () => ({
 }));
 
 import { AddressBalanceService } from "./AddressBalanceService";
-import { TrackedAddressesRequests } from "../requests/TrackedAddressesRequests";
+import { TrackedAddressesService } from "./TrackedAddressesService";
 import { XpubRequests } from "../requests/XpubRequests";
 
 const migrationsDir = join(process.cwd(), "src-tauri", "migrations");
@@ -59,14 +59,14 @@ describe("AddressBalanceService persistence", () => {
     const fetchMock = vi.fn();
     const originalFetch = globalThis.fetch;
     let addressBalanceService: AddressBalanceService;
-    let trackedAddressesRequests: TrackedAddressesRequests;
+    let trackedAddressesService: TrackedAddressesService;
     let xpubRequests: XpubRequests;
 
     beforeEach(() => {
         fetchMock.mockReset();
         globalThis.fetch = fetchMock as unknown as typeof fetch;
         addressBalanceService = new AddressBalanceService();
-        trackedAddressesRequests = new TrackedAddressesRequests();
+        trackedAddressesService = new TrackedAddressesService();
         xpubRequests = new XpubRequests();
     });
 
@@ -85,7 +85,7 @@ describe("AddressBalanceService persistence", () => {
     });
 
     it("updates the tracked address row and appends a snapshot to address_balances", async () => {
-        const tracked = await trackedAddressesRequests.add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
+        const tracked = await trackedAddressesService.add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(25_000_000, 0, 5));
 
@@ -121,7 +121,7 @@ describe("AddressBalanceService persistence", () => {
     });
 
     it("appends a new row for every fetch on the same address", async () => {
-        const tracked = await trackedAddressesRequests.add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
+        const tracked = await trackedAddressesService.add("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "Hot wallet");
 
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(10_000_000, 0, 2));
         fetchMock.mockResolvedValueOnce(mockMempoolResponse(20_000_000, 0, 3));

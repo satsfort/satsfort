@@ -1,8 +1,5 @@
 import { dbExecute, dbSelect } from "../db";
-import { BitcoinAddressValidationService } from "../services/BitcoinAddressValidationService";
 import type { AddressType } from "../services/BitcoinAddressValidationService";
-
-const bitcoinAddressValidationService = new BitcoinAddressValidationService();
 
 export type { AddressType };
 
@@ -34,37 +31,27 @@ function rowToMeta(row: AddressRow): TrackedAddressMeta {
 }
 
 export class TrackedAddressesRequests {
-    async execute(): Promise<TrackedAddressMeta[]> {
+    async getAll(): Promise<TrackedAddressMeta[]> {
         const rows = await dbSelect<AddressRow>("SELECT uuid, label, address, address_type, created_at FROM addresses ORDER BY id");
         return rows.map(rowToMeta);
     }
 
-    async add(address: string, label: string): Promise<TrackedAddressMeta> {
-        const trimmedAddress = address.trim();
-        const trimmedLabel = label.trim();
-
-        const error = await bitcoinAddressValidationService.validateBitcoinAddress(trimmedAddress);
-        if (error) throw new Error(error);
-
-        if (trimmedLabel.length === 0) throw new Error("Label is required");
-
-        const existing = await dbSelect<{ uuid: string }>("SELECT uuid FROM addresses WHERE address = ?", [trimmedAddress]);
-        if (existing.length > 0) {
-            throw new Error("This address is already being tracked");
-        }
-
-        const uuid = crypto.randomUUID();
-        const type = bitcoinAddressValidationService.detectAddressType(trimmedAddress);
-
-        await dbExecute("INSERT INTO addresses (uuid, label, address, address_type) VALUES (?, ?, ?, ?)", [
-            uuid,
-            trimmedLabel,
-            trimmedAddress,
-            type,
+    async findByAddress(address: string): Promise<TrackedAddressMeta | null> {
+        const rows = await dbSelect<AddressRow>("SELECT uuid, label, address, address_type, created_at FROM addresses WHERE address = ?", [
+            address,
         ]);
+        return rows.length > 0 ? rowToMeta(rows[0]) : null;
+    }
 
+    async insert(params: { uuid: string; label: string; address: string; type: AddressType }): Promise<TrackedAddressMeta> {
+        await dbExecute("INSERT INTO addresses (uuid, label, address, address_type) VALUES (?, ?, ?, ?)", [
+            params.uuid,
+            params.label,
+            params.address,
+            params.type,
+        ]);
         const rows = await dbSelect<AddressRow>("SELECT uuid, label, address, address_type, created_at FROM addresses WHERE uuid = ?", [
-            uuid,
+            params.uuid,
         ]);
         return rowToMeta(rows[0]);
     }
