@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./App.css";
 import { Sidebar } from "./components/Sidebar";
 import type { Route } from "./components/Sidebar";
@@ -25,6 +25,21 @@ function App() {
     const [portfolioVersion, setPortfolioVersion] = useState(0);
     const toggleBalances = () => setBalancesHidden((h) => !h);
     const refreshPortfolio = () => setPortfolioVersion((v) => v + 1);
+
+    const scrollPositions = useRef<Record<Route, number>>({
+        portfolio: 0,
+        addresses: 0,
+        settings: 0,
+        account: 0,
+    });
+    const prevRoute = useRef<Route>(route);
+
+    useLayoutEffect(() => {
+        if (prevRoute.current === route) return;
+        scrollPositions.current[prevRoute.current] = window.scrollY;
+        prevRoute.current = route;
+        window.scrollTo(0, scrollPositions.current[route]);
+    }, [route]);
 
     useEffect(() => {
         if (!user) return;
