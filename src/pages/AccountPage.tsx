@@ -178,7 +178,10 @@ export function AccountPage({ onLogout }: Props) {
             <div className="plan-support-free">
                 <div>
                     <h4 className="plan-support-free-title">Support without spending</h4>
-                    <p className="muted small">A star on GitHub helps more than you think.</p>
+                    <p className="muted small">
+                        If Sats Fort has been useful to you, we&apos;d be grateful for a star on GitHub, or a recommendation to friends and
+                        family who might enjoy it too. Thank you!
+                    </p>
                 </div>
                 <a
                     className="btn plan-support-free-btn"
