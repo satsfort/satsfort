@@ -2,10 +2,6 @@ import { useState } from "react";
 import "./AccountPage.css";
 import { TaskNotifications } from "../components/TaskNotifications";
 
-type Props = {
-    onLogout: () => void;
-};
-
 type BillingCycle = "monthly" | "yearly";
 
 type Plan = {
@@ -110,7 +106,7 @@ function renderPrice(plan: Plan, cycle: BillingCycle) {
     );
 }
 
-export function AccountPage({ onLogout }: Props) {
+export function AccountPage() {
     const [cycle, setCycle] = useState<BillingCycle>("monthly");
 
     return (
@@ -121,9 +117,6 @@ export function AccountPage({ onLogout }: Props) {
                     <h1 className="page-title">Support the project</h1>
                 </div>
                 <div className="page-actions">
-                    <button className="btn btn-danger" onClick={onLogout}>
-                        Log Out
-                    </button>
                     <TaskNotifications />
                 </div>
             </header>

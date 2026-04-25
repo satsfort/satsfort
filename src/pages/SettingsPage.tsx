@@ -42,6 +42,9 @@ export function SettingsPage({ username, onLogout }: Props) {
                     <h1 className="page-title">Settings</h1>
                 </div>
                 <div className="page-actions">
+                    <button className="btn btn-danger" onClick={() => void onLogout()}>
+                        Log Out
+                    </button>
                     <TaskNotifications />
                 </div>
             </header>

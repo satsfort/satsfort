@@ -276,10 +276,10 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     </div>
                     <div className="page-actions page-actions-stacked">
                         <button className="btn" onClick={() => setShowImportXpubModal(true)}>
-                            Import xpub
+                            Add xpub
                         </button>
                         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                            + Add Address
+                            {isMobile ? "Add" : "+ Add Address"}
                         </button>
                     </div>
                 </header>
@@ -290,10 +290,10 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     action={
                         <>
                             <button className="btn" onClick={() => setShowImportXpubModal(true)}>
-                                Import xpub
+                                Add xpub
                             </button>
                             <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                                + Add Address
+                                {isMobile ? "Add" : "+ Add Address"}
                             </button>
                         </>
                     }
@@ -345,13 +345,13 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         title="Refresh all address balances"
                     >
                         <RefreshIcon size={14} />
-                        {refreshingAll ? "Refreshing…" : "Refresh All"}
+                        {refreshingAll ? "Refreshing…" : isMobile ? "Refresh" : "Refresh All"}
                     </button>
                     <button className="btn" onClick={() => setShowImportXpubModal(true)}>
-                        Import xpub
+                        Add xpub
                     </button>
                     <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                        + Add Address
+                        {isMobile ? "Add" : "+ Add Address"}
                     </button>
                 </div>
             </header>
