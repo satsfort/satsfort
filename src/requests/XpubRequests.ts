@@ -1,4 +1,6 @@
+import { Config } from "../lib/Config";
 import { dbExecute, dbSelect } from "../db";
+import { MOCK_XPUB, MOCK_XPUB_DERIVED } from "../lib/mockData";
 import type { AddressDerivationType } from "../services/model/AddressDerivationType";
 import type { TrackedXpubMeta } from "../services/model/TrackedXpubMeta";
 import type { DerivedAddress } from "../services/model/DerivedAddress";
@@ -24,6 +26,18 @@ type XpubAddressRow = {
 
 export class XpubRequests {
     async getAll(): Promise<TrackedXpubMeta[]> {
+        if (Config.useMockData) {
+            return [
+                {
+                    id: MOCK_XPUB.id,
+                    label: MOCK_XPUB.label,
+                    xpub: MOCK_XPUB.xpub,
+                    derivationType: MOCK_XPUB.derivationType,
+                    added: MOCK_XPUB.added,
+                    addressCount: MOCK_XPUB.addressCount,
+                },
+            ];
+        }
         const rows = await dbSelect<XpubRow>(
             "SELECT id, uuid, label, xpub, derivation_type, address_count, created_at FROM xpubs ORDER BY id",
         );
@@ -39,6 +53,15 @@ export class XpubRequests {
     }
 
     async getAllDerivedAddresses(): Promise<DerivedAddress[]> {
+        if (Config.useMockData) {
+            return MOCK_XPUB_DERIVED.map((entry) => ({
+                id: entry.id,
+                xpubId: MOCK_XPUB.id,
+                address: entry.address,
+                derivationPath: entry.derivationPath,
+                index: entry.index,
+            }));
+        }
         const rows = await dbSelect<XpubAddressRow>(
             "SELECT xa.uuid, x.uuid AS xpub_uuid, xa.address, xa.derivation_path, xa.address_index FROM xpub_addresses xa JOIN xpubs x ON xa.xpub_id = x.id ORDER BY xa.xpub_id, xa.address_index",
         );

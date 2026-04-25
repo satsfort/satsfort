@@ -1,4 +1,6 @@
+import { Config } from "../lib/Config";
 import { dbExecute, dbSelect } from "../db";
+import { MOCK_TRACKED_ADDRESSES } from "../lib/mockData";
 import type { AddressType } from "../services/model/AddressType";
 import type { TrackedAddressMeta } from "../services/model/TrackedAddressMeta";
 
@@ -12,6 +14,15 @@ type AddressRow = {
 
 export class TrackedAddressesRequests {
     async getAll(): Promise<TrackedAddressMeta[]> {
+        if (Config.useMockData) {
+            return MOCK_TRACKED_ADDRESSES.map((entry) => ({
+                id: entry.id,
+                label: entry.label,
+                address: entry.address,
+                type: entry.type,
+                added: entry.added,
+            }));
+        }
         const rows = await dbSelect<AddressRow>("SELECT uuid, label, address, address_type, created_at FROM addresses ORDER BY id");
         return rows.map(this.rowToMeta);
     }

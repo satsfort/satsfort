@@ -30,6 +30,8 @@ export class PortfolioHistoryRequests {
      * additions against. Idempotent — a no-op once any row exists.
      */
     async ensureBaseline(): Promise<void> {
+        if (Config.useMockData) return;
+
         const [existing] = await dbSelect<{ c: number }>("SELECT COUNT(*) AS c FROM portfolio_value");
         if (existing.c > 0) return;
         await dbExecute("INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)", [
@@ -63,6 +65,8 @@ export class PortfolioHistoryRequests {
     }
 
     async insert(point: { btc: number; usd: number; fetchedAt: string }): Promise<void> {
+        if (Config.useMockData) return;
+
         await dbExecute("INSERT INTO portfolio_value (uuid, balance_btc, balance_usd, fetched_at) VALUES (?, ?, ?, ?)", [
             crypto.randomUUID(),
             point.btc,
