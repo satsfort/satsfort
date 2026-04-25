@@ -33,12 +33,16 @@ function App() {
         account: 0,
     });
     const prevRoute = useRef<Route>(route);
+    const contentRef = useRef<HTMLElement | null>(null);
 
     useLayoutEffect(() => {
         if (prevRoute.current === route) return;
-        scrollPositions.current[prevRoute.current] = window.scrollY;
+        const el = contentRef.current;
+        if (el) {
+            scrollPositions.current[prevRoute.current] = el.scrollTop;
+            el.scrollTo(0, scrollPositions.current[route]);
+        }
         prevRoute.current = route;
-        window.scrollTo(0, scrollPositions.current[route]);
     }, [route]);
 
     useEffect(() => {
@@ -75,7 +79,7 @@ function App() {
                 <div className="status-bar-mask" aria-hidden="true" />
                 <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
                     <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-                    <main className="content">
+                    <main className="content" ref={contentRef}>
                         <div className="content-inner">
                             <div hidden={route !== "portfolio"}>
                                 <PortfolioPage
