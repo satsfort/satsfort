@@ -1,5 +1,6 @@
 import { Config } from "../lib/Config";
 import { dbExecute, dbSelect } from "../db";
+import { MOCK_TARGET_BTC, MOCK_TRACKED_ADDRESSES } from "../lib/mockData";
 import { PortfolioValueRecord } from "../services/model/PortfolioValueRecord.ts";
 import type { HistoryPoint } from "../services/model/HistoryPoint";
 
@@ -7,6 +8,7 @@ const TARGET_BTC = 2.1;
 const WEEKS = 104;
 const END_DATE = new Date("2026-04-18T00:00:00Z");
 const MOCK_SPOT_USD = 94_820;
+const MOCK_TRACKED_COUNT = MOCK_TRACKED_ADDRESSES.length + 1;
 
 type PortfolioValueRow = {
     balance_btc: number;
@@ -43,6 +45,8 @@ export class PortfolioHistoryRequests {
     }
 
     async countTracked(): Promise<number> {
+        if (Config.useMockData) return MOCK_TRACKED_COUNT;
+
         const [row] = await dbSelect<{ tracked: number }>(
             "SELECT (SELECT COUNT(*) FROM addresses) + (SELECT COUNT(*) FROM xpubs) AS tracked",
         );
@@ -50,6 +54,8 @@ export class PortfolioHistoryRequests {
     }
 
     async sumLatestBalances(): Promise<{ btc: number; usd: number }> {
+        if (Config.useMockData) return { btc: MOCK_TARGET_BTC, usd: MOCK_TARGET_BTC * MOCK_SPOT_USD };
+
         const [totals] = await dbSelect<{ total_btc: number | null; total_usd: number | null }>(
             "SELECT COALESCE((SELECT SUM(latest_balance_btc) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_btc) FROM xpubs), 0) AS total_btc, COALESCE((SELECT SUM(latest_balance_usd) FROM addresses), 0) + COALESCE((SELECT SUM(latest_balance_usd) FROM xpubs), 0) AS total_usd",
         );
@@ -57,6 +63,8 @@ export class PortfolioHistoryRequests {
     }
 
     async selectLatest(): Promise<PortfolioValueRecord | null> {
+        if (Config.useMockData) return null;
+
         const [row] = await dbSelect<PortfolioValueRow | undefined>(
             "SELECT balance_btc, balance_usd, fetched_at FROM portfolio_value ORDER BY fetched_at DESC LIMIT 1",
         );
