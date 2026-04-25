@@ -78,8 +78,9 @@ export const config: Options.Testrunner = {
         const safe = `${test.parent}-${test.title}`.replace(/[^a-z0-9]+/gi, "_").slice(0, 120);
         try {
             // `browser` is injected as a global by the WDIO runner at test time.
-            const b = (globalThis as { browser?: { saveScreenshot: (p: string) => Promise<unknown>; getPageSource: () => Promise<string> } })
-                .browser;
+            const b = (
+                globalThis as { browser?: { saveScreenshot: (p: string) => Promise<unknown>; getPageSource: () => Promise<string> } }
+            ).browser;
             if (!b) return;
             await b.saveScreenshot(path.join(artifactsDir, `${safe}.png`));
             const html = await b.getPageSource();
