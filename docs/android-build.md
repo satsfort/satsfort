@@ -14,14 +14,26 @@ This project depends on SQLCipher (via `libsqlite3-sys` with the `bundled-sqlcip
     export ANDROID_NDK_HOME=$HOME/Library/Android/sdk/ndk/<version>
     ```
 
-## Alternativce to settings the paths permanently
+### Alternative to settings the paths permanently
 
-You can run a variation (this works on Mac) of this every time before running the Anndroid build:
+If you don't want to add permanently it to your path, you can do (this only works on Mac):
 
 ```bash
 export ANDROID_NDK_HOME=/Users/<username>/Library/Android/sdk/ndk/30.0.14904198
 export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin:$PATH"
 ```
+
+## Running the build
+
+To run on a simulator just do: `npx tauri android dev`
+
+If you want an apk to install on a real device, do: `npx tauri android build --apk --debug`
+
+## Choosing which device to run for
+
+When running `npx tauri android dev` if it does not ask which device you want to run it for, you can do `adb devices` to see the list of connected devices and then do `npx tauri android dev --target <device_id>` to run it on a specific device.
+
+Or use `export ANDROID_SERIAL=<serial>` to set the default device.
 
 ## Common failures
 
