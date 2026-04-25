@@ -48,7 +48,12 @@ function App() {
     }, [user]);
 
     if (!user) {
-        return <LoginPage onLogin={setUser} />;
+        return (
+            <>
+                <div className="status-bar-mask" aria-hidden="true" />
+                <LoginPage onLogin={setUser} />
+            </>
+        );
     }
 
     const handleLogout = () => {
@@ -67,6 +72,7 @@ function App() {
     return (
         <SettingsProvider>
             <TaskNotificationsProvider>
+                <div className="status-bar-mask" aria-hidden="true" />
                 <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
                     <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
                     <main className="content">
