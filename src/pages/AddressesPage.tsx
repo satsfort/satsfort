@@ -35,14 +35,29 @@ type Props = {
 
 type DerivedBalance = { btc: number; txCount: number };
 
-function shorten(addr: string) {
-    if (addr.length <= 18) return addr;
-    return `${addr.slice(0, 10)}…${addr.slice(-8)}`;
+function shorten(addr: string, compact: boolean) {
+    const head = compact ? 6 : 10;
+    const tail = compact ? 6 : 8;
+    if (addr.length <= head + tail) return addr;
+    return `${addr.slice(0, head)}…${addr.slice(-tail)}`;
 }
 
-function shortenXpub(xpub: string) {
-    if (xpub.length <= 24) return xpub;
-    return `${xpub.slice(0, 12)}…${xpub.slice(-8)}`;
+function shortenXpub(xpub: string, compact: boolean) {
+    const head = compact ? 6 : 12;
+    const tail = compact ? 6 : 8;
+    if (xpub.length <= head + tail) return xpub;
+    return `${xpub.slice(0, head)}…${xpub.slice(-tail)}`;
+}
+
+function useIsMobile() {
+    const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 720px)").matches);
+    useEffect(() => {
+        const mql = window.matchMedia("(max-width: 720px)");
+        const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mql.addEventListener("change", handler);
+        return () => mql.removeEventListener("change", handler);
+    }, []);
+    return isMobile;
 }
 
 export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances, onPortfolioChanged }: Props) {
@@ -70,6 +85,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [removeXpubTarget, setRemoveXpubTarget] = useState<TrackedXpubMeta | null>(null);
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
+    const isMobile = useIsMobile();
 
     /** Fetches balances for a list of derived addresses and merges them into state. */
     const fetchDerivedBalances = async (addresses: DerivedAddress[]) => {
@@ -381,7 +397,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                             <div className="xpub-info">
                                                 <div className="addr-label">{xpub.label}</div>
                                                 <div className="addr-string mono">
-                                                    <span>{shortenXpub(xpub.xpub)}</span>
+                                                    <span>{shortenXpub(xpub.xpub, isMobile)}</span>
                                                     <button
                                                         className="icon-btn"
                                                         title="Copy xpub"
@@ -405,10 +421,6 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div className="xpub-stats">
-                                                <span className="tx-tag xpub">{xpub.derivationType}</span>
-                                                <span className="muted mono small">{xpubDerived.length} addresses</span>
-                                            </div>
                                             <div className="addr-balance" onClick={(e) => e.stopPropagation()}>
                                                 <div className="addr-amount">
                                                     {balancesLoaded ? (
@@ -429,8 +441,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                             </div>
                                         </div>
                                         <div className="addr-meta" onClick={(e) => e.stopPropagation()}>
-                                            <span className="muted mono small">added {xpub.added}</span>
-                                            <span className="addr-spacer" />
+                                            <span className="tx-tag xpub">{xpub.derivationType}</span>
+                                            <span className="muted mono small">· {xpubDerived.length} addresses</span>
+                                            <span className="muted mono small">· added {xpub.added}</span>
                                             <button
                                                 className="link-btn"
                                                 onClick={() => void refreshXpub(xpub, xpubDerived)}
@@ -451,7 +464,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                                 return (
                                                     <div key={derived.id} className="derived-addr-row">
                                                         <span className="derived-index mono muted">{derived.index}</span>
-                                                        <span className="derived-addr mono">{shorten(derived.address)}</span>
+                                                        <span className="derived-addr mono">{shorten(derived.address, isMobile)}</span>
                                                         <span className="derived-path mono muted small">{derived.derivationPath}</span>
                                                         <span className="derived-balance">
                                                             {bal !== undefined ? (
@@ -518,7 +531,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                     <div>
                                         <div className="addr-label">{a.label}</div>
                                         <div className="addr-string mono">
-                                            <span>{shorten(a.address)}</span>
+                                            <span>{shorten(a.address, isMobile)}</span>
                                             <button
                                                 className="icon-btn"
                                                 title="Copy address"
