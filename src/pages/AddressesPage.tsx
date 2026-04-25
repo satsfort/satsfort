@@ -265,18 +265,22 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         return (
             <>
                 <header className="page-head">
-                    <div>
-                        <div className="eyebrow">Watch-only</div>
-                        <h1 className="page-title">Addresses</h1>
+                    <div className="page-head-titlebar">
+                        <div>
+                            <div className="eyebrow">Watch-only</div>
+                            <h1 className="page-title">Addresses</h1>
+                        </div>
+                        <div className="page-actions page-actions-inline">
+                            <TaskNotifications />
+                        </div>
                     </div>
-                    <div className="page-actions">
+                    <div className="page-actions page-actions-stacked">
                         <button className="btn" onClick={() => setShowImportXpubModal(true)}>
                             Import xpub
                         </button>
                         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                             + Add Address
                         </button>
-                        <TaskNotifications />
                     </div>
                 </header>
                 <EmptyState
@@ -307,28 +311,33 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     return (
         <div className={balancesHidden ? "balances-hidden" : undefined}>
             <header className="page-head">
-                <div>
-                    <div className="eyebrow">Watch-only</div>
-                    <h1 className="page-title">Addresses</h1>
-                </div>
-                <div className="page-actions">
-                    <button
-                        className="btn btn-icon"
-                        onClick={onToggleBalances}
-                        aria-pressed={balancesHidden}
-                        aria-label={balancesHidden ? "Show balances" : "Hide balances"}
-                        title={balancesHidden ? "Show balances" : "Hide balances"}
-                    >
-                        {balancesHidden ? <EyeIcon /> : <EyeOffIcon />}
-                    </button>
-                    <div className="unit-toggle" role="group" aria-label="Display unit">
-                        <button className={`unit-btn ${unit === "BTC" ? "active" : ""}`} onClick={() => setUnit("BTC")}>
-                            {formatBtcLabel(denomination)}
-                        </button>
-                        <button className={`unit-btn ${unit === "FIAT" ? "active" : ""}`} onClick={() => setUnit("FIAT")}>
-                            {formatSymbol("FIAT", currency)} {currency}
-                        </button>
+                <div className="page-head-titlebar">
+                    <div>
+                        <div className="eyebrow">Watch-only</div>
+                        <h1 className="page-title">Addresses</h1>
                     </div>
+                    <div className="page-actions page-actions-inline">
+                        <button
+                            className="btn btn-icon"
+                            onClick={onToggleBalances}
+                            aria-pressed={balancesHidden}
+                            aria-label={balancesHidden ? "Show balances" : "Hide balances"}
+                            title={balancesHidden ? "Show balances" : "Hide balances"}
+                        >
+                            {balancesHidden ? <EyeIcon /> : <EyeOffIcon />}
+                        </button>
+                        <div className="unit-toggle" role="group" aria-label="Display unit">
+                            <button className={`unit-btn ${unit === "BTC" ? "active" : ""}`} onClick={() => setUnit("BTC")}>
+                                {formatBtcLabel(denomination)}
+                            </button>
+                            <button className={`unit-btn ${unit === "FIAT" ? "active" : ""}`} onClick={() => setUnit("FIAT")}>
+                                {formatSymbol("FIAT", currency)} {currency}
+                            </button>
+                        </div>
+                        <TaskNotifications />
+                    </div>
+                </div>
+                <div className="page-actions page-actions-stacked">
                     <button
                         className="btn btn-with-icon"
                         onClick={() => void refreshAll()}
@@ -344,7 +353,6 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                         + Add Address
                     </button>
-                    <TaskNotifications />
                 </div>
             </header>
 

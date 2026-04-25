@@ -124,6 +124,14 @@ body::after {
     flex-wrap: wrap;
 }
 
+.page-head-titlebar {
+    display: contents;
+}
+
+.page-actions-inline {
+    margin-left: auto;
+}
+
 .btn {
     font-family: var(--font-head);
     background: transparent;
@@ -492,5 +500,24 @@ select.text-input {
     .text-input {
         width: 100%;
         min-width: 0;
+    }
+
+    .page-head-titlebar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex: 1 1 100%;
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+
+    .page-actions-inline {
+        margin-left: 0;
+    }
+
+    .page-actions-stacked {
+        flex: 1 1 100%;
+        justify-content: flex-end;
     }
 }
