@@ -502,6 +502,14 @@ select.text-input {
         min-width: 0;
     }
 
+    .page-head .eyebrow {
+        display: none;
+    }
+
+    .hero .stat-card {
+        display: none;
+    }
+
     .page-head-titlebar {
         display: flex;
         align-items: flex-end;

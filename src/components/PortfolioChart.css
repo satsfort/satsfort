@@ -73,3 +73,13 @@
     font-size: 11px;
     fill: var(--muted-dim);
 }
+
+@media (max-width: 720px) {
+    .axis-label {
+        display: none;
+    }
+
+    .chart-card {
+        padding: 0.5rem;
+    }
+}

@@ -84,11 +84,10 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
 
     const hovered = hover !== null ? points[hover] : null;
 
-    const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const updateHover = (clientX: number, svg: SVGSVGElement) => {
         if (!domain || points.length === 0) return;
-        const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * W;
+        const x = ((clientX - rect.left) / rect.width) * W;
         let nearest = 0;
         let bestDist = Infinity;
         for (let i = 0; i < points.length; i++) {
@@ -99,6 +98,15 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
             }
         }
         setHover(nearest);
+    };
+
+    const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+        updateHover(e.clientX, e.currentTarget);
+    };
+
+    const onTouch = (e: React.TouchEvent<SVGSVGElement>) => {
+        if (e.touches.length === 0) return;
+        updateHover(e.touches[0].clientX, e.currentTarget);
     };
 
     return (
@@ -132,6 +140,10 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
                 preserveAspectRatio="none"
                 onMouseMove={onMove}
                 onMouseLeave={() => setHover(null)}
+                onTouchStart={onTouch}
+                onTouchMove={onTouch}
+                onTouchEnd={() => setHover(null)}
+                onTouchCancel={() => setHover(null)}
             >
                 <defs>
                     <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
