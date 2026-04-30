@@ -13,9 +13,11 @@ import { TaskNotificationsProvider } from "./lib/TaskNotificationsContext";
 import type { Unit } from "./lib/format";
 import { lockDb } from "./db";
 import { PortfolioHistoryService } from "./services/PortfolioHistoryService.ts";
+import { HistoricalPriceRequests } from "./requests/HistoricalPriceRequests.ts";
 
 function App() {
     const portfolioHistoryService = new PortfolioHistoryService();
+    const historicalPriceRequests = new HistoricalPriceRequests();
 
     const [user, setUser] = useState<string | null>(null);
     const [route, setRoute] = useState<Route>("portfolio");
@@ -48,6 +50,7 @@ function App() {
     useEffect(() => {
         if (!user) return;
         void portfolioHistoryService.ensureBaseline().catch((err) => console.error("Failed to seed portfolio baseline", err));
+        void historicalPriceRequests.ensureSeeded().catch((err) => console.error("Failed to seed historical prices", err));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
