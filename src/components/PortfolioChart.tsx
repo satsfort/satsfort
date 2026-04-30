@@ -16,6 +16,15 @@ const RANGE_DAYS: Record<Range, number | "all"> = {
     ALL: "all",
 };
 
+const RANGE_LABEL: Record<Range, string> = {
+    "1W": "Last week",
+    "1M": "Last month",
+    "3M": "Last 3 months",
+    "1Y": "Last year",
+    "4Y": "Last 4 years",
+    ALL: "All time",
+};
+
 const DAY_MS = 86_400_000;
 const W = 880;
 const H = 300;
@@ -113,7 +122,7 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
         <div className="chart-card">
             <div className="chart-head">
                 <div>
-                    <div className="muted small">{hovered ? formatDate(hovered.date) : "Last 4 years"}</div>
+                    <div className="muted small">{hovered ? formatDate(hovered.date) : RANGE_LABEL[range]}</div>
                     <div className="chart-value">
                         {formatAmount((hovered ?? points[points.length - 1]).btc, unit, priceUsd, {
                             btcDigits: 8,
