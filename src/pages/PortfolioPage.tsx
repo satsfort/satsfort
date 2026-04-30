@@ -7,6 +7,7 @@ import { EmptyState } from "../components/EmptyState";
 import type { HistoryPoint } from "../services/model/HistoryPoint";
 import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { TransactionHistoryService } from "../services/TransactionHistoryService";
+import { CostBasisService } from "../services/CostBasisService";
 import type { Transaction } from "../services/model/Transaction";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../services/model/SpotPrice";
@@ -33,6 +34,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const exchangeRateRequests = ExchangeRateRequests.getInstance();
     const portfolioHistoryService = new PortfolioHistoryService();
     const transactionHistoryService = new TransactionHistoryService();
+    const costBasisService = new CostBasisService();
 
     const [history, setHistory] = useState<HistoryPoint[] | null>(null);
     const [hasTrackedItems, setHasTrackedItems] = useState<boolean | null>(null);
@@ -123,11 +125,10 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const fiatSymbol = formatSymbol("FIAT", currency);
 
     const usdValue = latest.btc * priceUsd;
-    const costBasis = 62_400;
-    const avgPrice = costBasis * 0.98;
-    const invested = latest.btc * avgPrice;
+    const { costBasis, avgPrice } = costBasisService.compute(history);
+    const invested = costBasis;
     const pnl = usdValue - invested;
-    const pnlPct = (pnl / invested) * 100;
+    const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
     const monthDelta = latest.btc - monthAgo.btc;
     const yearDelta = latest.btc - yearAgo.btc;
 
