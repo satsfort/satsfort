@@ -42,13 +42,8 @@ export class TrackedAddressesService {
             type,
         });
 
-        try {
-            await this.transactionHistoryService.ingestForAddress(inserted.id, inserted.address);
-        } catch (err) {
-            console.warn("Failed to ingest transactions for new address", err);
-            throw err;
-        }
-
+        // Transaction ingestion is handled by the caller so it can show
+        // progress UI (large wallets can take minutes to backfill).
         return inserted;
     }
 

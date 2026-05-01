@@ -73,12 +73,16 @@ async function fetchPage(url: string): Promise<MempoolTx[]> {
     return (await response.json()) as MempoolTx[];
 }
 
+export type IngestProgress = { pages: number; txsSoFar: number };
+export type PageFetched = IngestProgress & { pageTxs: RawTransaction[] };
+
 async function fetchAllFrom(
     endpoint: Endpoint,
     address: string,
     stopAtTxid: string | undefined,
-): Promise<MempoolTx[]> {
-    const collected: MempoolTx[] = [];
+    onPageFetched: ((info: PageFetched) => Promise<void> | void) | undefined,
+): Promise<RawTransaction[]> {
+    const collected: RawTransaction[] = [];
     let nextUrl = endpoint.firstPageUrl(address);
 
     for (let page = 0; page < MAX_PAGES_PER_ADDRESS; page++) {
@@ -101,11 +105,18 @@ async function fetchAllFrom(
                 stopEarly = true;
             }
         }
-        collected.push(...toAdd);
+        const pageTxs: RawTransaction[] = toAdd.map((tx) => ({
+            txid: tx.txid,
+            amountSat: netAmountForAddress(tx, address),
+            blockTime: tx.status.block_time ?? null,
+            confirmed: tx.status.confirmed,
+        }));
+        collected.push(...pageTxs);
 
         const stopNote = stopEarly ? " (hit known tx, stopping)" : "";
         // eslint-disable-next-line no-console
-        console.debug(`[tx-ingest] ${address} page ${page + 1}: +${toAdd.length} new (total ${collected.length})${stopNote}`);
+        console.debug(`[tx-ingest] ${address} page ${page + 1}: +${pageTxs.length} new (total ${collected.length})${stopNote}`);
+        if (onPageFetched) await onPageFetched({ pages: page + 1, txsSoFar: collected.length, pageTxs });
 
         if (stopEarly) break;
 
@@ -128,7 +139,10 @@ export class BlockchainTransactionsRequests {
      * encountered (incremental refresh — every older tx is already in the
      * DB). Pass nothing for a full backfill.
      */
-    async getForAddress(address: string, opts: { stopAtTxid?: string } = {}): Promise<RawTransaction[]> {
+    async getForAddress(
+        address: string,
+        opts: { stopAtTxid?: string; onPageFetched?: (info: PageFetched) => Promise<void> | void } = {},
+    ): Promise<RawTransaction[]> {
         const errors: string[] = [];
         const mode = opts.stopAtTxid ? `incremental (stop at ${opts.stopAtTxid.slice(0, 12)}…)` : "full";
         // eslint-disable-next-line no-console
@@ -136,15 +150,10 @@ export class BlockchainTransactionsRequests {
 
         for (const endpoint of ENDPOINTS) {
             try {
-                const txs = await fetchAllFrom(endpoint, address, opts.stopAtTxid);
+                const txs = await fetchAllFrom(endpoint, address, opts.stopAtTxid, opts.onPageFetched);
                 // eslint-disable-next-line no-console
                 console.debug(`[tx-ingest] ${address}: fetched ${txs.length} txs from ${endpoint.name}`);
-                return txs.map((tx) => ({
-                    txid: tx.txid,
-                    amountSat: netAmountForAddress(tx, address),
-                    blockTime: tx.status.block_time ?? null,
-                    confirmed: tx.status.confirmed,
-                }));
+                return txs;
             } catch (err) {
                 const message = err instanceof Error ? err.message : String(err);
                 errors.push(`${endpoint.name}: ${message}`);

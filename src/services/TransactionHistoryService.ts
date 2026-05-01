@@ -1,10 +1,12 @@
 import { Config } from "../lib/Config";
-import { BlockchainTransactionsRequests } from "../requests/BlockchainTransactionsRequests";
+import { BlockchainTransactionsRequests, type IngestProgress } from "../requests/BlockchainTransactionsRequests";
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import { TransactionHistoryRequests } from "../requests/TransactionHistoryRequests";
 import type { TransactionRow } from "../requests/TransactionHistoryRequests";
 import type { HistoryPoint } from "./model/HistoryPoint";
 import type { Transaction } from "./model/Transaction";
+
+export type { IngestProgress };
 
 const SOURCES = ["Coldcard", "Jade", "Strike", "Kraken", "River"];
 const SAT_PER_BTC = 100_000_000;
@@ -55,7 +57,7 @@ export class TransactionHistoryService {
     async ingestForAddress(
         addressUuid: string,
         address: string,
-        opts: { incremental?: boolean } = {},
+        opts: { incremental?: boolean; onProgress?: (info: IngestProgress) => void } = {},
     ): Promise<void> {
         if (Config.useMockData) return;
 
@@ -70,10 +72,25 @@ export class TransactionHistoryService {
             stopAtTxid = (await this.transactionHistoryRequests.latestConfirmedTxidForAddress(internalId)) ?? undefined;
         }
 
-        const transactions = await this.blockchainTransactionsRequests.getForAddress(address, { stopAtTxid });
-        // eslint-disable-next-line no-console
-        console.debug(`[tx-ingest] ${address}: persisting ${transactions.length} new transactions`);
-        await this.transactionHistoryRequests.upsertMany({ kind: "address", addressId: internalId }, transactions);
+        // Persistence only happens once the full pagination completes. If we
+        // committed each page as we went, a mid-sync failure could advance the
+        // `stopAtTxid` marker past txs we never actually saved — the next
+        // incremental refresh would skip them forever.
+        const transactions = await this.blockchainTransactionsRequests.getForAddress(address, {
+            stopAtTxid,
+            onPageFetched: ({ pages, txsSoFar }) => {
+                opts.onProgress?.({ pages, txsSoFar });
+            },
+        });
+        if (transactions.length > 0) {
+            // eslint-disable-next-line no-console
+            console.debug(`[tx-ingest] ${address}: persisting ${transactions.length} new transactions`);
+            await this.transactionHistoryRequests.upsertMany(
+                { kind: "address", addressId: internalId },
+                transactions,
+            );
+            await this.transactionHistoryRequests.markAddressHistoricFetched(internalId);
+        }
     }
 
     /**
@@ -95,11 +112,18 @@ export class TransactionHistoryService {
                         stopAtTxid =
                             (await this.transactionHistoryRequests.latestConfirmedTxidForXpubAddress(entry.id)) ?? undefined;
                     }
-                    const transactions = await this.blockchainTransactionsRequests.getForAddress(entry.address, { stopAtTxid });
-                    if (transactions.length === 0) return;
-                    // eslint-disable-next-line no-console
-                    console.debug(`[tx-ingest] ${entry.address}: persisting ${transactions.length} new transactions`);
-                    await this.transactionHistoryRequests.upsertMany({ kind: "xpubAddress", xpubAddressId: entry.id }, transactions);
+                    // Atomically persist only after the full pagination
+                    // completes — same reasoning as ingestForAddress.
+                    const transactions = await this.blockchainTransactionsRequests.getForAddress(entry.address, {
+                        stopAtTxid,
+                    });
+                    if (transactions.length > 0) {
+                        await this.transactionHistoryRequests.upsertMany(
+                            { kind: "xpubAddress", xpubAddressId: entry.id },
+                            transactions,
+                        );
+                        await this.transactionHistoryRequests.markXpubAddressHistoricFetched(entry.id);
+                    }
                 } catch (err) {
                     console.warn(`Failed to ingest transactions for xpub address ${entry.address}`, err);
                 }

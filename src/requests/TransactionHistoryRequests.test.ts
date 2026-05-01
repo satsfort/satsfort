@@ -74,7 +74,9 @@ function insertXpubAddress(xpubId: number, address: string, index: number): numb
 }
 
 function countTransactions(): number {
-    return (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM transactions").get() as { c: number }).c;
+    const a = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM address_transactions").get() as { c: number }).c;
+    const x = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM xpub_address_transactions").get() as { c: number }).c;
+    return a + x;
 }
 
 const transactionHistoryRequests = new TransactionHistoryRequests();
@@ -92,14 +94,14 @@ describe("TransactionHistoryRequests.upsertMany", () => {
         );
 
         expect(countTransactions()).toBe(2);
-        const rows = dbRef.current!.prepare("SELECT txid, address_id, xpub_address_id, amount_sat FROM transactions ORDER BY id").all();
+        const rows = dbRef.current!.prepare("SELECT txid, address_id, amount_sat FROM address_transactions ORDER BY id").all();
         expect(rows).toEqual([
-            { txid: "tx1", address_id: addressId, xpub_address_id: null, amount_sat: 50_000 },
-            { txid: "tx2", address_id: addressId, xpub_address_id: null, amount_sat: -25_000 },
+            { txid: "tx1", address_id: addressId, amount_sat: 50_000 },
+            { txid: "tx2", address_id: addressId, amount_sat: -25_000 },
         ]);
     });
 
-    it("dedupes by (txid, address_id) on re-fetch via the partial unique index", async () => {
+    it("dedupes by (txid, address_id) on re-fetch via the unique constraint", async () => {
         const addressId = insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
         const tx = { txid: "tx-shared", amountSat: 10_000, blockTime: 1_700_000_000, confirmed: true };
 
@@ -138,7 +140,7 @@ describe("TransactionHistoryRequests.upsertMany", () => {
         ]);
 
         const pending = dbRef
-            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .current!.prepare("SELECT block_time, confirmed FROM address_transactions WHERE txid = ?")
             .get("tx-once-pending") as { block_time: number | null; confirmed: number };
         expect(pending.block_time).toBeNull();
         expect(pending.confirmed).toBe(0);
@@ -150,7 +152,7 @@ describe("TransactionHistoryRequests.upsertMany", () => {
         // Still one row (UPSERT, not duplicate insert) and now confirmed.
         expect(countTransactions()).toBe(1);
         const promoted = dbRef
-            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .current!.prepare("SELECT block_time, confirmed FROM address_transactions WHERE txid = ?")
             .get("tx-once-pending") as { block_time: number | null; confirmed: number };
         expect(promoted.block_time).toBe(1_700_000_000);
         expect(promoted.confirmed).toBe(1);
@@ -169,7 +171,7 @@ describe("TransactionHistoryRequests.upsertMany", () => {
 
         expect(countTransactions()).toBe(1);
         const promoted = dbRef
-            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .current!.prepare("SELECT block_time, confirmed FROM xpub_address_transactions WHERE txid = ?")
             .get("tx-pending-xpub") as { block_time: number | null; confirmed: number };
         expect(promoted.block_time).toBe(1_700_500_000);
         expect(promoted.confirmed).toBe(1);
@@ -233,8 +235,10 @@ describe("TransactionHistoryRequests.deleteForAddressUuid / deleteForXpubUuid", 
 
         await transactionHistoryRequests.deleteForAddressUuid("addr-uuid");
 
-        const rows = dbRef.current!.prepare("SELECT txid FROM transactions").all() as { txid: string }[];
-        expect(rows).toEqual([{ txid: "tx-x" }]);
+        const aRows = dbRef.current!.prepare("SELECT txid FROM address_transactions").all() as { txid: string }[];
+        const xRows = dbRef.current!.prepare("SELECT txid FROM xpub_address_transactions").all() as { txid: string }[];
+        expect(aRows).toEqual([]);
+        expect(xRows).toEqual([{ txid: "tx-x" }]);
     });
 
     it("removes every transaction owned by an xpub's derived addresses", async () => {

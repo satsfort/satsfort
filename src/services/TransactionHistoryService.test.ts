@@ -23,7 +23,37 @@ vi.mock("@tauri-apps/api/core", () => ({
     }),
 }));
 
+type RawTx = { txid: string; amountSat: number; blockTime: number | null; confirmed: boolean };
+type GetForAddressOpts = {
+    stopAtTxid?: string;
+    onPageFetched?: (info: { pages: number; txsSoFar: number; pageTxs: RawTx[] }) => Promise<void> | void;
+};
+
 const blockchainGetForAddress = vi.hoisted(() => vi.fn());
+
+/**
+ * Mocks one call to `BlockchainTransactionsRequests.getForAddress`. The new
+ * persistence path moves the upsert into the `onPageFetched` callback, so
+ * the mock must invoke it (otherwise nothing reaches the DB).
+ */
+function mockBlockchainOnce(txs: RawTx[]) {
+    blockchainGetForAddress.mockImplementationOnce(async (_address: string, opts: GetForAddressOpts = {}) => {
+        if (opts.onPageFetched && txs.length > 0) {
+            await opts.onPageFetched({ pages: 1, txsSoFar: txs.length, pageTxs: txs });
+        }
+        return txs;
+    });
+}
+
+function mockBlockchainImpl(impl: (address: string) => RawTx[] | Promise<RawTx[]>) {
+    blockchainGetForAddress.mockImplementation(async (address: string, opts: GetForAddressOpts = {}) => {
+        const txs = await impl(address);
+        if (opts.onPageFetched && txs.length > 0) {
+            await opts.onPageFetched({ pages: 1, txsSoFar: txs.length, pageTxs: txs });
+        }
+        return txs;
+    });
+}
 
 vi.mock("../requests/BlockchainTransactionsRequests", () => ({
     BlockchainTransactionsRequests: class {
@@ -86,15 +116,15 @@ const service = new TransactionHistoryService();
 describe("TransactionHistoryService.ingestForAddress", () => {
     it("fetches via the blockchain API and persists each tx tied to the address", async () => {
         insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
-        blockchainGetForAddress.mockResolvedValueOnce([
+        mockBlockchainOnce([
             { txid: "tx1", amountSat: 100_000, blockTime: 1_700_000_000, confirmed: true },
             { txid: "tx2", amountSat: -25_000, blockTime: 1_700_500_000, confirmed: true },
         ]);
 
         await service.ingestForAddress("addr-uuid", "bc1qaddr1");
 
-        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qaddr1", { stopAtTxid: undefined });
-        const rows = dbRef.current!.prepare("SELECT txid, amount_sat FROM transactions ORDER BY id").all();
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qaddr1", expect.objectContaining({ stopAtTxid: undefined }));
+        const rows = dbRef.current!.prepare("SELECT txid, amount_sat FROM address_transactions ORDER BY id").all();
         expect(rows).toEqual([
             { txid: "tx1", amount_sat: 100_000 },
             { txid: "tx2", amount_sat: -25_000 },
@@ -109,7 +139,7 @@ describe("TransactionHistoryService.ingestForAddress", () => {
     it("passes the latest confirmed txid as the stop marker when incremental", async () => {
         const addressId = insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
         const insert = dbRef.current!.prepare(
-            "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+            "INSERT INTO address_transactions (uuid, txid, address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
         );
         // Older confirmed tx, newer confirmed tx, plus a pending one with no
         // block_time. The marker should be the newest CONFIRMED tx.
@@ -117,47 +147,43 @@ describe("TransactionHistoryService.ingestForAddress", () => {
         insert.run("u-new", "tx-new", addressId, 1, 1_700_500_000, 1);
         insert.run("u-pending", "tx-pending", addressId, 1, null, 0);
 
-        blockchainGetForAddress.mockResolvedValueOnce([]);
+        mockBlockchainOnce([]);
 
         await service.ingestForAddress("addr-uuid", "bc1qaddr1", { incremental: true });
 
-        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qaddr1", { stopAtTxid: "tx-new" });
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qaddr1", expect.objectContaining({ stopAtTxid: "tx-new" }));
     });
 
     it("falls through to a full fetch on incremental mode when the address has no transactions yet", async () => {
         // Address row exists but no transactions yet — empty wallet edge case.
         insertAddress("addr-uuid", "Empty", "bc1qempty");
-        blockchainGetForAddress.mockResolvedValueOnce([]);
+        mockBlockchainOnce([]);
 
         await service.ingestForAddress("addr-uuid", "bc1qempty", { incremental: true });
 
-        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qempty", { stopAtTxid: undefined });
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qempty", expect.objectContaining({ stopAtTxid: undefined }));
     });
 
     it("promotes a previously pending tx to confirmed when re-ingested through the service", async () => {
         insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
 
         // First ingest: tx is in mempool.
-        blockchainGetForAddress.mockResolvedValueOnce([
-            { txid: "tx-pending", amountSat: 75_000, blockTime: null, confirmed: false },
-        ]);
+        mockBlockchainOnce([{ txid: "tx-pending", amountSat: 75_000, blockTime: null, confirmed: false }]);
         await service.ingestForAddress("addr-uuid", "bc1qaddr1");
 
         const before = dbRef
-            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .current!.prepare("SELECT block_time, confirmed FROM address_transactions WHERE txid = ?")
             .get("tx-pending") as { block_time: number | null; confirmed: number };
         expect(before).toEqual({ block_time: null, confirmed: 0 });
 
         // Second ingest (e.g. on refresh): same txid now confirmed in a block.
-        blockchainGetForAddress.mockResolvedValueOnce([
-            { txid: "tx-pending", amountSat: 75_000, blockTime: 1_700_000_000, confirmed: true },
-        ]);
+        mockBlockchainOnce([{ txid: "tx-pending", amountSat: 75_000, blockTime: 1_700_000_000, confirmed: true }]);
         await service.ingestForAddress("addr-uuid", "bc1qaddr1");
 
-        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM transactions").get() as { c: number }).c;
+        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM address_transactions").get() as { c: number }).c;
         expect(count).toBe(1);
         const after = dbRef
-            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .current!.prepare("SELECT block_time, confirmed FROM address_transactions WHERE txid = ?")
             .get("tx-pending") as { block_time: number | null; confirmed: number };
         expect(after).toEqual({ block_time: 1_700_000_000, confirmed: 1 });
     });
@@ -166,15 +192,156 @@ describe("TransactionHistoryService.ingestForAddress", () => {
         const addressId = insertAddress("addr-uuid", "Mempool only", "bc1qmempool");
         dbRef
             .current!.prepare(
-                "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+                "INSERT INTO address_transactions (uuid, txid, address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
             )
             .run("u-pend", "tx-pend", addressId, 1, null, 0);
 
-        blockchainGetForAddress.mockResolvedValueOnce([]);
+        mockBlockchainOnce([]);
 
         await service.ingestForAddress("addr-uuid", "bc1qmempool", { incremental: true });
 
-        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qmempool", { stopAtTxid: undefined });
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qmempool", expect.objectContaining({ stopAtTxid: undefined }));
+    });
+
+    it("invokes onProgress with running counts as pages arrive", async () => {
+        insertAddress("addr-uuid", "Multi-page", "bc1qmulti");
+
+        blockchainGetForAddress.mockImplementationOnce(async (_addr: string, opts: GetForAddressOpts = {}) => {
+            // Simulate two pages so we can observe progress callbacks ordered.
+            const page1 = [{ txid: "tx-a", amountSat: 1, blockTime: 1, confirmed: true }];
+            const page2 = [{ txid: "tx-b", amountSat: 2, blockTime: 2, confirmed: true }];
+            await opts.onPageFetched?.({ pages: 1, txsSoFar: 1, pageTxs: page1 });
+            await opts.onPageFetched?.({ pages: 2, txsSoFar: 2, pageTxs: page2 });
+            return [...page1, ...page2];
+        });
+
+        const progress: { pages: number; txsSoFar: number }[] = [];
+        await service.ingestForAddress("addr-uuid", "bc1qmulti", {
+            onProgress: (info) => progress.push(info),
+        });
+
+        expect(progress).toEqual([
+            { pages: 1, txsSoFar: 1 },
+            { pages: 2, txsSoFar: 2 },
+        ]);
+        // Both pages persisted at the end (single atomic batch).
+        const rows = dbRef.current!.prepare("SELECT txid FROM address_transactions ORDER BY id").all();
+        expect(rows).toEqual([{ txid: "tx-a" }, { txid: "tx-b" }]);
+    });
+
+    it("does not persist anything when the blockchain fetch throws partway through", async () => {
+        insertAddress("addr-uuid", "Half-fetched", "bc1qhalf");
+
+        blockchainGetForAddress.mockImplementationOnce(async (_addr: string, opts: GetForAddressOpts = {}) => {
+            // Page 1 succeeds and progress is reported, but the overall fetch
+            // throws before page 2 completes.
+            await opts.onPageFetched?.({
+                pages: 1,
+                txsSoFar: 1,
+                pageTxs: [{ txid: "tx-page1", amountSat: 1, blockTime: 1, confirmed: true }],
+            });
+            throw new Error("network blew up");
+        });
+
+        await expect(service.ingestForAddress("addr-uuid", "bc1qhalf")).rejects.toThrow(/network blew up/);
+
+        // Nothing committed — the failure happened before the end-of-sync
+        // upsert, so the stopAtTxid marker on the next incremental refresh
+        // is still null and we'll re-fetch the page-1 tx safely.
+        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM address_transactions").get() as { c: number }).c;
+        expect(count).toBe(0);
+    });
+
+    it("stamps historic_transactions_fetched_at after persisting transactions", async () => {
+        const addressId = insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
+
+        const before = (
+            dbRef
+                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
+                .get(addressId) as { v: string | null }
+        ).v;
+        expect(before).toBeNull();
+
+        mockBlockchainOnce([{ txid: "tx1", amountSat: 10, blockTime: 1, confirmed: true }]);
+        await service.ingestForAddress("addr-uuid", "bc1qaddr1");
+
+        const after = (
+            dbRef
+                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
+                .get(addressId) as { v: string | null }
+        ).v;
+        expect(after).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+    });
+
+    it("leaves historic_transactions_fetched_at NULL when the fetch returned no transactions", async () => {
+        const addressId = insertAddress("addr-uuid", "Empty", "bc1qempty");
+
+        mockBlockchainOnce([]);
+        await service.ingestForAddress("addr-uuid", "bc1qempty");
+
+        const v = (
+            dbRef
+                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
+                .get(addressId) as { v: string | null }
+        ).v;
+        expect(v).toBeNull();
+    });
+
+    it("does not stamp historic_transactions_fetched_at when the fetch errors before completion", async () => {
+        const addressId = insertAddress("addr-uuid", "Half", "bc1qhalfaddr");
+
+        blockchainGetForAddress.mockImplementationOnce(async (_addr: string, opts: GetForAddressOpts = {}) => {
+            await opts.onPageFetched?.({
+                pages: 1,
+                txsSoFar: 1,
+                pageTxs: [{ txid: "tx-page1", amountSat: 1, blockTime: 1, confirmed: true }],
+            });
+            throw new Error("boom");
+        });
+
+        await expect(service.ingestForAddress("addr-uuid", "bc1qhalfaddr")).rejects.toThrow(/boom/);
+
+        const v = (
+            dbRef
+                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
+                .get(addressId) as { v: string | null }
+        ).v;
+        expect(v).toBeNull();
+    });
+
+    it("does not persist anything when the fetch throws after page 2 (incremental refresh case)", async () => {
+        const addressId = insertAddress("addr-uuid", "Existing", "bc1qexisting");
+        // Pretend we already have the older history: tx-known is the marker.
+        dbRef
+            .current!.prepare(
+                "INSERT INTO address_transactions (uuid, txid, address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
+            )
+            .run("u-known", "tx-known", addressId, 1, 1_700_000_000, 1);
+
+        blockchainGetForAddress.mockImplementationOnce(async (_addr: string, opts: GetForAddressOpts = {}) => {
+            await opts.onPageFetched?.({
+                pages: 1,
+                txsSoFar: 25,
+                pageTxs: Array.from({ length: 25 }, (_, i) => ({
+                    txid: `tx-new-${i}`,
+                    amountSat: 1,
+                    blockTime: 1_701_000_000 + i,
+                    confirmed: true,
+                })),
+            });
+            throw new Error("rate limited on page 2");
+        });
+
+        await expect(
+            service.ingestForAddress("addr-uuid", "bc1qexisting", { incremental: true }),
+        ).rejects.toThrow(/rate limited/);
+
+        // The existing tx-known is still the only row — we did not commit any
+        // page-1 txs, so a subsequent refresh will still use tx-known as the
+        // stop marker and find every new tx (including those that were on
+        // page 2 between page-1 and tx-known).
+        const rows = dbRef.current!.prepare("SELECT txid FROM address_transactions").all();
+        expect(rows).toEqual([{ txid: "tx-known" }]);
     });
 });
 
@@ -184,7 +351,7 @@ describe("TransactionHistoryService.ingestForXpub", () => {
         insertXpubAddress(xpubId, "bc1qderived0", 0);
         insertXpubAddress(xpubId, "bc1qderived1", 1);
 
-        blockchainGetForAddress.mockImplementation(async (addr: string) => {
+        mockBlockchainImpl((addr) => {
             if (addr === "bc1qderived0") {
                 return [{ txid: "tx-0", amountSat: 10_000, blockTime: 1, confirmed: true }];
             }
@@ -193,7 +360,7 @@ describe("TransactionHistoryService.ingestForXpub", () => {
 
         await service.ingestForXpub("xpub-uuid");
 
-        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM transactions").get() as { c: number }).c;
+        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM xpub_address_transactions").get() as { c: number }).c;
         expect(count).toBe(2);
     });
 
@@ -202,15 +369,40 @@ describe("TransactionHistoryService.ingestForXpub", () => {
         insertXpubAddress(xpubId, "bc1qderived0", 0);
         insertXpubAddress(xpubId, "bc1qderived1", 1);
 
-        blockchainGetForAddress.mockImplementation(async (addr: string) => {
+        blockchainGetForAddress.mockImplementation(async (addr: string, opts: GetForAddressOpts = {}) => {
             if (addr === "bc1qderived0") throw new Error("rate limited");
-            return [{ txid: "tx-1", amountSat: 20_000, blockTime: 2, confirmed: true }];
+            const txs: RawTx[] = [{ txid: "tx-1", amountSat: 20_000, blockTime: 2, confirmed: true }];
+            if (opts.onPageFetched) await opts.onPageFetched({ pages: 1, txsSoFar: 1, pageTxs: txs });
+            return txs;
         });
 
         await service.ingestForXpub("xpub-uuid");
 
-        const rows = dbRef.current!.prepare("SELECT txid FROM transactions").all();
+        const rows = dbRef.current!.prepare("SELECT txid FROM xpub_address_transactions").all();
         expect(rows).toEqual([{ txid: "tx-1" }]);
+    });
+
+    it("stamps historic_transactions_fetched_at on each derived address that produced transactions", async () => {
+        const xpubId = insertXpub("xpub-uuid", "Hot wallet");
+        insertXpubAddress(xpubId, "bc1qderived0", 0);
+        insertXpubAddress(xpubId, "bc1qderived1", 1);
+
+        mockBlockchainImpl((addr) => {
+            if (addr === "bc1qderived0") {
+                return [{ txid: "tx-0", amountSat: 1, blockTime: 1, confirmed: true }];
+            }
+            return []; // derived1 has no history
+        });
+
+        await service.ingestForXpub("xpub-uuid");
+
+        const rows = dbRef
+            .current!.prepare("SELECT address, historic_transactions_fetched_at AS v FROM xpub_addresses ORDER BY address_index")
+            .all() as { address: string; v: string | null }[];
+        // derived0 had a tx → stamped. derived1 had nothing → still NULL.
+        expect(rows[0].address).toBe("bc1qderived0");
+        expect(rows[0].v).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+        expect(rows[1]).toEqual({ address: "bc1qderived1", v: null });
     });
 
     it("on incremental refresh, passes a per-derived-address stop marker (or undefined for empty derived addresses)", async () => {
@@ -226,18 +418,18 @@ describe("TransactionHistoryService.ingestForXpub", () => {
         ).id;
         dbRef
             .current!.prepare(
-                "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, NULL, ?, ?, ?, ?)",
+                "INSERT INTO xpub_address_transactions (uuid, txid, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
             )
             .run("u-existing", "tx-known-0", xpubAddr0Id, 1, 1_700_000_000, 1);
 
-        blockchainGetForAddress.mockResolvedValue([]);
+        mockBlockchainImpl(() => []);
 
         await service.ingestForXpub("xpub-uuid", { incremental: true });
 
-        const calls = blockchainGetForAddress.mock.calls as [string, { stopAtTxid?: string }][];
+        const calls = blockchainGetForAddress.mock.calls as [string, GetForAddressOpts][];
         const byAddr = Object.fromEntries(calls.map(([addr, opts]) => [addr, opts]));
-        expect(byAddr["bc1qderived0"]).toEqual({ stopAtTxid: "tx-known-0" });
-        expect(byAddr["bc1qderived1"]).toEqual({ stopAtTxid: undefined });
+        expect(byAddr["bc1qderived0"]).toMatchObject({ stopAtTxid: "tx-known-0" });
+        expect(byAddr["bc1qderived1"]).toMatchObject({ stopAtTxid: undefined });
     });
 });
 
@@ -246,7 +438,7 @@ describe("TransactionHistoryService.execute", () => {
         const addressId = insertAddress("addr-uuid", "Strike", "bc1qaddr1");
         const insert = dbRef
             .current!.prepare(
-                "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+                "INSERT INTO address_transactions (uuid, txid, address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
             );
         insert.run("u-buy", "tx-buy", addressId, 50_000, 1_700_000_000, 1);
         insert.run("u-out", "tx-out", addressId, -10_000, 1_700_100_000, 1);
@@ -267,12 +459,12 @@ describe("TransactionHistoryService.delete*", () => {
         const addressId = insertAddress("addr-uuid", "Strike", "bc1qaddr1");
         dbRef
             .current!.prepare(
-                "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+                "INSERT INTO address_transactions (uuid, txid, address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
             )
             .run("u", "tx", addressId, 1, 1, 1);
 
         await service.deleteForAddress("addr-uuid");
-        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM transactions").get() as { c: number }).c;
+        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM address_transactions").get() as { c: number }).c;
         expect(count).toBe(0);
     });
 });

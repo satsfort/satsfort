@@ -8,6 +8,7 @@ import type { Unit } from "../lib/format";
 import type { Denomination, FiatCurrency } from "../lib/SettingsContext";
 import { TransactionsTable } from "./TransactionsTable";
 import { LoadingIndicator } from "./LoadingIndicator";
+import { SpinnerIcon } from "./icons";
 
 type Props = {
     addressUuid: string;
@@ -17,6 +18,13 @@ type Props = {
     priceUsd: number;
     currency: FiatCurrency;
     denomination: Denomination;
+    /**
+     * When set, ingestion is in flight for this address. The modal shows a
+     * progress banner and re-fetches the current page each time the count
+     * advances meaningfully, plus once when ingestion finishes (status
+     * transitions from set to null).
+     */
+    syncStatus: { txCount: number } | null;
     onClose: () => void;
 };
 
@@ -30,6 +38,7 @@ export function AddressTransactionsModal({
     priceUsd,
     currency,
     denomination,
+    syncStatus,
     onClose,
 }: Props) {
     useEscapeKey(onClose);
@@ -38,6 +47,11 @@ export function AddressTransactionsModal({
     const [page, setPage] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [loadingPage, setLoadingPage] = useState(false);
+
+    // Persistence is atomic at end-of-sync, so refetch only when sync finishes
+    // (the table has nothing new to show until then).
+    const isSyncing = syncStatus !== null;
+    const refetchKey = isSyncing ? "syncing" : "done";
 
     useEffect(() => {
         let cancelled = false;
@@ -63,7 +77,8 @@ export function AddressTransactionsModal({
         return () => {
             cancelled = true;
         };
-    }, [addressUuid, page]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [addressUuid, page, refetchKey]);
 
     const totalPages = total === null ? 0 : Math.max(1, Math.ceil(total / PAGE_SIZE));
     const showingFrom = transactions && transactions.length > 0 ? page * PAGE_SIZE + 1 : 0;
@@ -83,20 +98,31 @@ export function AddressTransactionsModal({
                 </div>
 
                 <div className="modal-body address-tx-body">
+                    {syncStatus && (
+                        <div className="address-tx-sync" role="status" aria-live="polite">
+                            <SpinnerIcon size={14} />
+                            <span>
+                                Fetching transactions, <strong>{syncStatus.txCount.toLocaleString()}</strong> found so far
+                                {syncStatus.txCount >= 500 ? ", this may take a moment" : ""}…
+                            </span>
+                        </div>
+                    )}
                     {transactions === null ? (
                         <LoadingIndicator />
                     ) : (
                         <>
-                            <TransactionsTable
-                                transactions={transactions}
-                                unit={unit}
-                                priceUsd={priceUsd}
-                                currency={currency}
-                                denomination={denomination}
-                                error={error}
-                                emptyMessage="No transactions for this address yet."
-                                showSourceColumn={false}
-                            />
+                            <div className="address-tx-table-scroll">
+                                <TransactionsTable
+                                    transactions={transactions}
+                                    unit={unit}
+                                    priceUsd={priceUsd}
+                                    currency={currency}
+                                    denomination={denomination}
+                                    error={error}
+                                    emptyMessage="No transactions for this address yet."
+                                    showSourceColumn={false}
+                                />
+                            </div>
                             {!error && total !== null && total > 0 && (
                                 <div className="address-tx-pager">
                                     <span className="small muted mono">
