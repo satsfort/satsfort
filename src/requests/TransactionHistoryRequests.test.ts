@@ -129,6 +129,51 @@ describe("TransactionHistoryRequests.upsertMany", () => {
         await transactionHistoryRequests.upsertMany({ kind: "address", addressId }, []);
         expect(countTransactions()).toBe(0);
     });
+
+    it("promotes a pending address tx to confirmed when re-ingested with a block_time", async () => {
+        const addressId = insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
+
+        await transactionHistoryRequests.upsertMany({ kind: "address", addressId }, [
+            { txid: "tx-once-pending", amountSat: 50_000, blockTime: null, confirmed: false },
+        ]);
+
+        const pending = dbRef
+            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .get("tx-once-pending") as { block_time: number | null; confirmed: number };
+        expect(pending.block_time).toBeNull();
+        expect(pending.confirmed).toBe(0);
+
+        await transactionHistoryRequests.upsertMany({ kind: "address", addressId }, [
+            { txid: "tx-once-pending", amountSat: 50_000, blockTime: 1_700_000_000, confirmed: true },
+        ]);
+
+        // Still one row (UPSERT, not duplicate insert) and now confirmed.
+        expect(countTransactions()).toBe(1);
+        const promoted = dbRef
+            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .get("tx-once-pending") as { block_time: number | null; confirmed: number };
+        expect(promoted.block_time).toBe(1_700_000_000);
+        expect(promoted.confirmed).toBe(1);
+    });
+
+    it("promotes a pending xpub-address tx to confirmed when re-ingested with a block_time", async () => {
+        const xpubId = insertXpub("xpub-uuid", "Wallet", "zpub-xyz");
+        const xpubAddressId = insertXpubAddress(xpubId, "bc1qderived0", 0);
+
+        await transactionHistoryRequests.upsertMany({ kind: "xpubAddress", xpubAddressId }, [
+            { txid: "tx-pending-xpub", amountSat: 12_345, blockTime: null, confirmed: false },
+        ]);
+        await transactionHistoryRequests.upsertMany({ kind: "xpubAddress", xpubAddressId }, [
+            { txid: "tx-pending-xpub", amountSat: 12_345, blockTime: 1_700_500_000, confirmed: true },
+        ]);
+
+        expect(countTransactions()).toBe(1);
+        const promoted = dbRef
+            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .get("tx-pending-xpub") as { block_time: number | null; confirmed: number };
+        expect(promoted.block_time).toBe(1_700_500_000);
+        expect(promoted.confirmed).toBe(1);
+    });
 });
 
 describe("TransactionHistoryRequests.listRecent", () => {

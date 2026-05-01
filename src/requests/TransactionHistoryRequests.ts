@@ -38,7 +38,14 @@ export class TransactionHistoryRequests {
             for (const tx of chunk) {
                 params.push(crypto.randomUUID(), tx.txid, ownerId, tx.amountSat, tx.blockTime, tx.confirmed ? 1 : 0);
             }
-            const sql = `INSERT OR IGNORE INTO transactions (uuid, txid, ${ownerColumn}, ${otherColumn}, amount_sat, block_time, confirmed) VALUES ${placeholders}`;
+            // ON CONFLICT targets the partial unique index for this owning
+            // column. Pending txs (confirmed=0, block_time=NULL) get promoted
+            // to confirmed when seen again with a block_time. amount_sat is
+            // an immutable property of a txid so we don't overwrite it.
+            const sql =
+                `INSERT INTO transactions (uuid, txid, ${ownerColumn}, ${otherColumn}, amount_sat, block_time, confirmed) VALUES ${placeholders} ` +
+                `ON CONFLICT(txid, ${ownerColumn}) WHERE ${ownerColumn} IS NOT NULL DO UPDATE SET ` +
+                `block_time = excluded.block_time, confirmed = excluded.confirmed, fetched_at = datetime('now')`;
             await dbExecute(sql, params);
         }
     }

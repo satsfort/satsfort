@@ -134,6 +134,34 @@ describe("TransactionHistoryService.ingestForAddress", () => {
         expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qempty", { stopAtTxid: undefined });
     });
 
+    it("promotes a previously pending tx to confirmed when re-ingested through the service", async () => {
+        insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
+
+        // First ingest: tx is in mempool.
+        blockchainGetForAddress.mockResolvedValueOnce([
+            { txid: "tx-pending", amountSat: 75_000, blockTime: null, confirmed: false },
+        ]);
+        await service.ingestForAddress("addr-uuid", "bc1qaddr1");
+
+        const before = dbRef
+            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .get("tx-pending") as { block_time: number | null; confirmed: number };
+        expect(before).toEqual({ block_time: null, confirmed: 0 });
+
+        // Second ingest (e.g. on refresh): same txid now confirmed in a block.
+        blockchainGetForAddress.mockResolvedValueOnce([
+            { txid: "tx-pending", amountSat: 75_000, blockTime: 1_700_000_000, confirmed: true },
+        ]);
+        await service.ingestForAddress("addr-uuid", "bc1qaddr1");
+
+        const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM transactions").get() as { c: number }).c;
+        expect(count).toBe(1);
+        const after = dbRef
+            .current!.prepare("SELECT block_time, confirmed FROM transactions WHERE txid = ?")
+            .get("tx-pending") as { block_time: number | null; confirmed: number };
+        expect(after).toEqual({ block_time: 1_700_000_000, confirmed: 1 });
+    });
+
     it("falls through to a full fetch on incremental when only pending (unconfirmed) txs exist", async () => {
         const addressId = insertAddress("addr-uuid", "Mempool only", "bc1qmempool");
         dbRef
