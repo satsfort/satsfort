@@ -10,6 +10,7 @@ import type { TrackedXpubMeta } from "../services/model/TrackedXpubMeta";
 import type { DerivedAddress } from "../services/model/DerivedAddress";
 import type { AddressDerivationType } from "../services/model/AddressDerivationType";
 import { XpubService } from "../services/XpubService";
+import { TransactionHistoryService } from "../services/TransactionHistoryService";
 import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../services/model/SpotPrice";
@@ -65,6 +66,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const trackedAddressesService = new TrackedAddressesService();
     const addressBalanceService = new AddressBalanceService();
     const xpubService = new XpubService();
+    const transactionHistoryService = new TransactionHistoryService();
     const portfolioHistoryService = new PortfolioHistoryService();
     const spotPriceRequests = new SpotPriceRequests();
 
@@ -117,6 +119,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         try {
             const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceService.get(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
+            await track(`Syncing transactions for ${addr.label}`, () =>
+                transactionHistoryService.ingestForAddress(addr.id, addr.address, { incremental: true }),
+            ).catch((err) => console.warn("Failed to sync transactions", err));
             await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
@@ -130,6 +135,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         setRefreshingXpub(xpub.id);
         try {
             await track(`Refreshing ${xpub.label}`, () => fetchDerivedBalances(xpubDerived));
+            await track(`Syncing transactions for ${xpub.label}`, () =>
+                transactionHistoryService.ingestForXpub(xpub.id),
+            ).catch((err) => console.warn("Failed to sync xpub transactions", err));
             await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {

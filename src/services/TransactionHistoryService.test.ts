@@ -93,7 +93,7 @@ describe("TransactionHistoryService.ingestForAddress", () => {
 
         await service.ingestForAddress("addr-uuid", "bc1qaddr1");
 
-        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qaddr1");
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qaddr1", { stopAtTxid: undefined });
         const rows = dbRef.current!.prepare("SELECT txid, amount_sat FROM transactions ORDER BY id").all();
         expect(rows).toEqual([
             { txid: "tx1", amount_sat: 100_000 },
@@ -104,6 +104,49 @@ describe("TransactionHistoryService.ingestForAddress", () => {
     it("is a no-op when the address uuid is not in the addresses table", async () => {
         await service.ingestForAddress("missing", "bc1qmissing");
         expect(blockchainGetForAddress).not.toHaveBeenCalled();
+    });
+
+    it("passes the latest confirmed txid as the stop marker when incremental", async () => {
+        const addressId = insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
+        const insert = dbRef.current!.prepare(
+            "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+        );
+        // Older confirmed tx, newer confirmed tx, plus a pending one with no
+        // block_time. The marker should be the newest CONFIRMED tx.
+        insert.run("u-old", "tx-old", addressId, 1, 1_700_000_000, 1);
+        insert.run("u-new", "tx-new", addressId, 1, 1_700_500_000, 1);
+        insert.run("u-pending", "tx-pending", addressId, 1, null, 0);
+
+        blockchainGetForAddress.mockResolvedValueOnce([]);
+
+        await service.ingestForAddress("addr-uuid", "bc1qaddr1", { incremental: true });
+
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qaddr1", { stopAtTxid: "tx-new" });
+    });
+
+    it("falls through to a full fetch on incremental mode when the address has no transactions yet", async () => {
+        // Address row exists but no transactions yet — empty wallet edge case.
+        insertAddress("addr-uuid", "Empty", "bc1qempty");
+        blockchainGetForAddress.mockResolvedValueOnce([]);
+
+        await service.ingestForAddress("addr-uuid", "bc1qempty", { incremental: true });
+
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qempty", { stopAtTxid: undefined });
+    });
+
+    it("falls through to a full fetch on incremental when only pending (unconfirmed) txs exist", async () => {
+        const addressId = insertAddress("addr-uuid", "Mempool only", "bc1qmempool");
+        dbRef
+            .current!.prepare(
+                "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+            )
+            .run("u-pend", "tx-pend", addressId, 1, null, 0);
+
+        blockchainGetForAddress.mockResolvedValueOnce([]);
+
+        await service.ingestForAddress("addr-uuid", "bc1qmempool", { incremental: true });
+
+        expect(blockchainGetForAddress).toHaveBeenCalledWith("bc1qmempool", { stopAtTxid: undefined });
     });
 });
 
@@ -140,6 +183,33 @@ describe("TransactionHistoryService.ingestForXpub", () => {
 
         const rows = dbRef.current!.prepare("SELECT txid FROM transactions").all();
         expect(rows).toEqual([{ txid: "tx-1" }]);
+    });
+
+    it("on incremental refresh, passes a per-derived-address stop marker (or undefined for empty derived addresses)", async () => {
+        const xpubId = insertXpub("xpub-uuid", "Hot wallet");
+        insertXpubAddress(xpubId, "bc1qderived0", 0);
+        insertXpubAddress(xpubId, "bc1qderived1", 1);
+
+        // Seed only derived0 with a confirmed tx; derived1 stays empty.
+        const xpubAddr0Id = (
+            dbRef
+                .current!.prepare("SELECT id FROM xpub_addresses WHERE address = ?")
+                .get("bc1qderived0") as { id: number }
+        ).id;
+        dbRef
+            .current!.prepare(
+                "INSERT INTO transactions (uuid, txid, address_id, xpub_address_id, amount_sat, block_time, confirmed) VALUES (?, ?, NULL, ?, ?, ?, ?)",
+            )
+            .run("u-existing", "tx-known-0", xpubAddr0Id, 1, 1_700_000_000, 1);
+
+        blockchainGetForAddress.mockResolvedValue([]);
+
+        await service.ingestForXpub("xpub-uuid", { incremental: true });
+
+        const calls = blockchainGetForAddress.mock.calls as [string, { stopAtTxid?: string }][];
+        const byAddr = Object.fromEntries(calls.map(([addr, opts]) => [addr, opts]));
+        expect(byAddr["bc1qderived0"]).toEqual({ stopAtTxid: "tx-known-0" });
+        expect(byAddr["bc1qderived1"]).toEqual({ stopAtTxid: undefined });
     });
 });
 

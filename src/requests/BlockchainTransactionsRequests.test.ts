@@ -113,6 +113,105 @@ describe("BlockchainTransactionsRequests.getForAddress", () => {
         );
     });
 
+    it("stops paginating mid-page when it encounters the stop marker", async () => {
+        const page1 = [
+            {
+                txid: "tx-new",
+                status: { confirmed: true, block_time: 100 },
+                vin: [],
+                vout: [{ scriptpubkey_address: ADDRESS, value: 5 }],
+            },
+            {
+                txid: "tx-known",
+                status: { confirmed: true, block_time: 90 },
+                vin: [],
+                vout: [{ scriptpubkey_address: ADDRESS, value: 7 }],
+            },
+        ];
+
+        const fetchSpy = vi.fn(async () => fetchOk(page1));
+        vi.stubGlobal("fetch", fetchSpy);
+
+        const result = await new BlockchainTransactionsRequests().getForAddress(ADDRESS, { stopAtTxid: "tx-known" });
+
+        expect(result.map((r) => r.txid)).toEqual(["tx-new"]);
+        // Should not have fetched a second page — stopped on first known tx.
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("paginates onto the next page when the stop marker is not on the first page", async () => {
+        const page1 = [
+            {
+                txid: "tx-new-1",
+                status: { confirmed: true, block_time: 200 },
+                vin: [],
+                vout: [{ scriptpubkey_address: ADDRESS, value: 1 }],
+            },
+            {
+                txid: "tx-new-2",
+                status: { confirmed: true, block_time: 190 },
+                vin: [],
+                vout: [{ scriptpubkey_address: ADDRESS, value: 1 }],
+            },
+        ];
+        const page2 = [
+            {
+                txid: "tx-new-3",
+                status: { confirmed: true, block_time: 180 },
+                vin: [],
+                vout: [{ scriptpubkey_address: ADDRESS, value: 1 }],
+            },
+            {
+                txid: "tx-known",
+                status: { confirmed: true, block_time: 170 },
+                vin: [],
+                vout: [{ scriptpubkey_address: ADDRESS, value: 1 }],
+            },
+        ];
+
+        const fetchSpy = vi.fn();
+        fetchSpy.mockImplementationOnce(async () => fetchOk(page1));
+        fetchSpy.mockImplementationOnce(async () => fetchOk(page2));
+        vi.stubGlobal("fetch", fetchSpy);
+
+        const result = await new BlockchainTransactionsRequests().getForAddress(ADDRESS, { stopAtTxid: "tx-known" });
+
+        expect(result.map((r) => r.txid)).toEqual(["tx-new-1", "tx-new-2", "tx-new-3"]);
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("does a normal full pagination when the stop marker is never seen (e.g. reorg)", async () => {
+        const page1 = [
+            {
+                txid: "tx-1",
+                status: { confirmed: true, block_time: 200 },
+                vin: [],
+                vout: [{ scriptpubkey_address: ADDRESS, value: 1 }],
+            },
+        ];
+
+        const fetchSpy = vi.fn();
+        fetchSpy.mockImplementationOnce(async () => fetchOk(page1));
+        fetchSpy.mockImplementationOnce(async () => fetchOk([]));
+        vi.stubGlobal("fetch", fetchSpy);
+
+        const result = await new BlockchainTransactionsRequests().getForAddress(ADDRESS, { stopAtTxid: "tx-not-here" });
+
+        expect(result.map((r) => r.txid)).toEqual(["tx-1"]);
+        // Two calls: page1, then empty page (which terminates the loop).
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("returns an empty array immediately when an empty address responds with no txs", async () => {
+        const fetchSpy = vi.fn(async () => fetchOk([]));
+        vi.stubGlobal("fetch", fetchSpy);
+
+        const result = await new BlockchainTransactionsRequests().getForAddress(ADDRESS);
+
+        expect(result).toEqual([]);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
     it("paginates using the last confirmed txid until an empty page", async () => {
         const page1 = [
             {

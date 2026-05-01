@@ -106,6 +106,36 @@ export class TransactionHistoryRequests {
         );
     }
 
+    /**
+     * Returns the txid of the most-recent confirmed transaction we have for
+     * this address, or null if the address has no confirmed transactions.
+     * Used as the stop marker for incremental refreshes — pending txs are
+     * excluded so the marker is stable across re-broadcasts.
+     */
+    async latestConfirmedTxidForAddress(addressInternalId: number): Promise<string | null> {
+        if (Config.useMockData) return null;
+        const rows = await dbSelect<{ txid: string }>(
+            `SELECT txid FROM transactions
+             WHERE address_id = ? AND block_time IS NOT NULL
+             ORDER BY block_time DESC, id DESC
+             LIMIT 1`,
+            [addressInternalId],
+        );
+        return rows[0]?.txid ?? null;
+    }
+
+    async latestConfirmedTxidForXpubAddress(xpubAddressId: number): Promise<string | null> {
+        if (Config.useMockData) return null;
+        const rows = await dbSelect<{ txid: string }>(
+            `SELECT txid FROM transactions
+             WHERE xpub_address_id = ? AND block_time IS NOT NULL
+             ORDER BY block_time DESC, id DESC
+             LIMIT 1`,
+            [xpubAddressId],
+        );
+        return rows[0]?.txid ?? null;
+    }
+
     async findAddressInternalIdByUuid(uuid: string): Promise<number | null> {
         if (Config.useMockData) return null;
         const rows = await dbSelect<{ id: number }>("SELECT id FROM addresses WHERE uuid = ?", [uuid]);

@@ -47,17 +47,32 @@ export class TransactionHistoryService {
     }
 
     /**
-     * Fetches the full recent transaction history for a single tracked
-     * address from a public blockchain API and persists it. Called when a
-     * new address is added so the user immediately sees real activity.
+     * Fetches transaction history for a single tracked address and persists
+     * it. When `opts.incremental` is true, the blockchain pagination stops
+     * as soon as it encounters a txid we already have in the DB — fast for
+     * refreshes since older txs don't change.
      */
-    async ingestForAddress(addressUuid: string, address: string): Promise<void> {
+    async ingestForAddress(
+        addressUuid: string,
+        address: string,
+        opts: { incremental?: boolean } = {},
+    ): Promise<void> {
         if (Config.useMockData) return;
 
         const internalId = await this.transactionHistoryRequests.findAddressInternalIdByUuid(addressUuid);
         if (internalId === null) return;
 
-        const transactions = await this.blockchainTransactionsRequests.getForAddress(address);
+        // Incremental mode short-circuits the page loop at the first tx we
+        // already have. For a brand-new address with nothing in the DB yet
+        // there is no marker, so we naturally fall through to a full fetch.
+        let stopAtTxid: string | undefined;
+        if (opts.incremental) {
+            stopAtTxid = (await this.transactionHistoryRequests.latestConfirmedTxidForAddress(internalId)) ?? undefined;
+        }
+
+        const transactions = await this.blockchainTransactionsRequests.getForAddress(address, { stopAtTxid });
+        // eslint-disable-next-line no-console
+        console.debug(`[tx-ingest] ${address}: persisting ${transactions.length} new transactions`);
         await this.transactionHistoryRequests.upsertMany({ kind: "address", addressId: internalId }, transactions);
     }
 
@@ -67,7 +82,7 @@ export class TransactionHistoryService {
      * for a single address don't abort the whole batch since some derived
      * addresses are commonly empty/unused.
      */
-    async ingestForXpub(xpubUuid: string): Promise<void> {
+    async ingestForXpub(xpubUuid: string, opts: { incremental?: boolean } = {}): Promise<void> {
         if (Config.useMockData) return;
 
         const derived = await this.transactionHistoryRequests.findXpubAddressIdsByXpubUuid(xpubUuid);
@@ -75,8 +90,15 @@ export class TransactionHistoryService {
         await Promise.all(
             derived.map(async (entry) => {
                 try {
-                    const transactions = await this.blockchainTransactionsRequests.getForAddress(entry.address);
+                    let stopAtTxid: string | undefined;
+                    if (opts.incremental) {
+                        stopAtTxid =
+                            (await this.transactionHistoryRequests.latestConfirmedTxidForXpubAddress(entry.id)) ?? undefined;
+                    }
+                    const transactions = await this.blockchainTransactionsRequests.getForAddress(entry.address, { stopAtTxid });
                     if (transactions.length === 0) return;
+                    // eslint-disable-next-line no-console
+                    console.debug(`[tx-ingest] ${entry.address}: persisting ${transactions.length} new transactions`);
                     await this.transactionHistoryRequests.upsertMany({ kind: "xpubAddress", xpubAddressId: entry.id }, transactions);
                 } catch (err) {
                     console.warn(`Failed to ingest transactions for xpub address ${entry.address}`, err);

@@ -1,6 +1,13 @@
 import type { RawTransaction } from "../services/model/RawTransaction";
 
-const MAX_PAGES_PER_ADDRESS = 5;
+// Mempool.space / blockstream.info return 25 confirmed txs per chain page.
+// 500 pages = up to ~12,500 txs per address, which covers all but pathologically
+// active addresses (exchange hot wallets, etc.). The inter-page delay below keeps
+// us under the public-API rate limits.
+const MAX_PAGES_PER_ADDRESS = 500;
+const INTER_PAGE_DELAY_MS = 250;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 type MempoolTxStatus = {
     confirmed: boolean;
@@ -66,14 +73,41 @@ async function fetchPage(url: string): Promise<MempoolTx[]> {
     return (await response.json()) as MempoolTx[];
 }
 
-async function fetchAllFrom(endpoint: Endpoint, address: string): Promise<MempoolTx[]> {
+async function fetchAllFrom(
+    endpoint: Endpoint,
+    address: string,
+    stopAtTxid: string | undefined,
+): Promise<MempoolTx[]> {
     const collected: MempoolTx[] = [];
     let nextUrl = endpoint.firstPageUrl(address);
 
     for (let page = 0; page < MAX_PAGES_PER_ADDRESS; page++) {
+        if (page > 0) await sleep(INTER_PAGE_DELAY_MS);
         const batch = await fetchPage(nextUrl);
-        if (batch.length === 0) break;
-        collected.push(...batch);
+        if (batch.length === 0) {
+            // eslint-disable-next-line no-console
+            console.debug(`[tx-ingest] ${address} page ${page + 1}: empty, done (total ${collected.length})`);
+            break;
+        }
+
+        // Pages are returned newest-first; once we hit our stop marker every
+        // older tx is also already in the DB.
+        let stopEarly = false;
+        let toAdd = batch;
+        if (stopAtTxid) {
+            const knownIdx = batch.findIndex((tx) => tx.txid === stopAtTxid);
+            if (knownIdx !== -1) {
+                toAdd = batch.slice(0, knownIdx);
+                stopEarly = true;
+            }
+        }
+        collected.push(...toAdd);
+
+        const stopNote = stopEarly ? " (hit known tx, stopping)" : "";
+        // eslint-disable-next-line no-console
+        console.debug(`[tx-ingest] ${address} page ${page + 1}: +${toAdd.length} new (total ${collected.length})${stopNote}`);
+
+        if (stopEarly) break;
 
         const lastConfirmed = [...batch].reverse().find((tx) => tx.status.confirmed);
         if (!lastConfirmed) break;
@@ -85,20 +119,26 @@ async function fetchAllFrom(endpoint: Endpoint, address: string): Promise<Mempoo
 
 export class BlockchainTransactionsRequests {
     /**
-     * Fetches the recent transaction history for an address from a public
+     * Fetches the transaction history for an address from a public
      * Electrum-compatible HTTP API, falling back to a secondary source on
      * failure. Each tx is reduced to its net effect on the queried address
      * so callers don't have to reconcile vins/vouts themselves.
      *
-     * Pagination is capped at MAX_PAGES_PER_ADDRESS (~250 txs) to keep the
-     * add-address flow bounded; further history can be backfilled later.
+     * If `stopAtTxid` is provided, pagination stops as soon as that txid is
+     * encountered (incremental refresh — every older tx is already in the
+     * DB). Pass nothing for a full backfill.
      */
-    async getForAddress(address: string): Promise<RawTransaction[]> {
+    async getForAddress(address: string, opts: { stopAtTxid?: string } = {}): Promise<RawTransaction[]> {
         const errors: string[] = [];
+        const mode = opts.stopAtTxid ? `incremental (stop at ${opts.stopAtTxid.slice(0, 12)}…)` : "full";
+        // eslint-disable-next-line no-console
+        console.debug(`[tx-ingest] ${address}: starting fetch, ${mode}`);
 
         for (const endpoint of ENDPOINTS) {
             try {
-                const txs = await fetchAllFrom(endpoint, address);
+                const txs = await fetchAllFrom(endpoint, address, opts.stopAtTxid);
+                // eslint-disable-next-line no-console
+                console.debug(`[tx-ingest] ${address}: fetched ${txs.length} txs from ${endpoint.name}`);
                 return txs.map((tx) => ({
                     txid: tx.txid,
                     amountSat: netAmountForAddress(tx, address),
