@@ -18,6 +18,7 @@ import { useSettings } from "../lib/SettingsContext";
 import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { TaskNotifications } from "../components/TaskNotifications";
+import { TransactionsTable } from "../components/TransactionsTable";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
 
 type Props = {
@@ -39,14 +40,30 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [history, setHistory] = useState<HistoryPoint[] | null>(null);
     const [hasTrackedItems, setHasTrackedItems] = useState<boolean | null>(null);
     const [transactions, setTransactions] = useState<Transaction[] | null>(null);
+    const [transactionsError, setTransactionsError] = useState<string | null>(null);
     const [spot, setSpot] = useState<SpotPrice | null>(null);
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
 
+    // Spot price + exchange rates: fetch once per mount. Tying these to
+    // `version === 0` was wrong: if the user adds an address/xpub before ever
+    // opening this page, version is already > 0 at mount and spot would never
+    // be fetched, leaving the loading guard stuck.
     useEffect(() => {
-        const isInitial = version === 0;
-        // TEMP: artificial delay to preview loading state
-        const delay = isInitial ? 2000 : 0;
+        track("Spot price", () => spotPriceRequests.execute())
+            .then(setSpot)
+            .catch((err) => {
+                console.error("Failed to fetch spot price", err);
+                setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+            });
+        track("Exchange rates", () => exchangeRateRequests.loadCache()).catch(() => {});
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        // TEMP: artificial delay on first load to preview the loading state.
+        const isFirstLoad = version === 0;
+        const delay = isFirstLoad ? 2000 : 0;
         const timer = setTimeout(() => {
             void portfolioHistoryService
                 .snapshot()
@@ -54,26 +71,31 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     setHasTrackedItems(point !== null);
                     return portfolioHistoryService.getAll();
                 })
-                .then(setHistory)
+                .then((history) => {
+                    console.debug(`Loaded portfolio history with ${history.length} points`);
+                    console.debug(history);
+                    setHistory(history);
+                })
                 .catch((err) => {
                     console.error("Failed to load portfolio history", err);
                     setHasTrackedItems(false);
                     setHistory([]);
                 });
-            transactionHistoryService.execute().then(setTransactions);
-            if (isInitial) {
-                track("Spot price", () => spotPriceRequests.execute())
-                    .then(setSpot)
-                    .catch((err) => {
-                        console.error("Failed to fetch spot price", err);
-                        setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
-                    });
-                track("Exchange rates", () => exchangeRateRequests.loadCache()).catch(() => {});
-            }
+            transactionHistoryService
+                .execute()
+                .then((txs) => {
+                    setTransactions(txs);
+                    setTransactionsError(null);
+                })
+                .catch((err) => {
+                    console.error("Failed to load transactions", err);
+                    setTransactions([]);
+                    setTransactionsError(err instanceof Error ? err.message : String(err));
+                });
         }, delay);
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [track, version]);
+    }, [version]);
 
     if (history === null || hasTrackedItems === null || transactions === null || !spot) {
         return (
@@ -232,39 +254,15 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
             <section className="section">
                 <div className="section-head">
                     <h2 className="section-title">// Recent Activity</h2>
-                    <span className="small muted mono">{transactions.length} entries</span>
                 </div>
-                <div className="tx-table">
-                    <div className="tx-row head">
-                        <div>Type</div>
-                        <div>Date</div>
-                        <div>Amount</div>
-                        <div className="tx-hide-sm">Source</div>
-                        <div className="tx-hide-sm">{unit === "BTC" ? `${currency} Value` : "BTC"}</div>
-                    </div>
-                    {transactions.length === 0 ? (
-                        <div className="tx-row muted mono">No transactions yet.</div>
-                    ) : (
-                        transactions.map((tx) => (
-                            <div className="tx-row" key={tx.id}>
-                                <div>
-                                    <span className={`tx-tag ${tx.type}`}>{tx.type}</span>
-                                </div>
-                                <div>{tx.date}</div>
-                                <div className="tx-amount">
-                                    <span className="plus">+</span>
-                                    {formatAmount(tx.amount, unit, priceUsd, {
-                                        btcDigits: 6,
-                                        fiat: currency,
-                                        denom: denomination,
-                                    })}
-                                </div>
-                                <div className="tx-hide-sm muted">{tx.source}</div>
-                                <div className="tx-hide-sm">{formatSecondary(tx.amount, unit, priceUsd, currency, denomination)}</div>
-                            </div>
-                        ))
-                    )}
-                </div>
+                <TransactionsTable
+                    transactions={transactions}
+                    unit={unit}
+                    priceUsd={priceUsd}
+                    currency={currency}
+                    denomination={denomination}
+                    error={transactionsError}
+                />
             </section>
         </div>
     );

@@ -11,6 +11,7 @@ CREATE TABLE addresses (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX addresses_address_idx ON addresses(address);
 
 CREATE TABLE xpubs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +27,7 @@ CREATE TABLE xpubs (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX xpubs_xpub_idx ON xpubs(xpub);
 
 CREATE TABLE xpub_addresses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +43,8 @@ CREATE TABLE xpub_addresses (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX xpub_addresses_address_idx ON xpub_addresses(address);
+CREATE INDEX xpub_addresses_xpub_id_idx ON xpub_addresses(xpub_id);
 
 CREATE TABLE address_balances (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,6 +55,7 @@ CREATE TABLE address_balances (
     tx_count INTEGER NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX address_balances_address_id_idx ON address_balances(address_id);
 
 CREATE TABLE xpub_balances (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,6 +66,7 @@ CREATE TABLE xpub_balances (
     tx_count INTEGER NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX xpub_balances_xpub_id_idx ON xpub_balances(xpub_id);
 
 CREATE TABLE xpub_address_balances (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,6 +77,7 @@ CREATE TABLE xpub_address_balances (
     tx_count INTEGER NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX xpub_address_balances_xpub_address_id_idx ON xpub_address_balances(xpub_address_id);
 
 CREATE TABLE portfolio_value (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,3 +86,4 @@ CREATE TABLE portfolio_value (
     balance_usd REAL NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX portfolio_value_fetched_at_idx ON portfolio_value(fetched_at);

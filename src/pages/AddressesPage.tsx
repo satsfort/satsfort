@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./AddressesPage.css";
 import "./BalancePrivacy.css";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIcon, ChevronRight } from "../components/icons";
+import { CopyIcon, EyeIcon, EyeOffIcon, WalletIcon, ExternalLinkIcon, RefreshIcon, ChevronRight, SpinnerIcon } from "../components/icons";
 import { AddressBalanceService } from "../services/AddressBalanceService";
 import { TrackedAddressesService } from "../services/TrackedAddressesService";
 import type { TrackedAddress } from "../services/model/TrackedAddress";
@@ -10,6 +10,7 @@ import type { TrackedXpubMeta } from "../services/model/TrackedXpubMeta";
 import type { DerivedAddress } from "../services/model/DerivedAddress";
 import type { AddressDerivationType } from "../services/model/AddressDerivationType";
 import { XpubService } from "../services/XpubService";
+import { TransactionHistoryService } from "../services/TransactionHistoryService";
 import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
 import { SpotPriceRequests } from "../requests/SpotPriceRequests";
 import type { SpotPrice } from "../services/model/SpotPrice";
@@ -21,6 +22,7 @@ import { AddAddressModal } from "../components/AddAddressModal";
 import { ConfirmRemoveAddressModal } from "../components/ConfirmRemoveAddressModal";
 import { ImportXpubModal } from "../components/ImportXpubModal";
 import { ConfirmRemoveXpubModal } from "../components/ConfirmRemoveXpubModal";
+import { AddressTransactionsModal } from "../components/AddressTransactionsModal";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { TaskNotifications } from "../components/TaskNotifications";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
@@ -64,6 +66,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const trackedAddressesService = new TrackedAddressesService();
     const addressBalanceService = new AddressBalanceService();
     const xpubService = new XpubService();
+    const transactionHistoryService = new TransactionHistoryService();
     const portfolioHistoryService = new PortfolioHistoryService();
     const spotPriceRequests = new SpotPriceRequests();
 
@@ -83,6 +86,10 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [showImportXpubModal, setShowImportXpubModal] = useState(false);
     const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
     const [removeXpubTarget, setRemoveXpubTarget] = useState<TrackedXpubMeta | null>(null);
+    const [transactionsTarget, setTransactionsTarget] = useState<TrackedAddress | null>(null);
+    // Inline progress for in-flight transaction ingestion (add or refresh).
+    // Keyed by address uuid so multiple parallel syncs don't trample each other.
+    const [syncingTxs, setSyncingTxs] = useState<Map<string, { label: string; txCount: number }>>(new Map());
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
     const isMobile = useIsMobile();
@@ -110,11 +117,48 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         });
     };
 
+    /**
+     * Runs `ingestForAddress` while keeping `syncingTxs` updated so the inline
+     * banner can show running progress. Used both by add (full backfill) and
+     * by refresh (incremental).
+     */
+    const ingestWithProgress = async (
+        addressId: string,
+        address: string,
+        label: string,
+        incremental: boolean,
+    ): Promise<void> => {
+        setSyncingTxs((prev) => new Map(prev).set(addressId, { label, txCount: 0 }));
+        try {
+            await transactionHistoryService.ingestForAddress(addressId, address, {
+                incremental,
+                onProgress: ({ txsSoFar }) => {
+                    setSyncingTxs((prev) => {
+                        const existing = prev.get(addressId);
+                        if (!existing) return prev;
+                        const next = new Map(prev);
+                        next.set(addressId, { ...existing, txCount: txsSoFar });
+                        return next;
+                    });
+                },
+            });
+        } finally {
+            setSyncingTxs((prev) => {
+                const next = new Map(prev);
+                next.delete(addressId);
+                return next;
+            });
+        }
+    };
+
     const refreshOne = async (addr: TrackedAddress) => {
         setRefreshing(addr.id);
         try {
             const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceService.get(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
+            await track(`Syncing transactions for ${addr.label}`, () =>
+                ingestWithProgress(addr.id, addr.address, addr.label, true),
+            ).catch((err) => console.warn("Failed to sync transactions", err));
             await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
@@ -128,6 +172,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         setRefreshingXpub(xpub.id);
         try {
             await track(`Refreshing ${xpub.label}`, () => fetchDerivedBalances(xpubDerived));
+            await track(`Syncing transactions for ${xpub.label}`, () =>
+                transactionHistoryService.ingestForXpub(xpub.id),
+            ).catch((err) => console.warn("Failed to sync xpub transactions", err));
             await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
@@ -178,6 +225,13 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         setAddresses((prev) => [...(prev ?? []), tracked]);
         await portfolioHistoryService.snapshot();
         onPortfolioChanged();
+
+        // Kick off transaction backfill in the background so the modal can
+        // close immediately. Progress flows through `syncingTxs` and renders
+        // as an inline banner; large wallets (500+ txs) get a stronger hint.
+        void track(`Fetching transactions for ${label}`, () => ingestWithProgress(meta.id, meta.address, label, false))
+            .then(() => onPortfolioChanged())
+            .catch((err) => console.warn("Failed to ingest transactions for new address", err));
     };
 
     const handleRemove = async (id: string) => {
@@ -356,6 +410,27 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                 </div>
             </header>
 
+            {syncingTxs.size > 0 && (
+                <section className="tx-sync-banner" role="status" aria-live="polite">
+                    {Array.from(syncingTxs.entries()).map(([id, info]) => {
+                        const isLarge = info.txCount >= 500;
+                        return (
+                            <div key={id} className={`tx-sync-row ${isLarge ? "is-large" : ""}`}>
+                                <SpinnerIcon size={14} />
+                                <span className="tx-sync-text">
+                                    Fetching transactions for <strong>{info.label}</strong>
+                                    <span className="muted mono small">
+                                        {" · "}
+                                        {info.txCount.toLocaleString()} found
+                                        {isLarge ? ", this may take a moment" : ""}
+                                    </span>
+                                </span>
+                            </div>
+                        );
+                    })}
+                </section>
+            )}
+
             <section className="hero">
                 <div className="stat-card">
                     <div className="stat-label">Tracked</div>
@@ -533,7 +608,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         <span className="small muted mono">sorted by balance</span>
                     </div>
                     <div className="addr-list">
-                        {addresses.map((a) => (
+                        {addresses.map((a) => {
+                            const sync = syncingTxs.get(a.id);
+                            return (
                             <article key={a.id} className="addr-card">
                                 <div className="addr-card-head">
                                     <div>
@@ -567,11 +644,24 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                 <div className="addr-meta">
                                     <span className={`tx-tag type-${a.type.toLowerCase()}`}>{a.type}</span>
                                     {a.xpub && <span className="tx-tag xpub">xpub</span>}
-                                    <span className="muted mono small">· {a.txCount} tx</span>
+                                    <button
+                                        type="button"
+                                        className="link-btn tx-count-btn"
+                                        onClick={() => setTransactionsTarget(a)}
+                                        title="View transactions"
+                                    >
+                                        · {a.txCount} tx
+                                    </button>
+                                    {sync && (
+                                        <span className="addr-sync-indicator" title="Fetching transactions">
+                                            <SpinnerIcon size={12} />
+                                            syncing · {sync.txCount.toLocaleString()}
+                                        </span>
+                                    )}
                                     <span className="muted mono small">· added {a.added}</span>
                                     <span className="addr-spacer" />
-                                    <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id}>
-                                        {refreshing === a.id ? "Refreshing…" : "Refresh"}
+                                    <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id || !!sync}>
+                                        {sync ? "Syncing…" : refreshing === a.id ? "Refreshing…" : "Refresh"}
                                     </button>
                                     <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>
                                         Remove
@@ -581,7 +671,8 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                     </button>
                                 </div>
                             </article>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
             )}
@@ -602,6 +693,19 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     addressCount={removeXpubTarget.addressCount}
                     onClose={() => setRemoveXpubTarget(null)}
                     onConfirm={() => handleRemoveXpub(removeXpubTarget.id)}
+                />
+            )}
+            {transactionsTarget && (
+                <AddressTransactionsModal
+                    addressUuid={transactionsTarget.id}
+                    label={transactionsTarget.label}
+                    address={transactionsTarget.address}
+                    unit={unit}
+                    priceUsd={priceUsd}
+                    currency={currency}
+                    denomination={denomination}
+                    syncStatus={syncingTxs.get(transactionsTarget.id) ?? null}
+                    onClose={() => setTransactionsTarget(null)}
                 />
             )}
         </div>

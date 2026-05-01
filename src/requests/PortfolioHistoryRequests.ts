@@ -23,7 +23,10 @@ export class PortfolioHistoryRequests {
         const rows = await dbSelect<PortfolioValueRow>(
             "SELECT balance_btc, balance_usd, fetched_at FROM portfolio_value ORDER BY fetched_at ASC",
         );
-        return rows.map((row) => ({ date: row.fetched_at.slice(0, 10), btc: row.balance_btc, usd: row.balance_usd }));
+        // Keep the full ISO timestamp so the chart can spread same-day
+        // snapshots along the x axis (multiple add/remove events in one day
+        // would otherwise stack on a single x coordinate).
+        return rows.map((row) => ({ date: row.fetched_at, btc: row.balance_btc, usd: row.balance_usd }));
     }
 
     /**

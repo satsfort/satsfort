@@ -160,7 +160,9 @@ describe("PortfolioHistoryRequests.execute", () => {
         expect(history).toHaveLength(1);
         expect(history[0].btc).toBeCloseTo(0.5, 8);
         expect(history[0].usd).toBeCloseTo(50_000, 4);
-        expect(history[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        // Now keeps the full ISO timestamp so multiple same-day snapshots
+        // get distinct x positions on the chart.
+        expect(history[0].date).toBe("2026-04-23T12:00:00.000Z");
     });
 
     it("returns rows sorted by fetched_at ascending", async () => {
