@@ -10,7 +10,13 @@ CREATE TABLE address_transactions (
     UNIQUE(txid, address_id)
 );
 
-CREATE INDEX address_transactions_address_id_idx ON address_transactions(address_id);
+-- Composite covers both `WHERE address_id = ?` (leading column lookup) and
+-- the hot `WHERE address_id = ? ORDER BY block_time DESC LIMIT 1` pattern
+-- used by latestConfirmedTxidForAddress and the per-address modal listing.
+CREATE INDEX address_transactions_address_id_block_time_idx
+    ON address_transactions(address_id, block_time DESC);
+-- Standalone block_time index serves the global recent-activity feed
+-- (UNION ALL ORDER BY block_time DESC) where there's no address filter.
 CREATE INDEX address_transactions_block_time_idx ON address_transactions(block_time DESC);
 
 CREATE TABLE xpub_address_transactions (
@@ -25,7 +31,9 @@ CREATE TABLE xpub_address_transactions (
     UNIQUE(txid, xpub_address_id)
 );
 
-CREATE INDEX xpub_address_transactions_xpub_address_id_idx ON xpub_address_transactions(xpub_address_id);
+-- Same reasoning as the address_transactions composite above.
+CREATE INDEX xpub_address_transactions_xpub_address_id_block_time_idx
+    ON xpub_address_transactions(xpub_address_id, block_time DESC);
 CREATE INDEX xpub_address_transactions_block_time_idx ON xpub_address_transactions(block_time DESC);
 
 -- Timestamp of the last successful historic-transaction backfill for this

@@ -5,3 +5,4 @@ CREATE TABLE historical_prices (
     source TEXT NOT NULL,
     fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX historical_prices_date_idx ON historical_prices(date);
