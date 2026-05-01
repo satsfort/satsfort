@@ -63,6 +63,36 @@ export class TransactionHistoryRequests {
         );
     }
 
+    /**
+     * Returns a page of transactions for a single tracked address (looked up
+     * by the address-table uuid), ordered most-recent first.
+     */
+    async listForAddressUuid(addressUuid: string, limit: number, offset: number = 0): Promise<TransactionRow[]> {
+        if (Config.useMockData) return [];
+        return dbSelect<TransactionRow>(
+            `SELECT t.uuid, t.txid, t.address_id, t.xpub_address_id, t.amount_sat, t.block_time, t.confirmed,
+                    a.label AS label
+             FROM transactions t
+             JOIN addresses a ON t.address_id = a.id
+             WHERE a.uuid = ?
+             ORDER BY COALESCE(t.block_time, 9999999999) DESC, t.id DESC
+             LIMIT ? OFFSET ?`,
+            [addressUuid, limit, offset],
+        );
+    }
+
+    async countForAddressUuid(addressUuid: string): Promise<number> {
+        if (Config.useMockData) return 0;
+        const rows = await dbSelect<{ count: number }>(
+            `SELECT COUNT(*) AS count
+             FROM transactions t
+             JOIN addresses a ON t.address_id = a.id
+             WHERE a.uuid = ?`,
+            [addressUuid],
+        );
+        return rows[0]?.count ?? 0;
+    }
+
     async deleteForAddressUuid(addressUuid: string): Promise<void> {
         if (Config.useMockData) return;
         await dbExecute("DELETE FROM transactions WHERE address_id = (SELECT id FROM addresses WHERE uuid = ?)", [addressUuid]);

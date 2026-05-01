@@ -1,0 +1,31 @@
+.address-tx-modal {
+    max-width: 880px;
+    max-height: min(80vh, 720px);
+    display: flex;
+    flex-direction: column;
+}
+
+.address-tx-subtitle {
+    margin-top: 0.25rem;
+    word-break: break-all;
+}
+
+.address-tx-body {
+    overflow-y: auto;
+    padding-top: 1rem;
+}
+
+.address-tx-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.address-tx-pager-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}

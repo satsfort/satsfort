@@ -18,6 +18,7 @@ import { useSettings } from "../lib/SettingsContext";
 import { ExchangeRateRequests } from "../requests/ExchangeRateRequests";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { TaskNotifications } from "../components/TaskNotifications";
+import { TransactionsTable } from "../components/TransactionsTable";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
 
 type Props = {
@@ -243,43 +244,15 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
             <section className="section">
                 <div className="section-head">
                     <h2 className="section-title">// Recent Activity</h2>
-                    <span className="small muted mono">{transactions.length} entries</span>
                 </div>
-                <div className="tx-table">
-                    <div className="tx-row head">
-                        <div>Type</div>
-                        <div>Date</div>
-                        <div>Amount</div>
-                        <div className="tx-hide-sm">Source</div>
-                        <div className="tx-hide-sm">{unit === "BTC" ? `${currency} Value` : "BTC"}</div>
-                    </div>
-                    {transactionsError ? (
-                        <div className="tx-row tx-error mono" role="alert">
-                            Failed to load transactions: {transactionsError}
-                        </div>
-                    ) : transactions.length === 0 ? (
-                        <div className="tx-row muted mono">No transactions yet.</div>
-                    ) : (
-                        transactions.map((tx) => (
-                            <div className="tx-row" key={tx.id}>
-                                <div>
-                                    <span className={`tx-tag ${tx.type}`}>{tx.type}</span>
-                                </div>
-                                <div>{tx.date}</div>
-                                <div className="tx-amount">
-                                    <span className="plus">+</span>
-                                    {formatAmount(tx.amount, unit, priceUsd, {
-                                        btcDigits: 6,
-                                        fiat: currency,
-                                        denom: denomination,
-                                    })}
-                                </div>
-                                <div className="tx-hide-sm muted">{tx.source}</div>
-                                <div className="tx-hide-sm">{formatSecondary(tx.amount, unit, priceUsd, currency, denomination)}</div>
-                            </div>
-                        ))
-                    )}
-                </div>
+                <TransactionsTable
+                    transactions={transactions}
+                    unit={unit}
+                    priceUsd={priceUsd}
+                    currency={currency}
+                    denomination={denomination}
+                    error={transactionsError}
+                />
             </section>
         </div>
     );

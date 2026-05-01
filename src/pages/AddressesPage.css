@@ -68,6 +68,14 @@
     flex: 1 1 auto;
 }
 
+.tx-count-btn {
+    font-size: 0.78rem;
+    padding: 0.15rem 0.35rem;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.15);
+    text-underline-offset: 3px;
+}
+
 .copied-label {
     font-family: var(--font-mono);
     font-size: 0.65rem;

@@ -32,6 +32,21 @@ export class TransactionHistoryService {
     }
 
     /**
+     * Returns a page of persisted transactions for a single tracked address,
+     * ordered most-recent first.
+     */
+    async getForAddress(addressUuid: string, limit: number = 25, offset: number = 0): Promise<Transaction[]> {
+        if (Config.useMockData) return [];
+        const rows = await this.transactionHistoryRequests.listForAddressUuid(addressUuid, limit, offset);
+        return rows.map(this.rowToTransaction);
+    }
+
+    async countForAddress(addressUuid: string): Promise<number> {
+        if (Config.useMockData) return 0;
+        return this.transactionHistoryRequests.countForAddressUuid(addressUuid);
+    }
+
+    /**
      * Fetches the full recent transaction history for a single tracked
      * address from a public blockchain API and persists it. Called when a
      * new address is added so the user immediately sees real activity.
@@ -65,7 +80,6 @@ export class TransactionHistoryService {
                     await this.transactionHistoryRequests.upsertMany({ kind: "xpubAddress", xpubAddressId: entry.id }, transactions);
                 } catch (err) {
                     console.warn(`Failed to ingest transactions for xpub address ${entry.address}`, err);
-                    throw err;
                 }
             }),
         );
@@ -84,6 +98,7 @@ export class TransactionHistoryService {
         const date = row.block_time ? new Date(row.block_time * 1000).toISOString().slice(0, 10) : "Pending";
         return {
             id: row.uuid,
+            txid: row.txid,
             date,
             type: isIncoming ? "buy" : "transfer",
             amount: Math.abs(row.amount_sat) / SAT_PER_BTC,
@@ -98,6 +113,7 @@ export class TransactionHistoryService {
             if (delta <= 0) continue;
             out.push({
                 id: `tx-${i}`,
+                txid: null,
                 date: history[i].date,
                 type: delta > 0.04 ? "transfer" : "buy",
                 amount: Math.round(delta * 1e8) / 1e8,

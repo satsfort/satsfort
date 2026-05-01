@@ -21,6 +21,7 @@ import { AddAddressModal } from "../components/AddAddressModal";
 import { ConfirmRemoveAddressModal } from "../components/ConfirmRemoveAddressModal";
 import { ImportXpubModal } from "../components/ImportXpubModal";
 import { ConfirmRemoveXpubModal } from "../components/ConfirmRemoveXpubModal";
+import { AddressTransactionsModal } from "../components/AddressTransactionsModal";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { TaskNotifications } from "../components/TaskNotifications";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
@@ -83,6 +84,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [showImportXpubModal, setShowImportXpubModal] = useState(false);
     const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
     const [removeXpubTarget, setRemoveXpubTarget] = useState<TrackedXpubMeta | null>(null);
+    const [transactionsTarget, setTransactionsTarget] = useState<TrackedAddress | null>(null);
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
     const isMobile = useIsMobile();
@@ -567,7 +569,14 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                                 <div className="addr-meta">
                                     <span className={`tx-tag type-${a.type.toLowerCase()}`}>{a.type}</span>
                                     {a.xpub && <span className="tx-tag xpub">xpub</span>}
-                                    <span className="muted mono small">· {a.txCount} tx</span>
+                                    <button
+                                        type="button"
+                                        className="link-btn tx-count-btn"
+                                        onClick={() => setTransactionsTarget(a)}
+                                        title="View transactions"
+                                    >
+                                        · {a.txCount} tx
+                                    </button>
                                     <span className="muted mono small">· added {a.added}</span>
                                     <span className="addr-spacer" />
                                     <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id}>
@@ -602,6 +611,18 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     addressCount={removeXpubTarget.addressCount}
                     onClose={() => setRemoveXpubTarget(null)}
                     onConfirm={() => handleRemoveXpub(removeXpubTarget.id)}
+                />
+            )}
+            {transactionsTarget && (
+                <AddressTransactionsModal
+                    addressUuid={transactionsTarget.id}
+                    label={transactionsTarget.label}
+                    address={transactionsTarget.address}
+                    unit={unit}
+                    priceUsd={priceUsd}
+                    currency={currency}
+                    denomination={denomination}
+                    onClose={() => setTransactionsTarget(null)}
                 />
             )}
         </div>
