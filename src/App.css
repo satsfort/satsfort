@@ -442,7 +442,7 @@ select.text-input {
         inset 0 0 6px oklch(0.7 0.22 145 / 0.15);
 }
 
-.tx-tag.transfer {
+.tx-tag.sell {
     color: oklch(0.78 0.25 25);
     border-color: oklch(0.65 0.25 25 / 0.7);
     background: oklch(0.25 0.12 25 / 0.25);

@@ -146,7 +146,7 @@ export class TransactionHistoryService {
             id: row.uuid,
             txid: row.txid,
             date,
-            type: isIncoming ? "buy" : "transfer",
+            type: isIncoming ? "buy" : "sell",
             amount: Math.abs(row.amount_sat) / SAT_PER_BTC,
             source: row.label,
         };
@@ -161,7 +161,7 @@ export class TransactionHistoryService {
                 id: `tx-${i}`,
                 txid: null,
                 date: history[i].date.slice(0, 10),
-                type: delta > 0.04 ? "transfer" : "buy",
+                type: delta > 0.04 ? "sell" : "buy",
                 amount: Math.round(delta * 1e8) / 1e8,
                 source: SOURCES[i % SOURCES.length],
             });

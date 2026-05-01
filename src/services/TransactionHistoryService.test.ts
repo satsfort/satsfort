@@ -447,7 +447,7 @@ describe("TransactionHistoryService.execute", () => {
         expect(list).toHaveLength(2);
         // Ordered by block_time DESC -> tx-out first (more recent).
         expect(list[0].id).toBe("u-out");
-        expect(list[0].type).toBe("transfer");
+        expect(list[0].type).toBe("sell");
         expect(list[0].amount).toBeCloseTo(0.0001, 8);
         expect(list[0].source).toBe("Strike");
         expect(list[1].type).toBe("buy");
