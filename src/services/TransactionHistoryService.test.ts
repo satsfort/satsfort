@@ -23,6 +23,14 @@ vi.mock("@tauri-apps/api/core", () => ({
     }),
 }));
 
+// Backtrack runs at the end of every successful ingest and tries to look up
+// historical USD prices. Stub both the Tauri plugin and Node's global fetch
+// so tests never actually hit a remote API (CoinGecko/CryptoCompare rate
+// limits would otherwise time out the suite).
+vi.mock("@tauri-apps/plugin-http", () => ({
+    fetch: vi.fn().mockRejectedValue(new Error("network blocked in tests")),
+}));
+
 type RawTx = { txid: string; amountSat: number; blockTime: number | null; confirmed: boolean };
 type GetForAddressOpts = {
     stopAtTxid?: string;
@@ -79,12 +87,14 @@ beforeEach(() => {
     dbRef.current = db;
     (Config as { useMockData: boolean }).useMockData = false;
     blockchainGetForAddress.mockReset();
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network blocked in tests")));
 });
 
 afterEach(() => {
     dbRef.current?.close();
     dbRef.current = null;
     (Config as { useMockData: boolean }).useMockData = ORIGINAL_USE_MOCK;
+    vi.unstubAllGlobals();
 });
 
 function insertAddress(uuid: string, label: string, address: string): number {

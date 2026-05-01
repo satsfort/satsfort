@@ -3,6 +3,7 @@ import { BlockchainTransactionsRequests, type IngestProgress } from "../requests
 import { PortfolioHistoryRequests } from "../requests/PortfolioHistoryRequests";
 import { TransactionHistoryRequests } from "../requests/TransactionHistoryRequests";
 import type { TransactionRow } from "../requests/TransactionHistoryRequests";
+import { BacktrackService } from "./BacktrackService";
 import type { HistoryPoint } from "./model/HistoryPoint";
 import type { Transaction } from "./model/Transaction";
 
@@ -15,6 +16,7 @@ export class TransactionHistoryService {
     private readonly transactionHistoryRequests = new TransactionHistoryRequests();
     private readonly blockchainTransactionsRequests = new BlockchainTransactionsRequests();
     private readonly portfolioHistoryRequests = new PortfolioHistoryRequests();
+    private readonly backtrackService = new BacktrackService();
 
     constructor(private limit: number = 6) {}
 
@@ -88,6 +90,10 @@ export class TransactionHistoryService {
             await this.transactionHistoryRequests.upsertMany({ kind: "address", addressId: internalId }, transactions);
             await this.transactionHistoryRequests.markAddressHistoricFetched(internalId);
         }
+
+        // Even on a zero-tx ingest we rebuild — ensures `portfolio_value` picks
+        // up live `address_balances` rows the caller wrote before us.
+        await this.backtrackService.backtrackAddress(addressUuid);
     }
 
     /**
@@ -122,6 +128,11 @@ export class TransactionHistoryService {
                 }
             }),
         );
+
+        // Single rebuild for the whole xpub once every derived address has
+        // been ingested — running per-derived would rebuild portfolio_value
+        // 20× per import.
+        await this.backtrackService.backtrackXpub(xpubUuid);
     }
 
     async deleteForAddress(addressUuid: string): Promise<void> {
