@@ -47,13 +47,30 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
     const [hover, setHover] = useState<number | null>(null);
     const { currency, denomination } = useSettings();
 
-    const { points, domain } = useMemo(() => {
-        if (history.length === 0) return { points: [] as HistoryPoint[], domain: null };
+    const { points, domain, firstRealIndex } = useMemo(() => {
+        if (history.length === 0) return { points: [] as HistoryPoint[], domain: null, firstRealIndex: 0 };
         const latestMs = dateMs(history[history.length - 1].date);
         const span = RANGE_DAYS[range];
-        const startMs = span === "all" ? dateMs(history[0].date) : latestMs - span * DAY_MS;
-        const visible = span === "all" ? history : history.filter((p) => dateMs(p.date) >= startMs);
-        return { points: visible, domain: { start: startMs, end: latestMs } };
+        if (span === "all") {
+            return { points: history, domain: { start: dateMs(history[0].date), end: latestMs }, firstRealIndex: 0 };
+        }
+        const startMs = latestMs - span * DAY_MS;
+        const visible = history.filter((p) => dateMs(p.date) >= startMs);
+        // If activity began before the range, the balance at the range start is
+        // the carry-over from the most recent earlier point. The anchor exists
+        // only to give the line a left-edge vertex; it's excluded from hover
+        // and dot rendering via firstRealIndex so the user doesn't see a
+        // phantom data point at the range boundary.
+        let lastBefore: HistoryPoint | undefined;
+        for (let i = history.length - 1; i >= 0; i--) {
+            if (dateMs(history[i].date) < startMs) {
+                lastBefore = history[i];
+                break;
+            }
+        }
+        if (!lastBefore) return { points: visible, domain: { start: startMs, end: latestMs }, firstRealIndex: 0 };
+        const anchor: HistoryPoint = { date: new Date(startMs).toISOString(), btc: lastBefore.btc, usd: lastBefore.usd };
+        return { points: [anchor, ...visible], domain: { start: startMs, end: latestMs }, firstRealIndex: 1 };
     }, [history, range]);
 
     const maxBtc = Math.max(...points.map((p) => p.btc), 0.01);
@@ -96,12 +113,12 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
     const hovered = hover !== null ? points[hover] : null;
 
     const updateHover = (clientX: number, svg: SVGSVGElement) => {
-        if (!domain || points.length === 0) return;
+        if (!domain || points.length <= firstRealIndex) return;
         const rect = svg.getBoundingClientRect();
         const x = ((clientX - rect.left) / rect.width) * W;
-        let nearest = 0;
+        let nearest = firstRealIndex;
         let bestDist = Infinity;
-        for (let i = 0; i < points.length; i++) {
+        for (let i = firstRealIndex; i < points.length; i++) {
             const dist = Math.abs(xAt(points[i].date) - x);
             if (dist < bestDist) {
                 bestDist = dist;

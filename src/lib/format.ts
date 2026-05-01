@@ -78,15 +78,23 @@ export function formatSecondary(
 
 export function formatAxis(btc: number, unit: Unit, priceUsd: number, fiat: FiatCurrency = "USD", denom: Denomination = "BTC"): string {
     if (unit === "BTC") {
-        if (denom === "SATS") {
-            const sats = btcToDisplay(btc, denom);
-            if (sats >= 1_000_000) return `${(sats / 1_000_000).toFixed(1)}M`;
-            if (sats >= 1_000) return `${(sats / 1_000).toFixed(0)}k`;
-            return sats.toLocaleString();
-        }
-        return btc.toFixed(2);
+        if (denom === "SATS") return compact(btcToDisplay(btc, denom), 0);
+        return compact(btc, 2);
     }
     const value = toFiat(btc * priceUsd, fiat);
-    if (value >= 1_000) return `${FIAT_SYMBOLS[fiat]}${(value / 1_000).toFixed(0)}k`;
-    return `${FIAT_SYMBOLS[fiat]}${value.toFixed(0)}`;
+    return `${FIAT_SYMBOLS[fiat]}${compact(value, 0)}`;
+}
+
+/**
+ * Renders a number in axis-friendly compact form (1.2k, 3.4M, 5.6B). Values
+ * below 1k drop the suffix and use `smallDigits` decimals so BTC labels keep
+ * their precision while large fiat totals stay narrow enough to fit in the
+ * left gutter.
+ */
+function compact(value: number, smallDigits: number): string {
+    const abs = Math.abs(value);
+    if (abs >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+    if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+    return value.toFixed(smallDigits);
 }
