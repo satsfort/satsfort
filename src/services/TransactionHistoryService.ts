@@ -160,7 +160,7 @@ export class TransactionHistoryService {
             out.push({
                 id: `tx-${i}`,
                 txid: null,
-                date: history[i].date,
+                date: history[i].date.slice(0, 10),
                 type: delta > 0.04 ? "transfer" : "buy",
                 amount: Math.round(delta * 1e8) / 1e8,
                 source: SOURCES[i % SOURCES.length],

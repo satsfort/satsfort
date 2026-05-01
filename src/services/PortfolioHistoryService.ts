@@ -40,6 +40,6 @@ export class PortfolioHistoryService {
 
         const fetchedAt = new Date().toISOString();
         await this.portfolioHistoryRequests.insert({ btc, usd, fetchedAt });
-        return { date: fetchedAt.slice(0, 10), btc, usd };
+        return { date: fetchedAt, btc, usd };
     }
 }

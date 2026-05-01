@@ -45,10 +45,25 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
 
+    // Spot price + exchange rates: fetch once per mount. Tying these to
+    // `version === 0` was wrong: if the user adds an address/xpub before ever
+    // opening this page, version is already > 0 at mount and spot would never
+    // be fetched, leaving the loading guard stuck.
     useEffect(() => {
-        const isInitial = version === 0;
-        // TEMP: artificial delay to preview loading state
-        const delay = isInitial ? 2000 : 0;
+        track("Spot price", () => spotPriceRequests.execute())
+            .then(setSpot)
+            .catch((err) => {
+                console.error("Failed to fetch spot price", err);
+                setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
+            });
+        track("Exchange rates", () => exchangeRateRequests.loadCache()).catch(() => {});
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        // TEMP: artificial delay on first load to preview the loading state.
+        const isFirstLoad = version === 0;
+        const delay = isFirstLoad ? 2000 : 0;
         const timer = setTimeout(() => {
             void portfolioHistoryService
                 .snapshot()
@@ -56,7 +71,11 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     setHasTrackedItems(point !== null);
                     return portfolioHistoryService.getAll();
                 })
-                .then(setHistory)
+                .then((history) => {
+                    console.debug(`Loaded portfolio history with ${history.length} points`);
+                    console.debug(history);
+                    setHistory(history);
+                })
                 .catch((err) => {
                     console.error("Failed to load portfolio history", err);
                     setHasTrackedItems(false);
@@ -73,19 +92,10 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     setTransactions([]);
                     setTransactionsError(err instanceof Error ? err.message : String(err));
                 });
-            if (isInitial) {
-                track("Spot price", () => spotPriceRequests.execute())
-                    .then(setSpot)
-                    .catch((err) => {
-                        console.error("Failed to fetch spot price", err);
-                        setSpot({ usd: 0, source: "unavailable", asOf: new Date().toISOString() });
-                    });
-                track("Exchange rates", () => exchangeRateRequests.loadCache()).catch(() => {});
-            }
         }, delay);
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [track, version]);
+    }, [version]);
 
     if (history === null || hasTrackedItems === null || transactions === null || !spot) {
         return (

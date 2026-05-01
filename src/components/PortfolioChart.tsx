@@ -37,7 +37,9 @@ type Props = {
 };
 
 function dateMs(iso: string) {
-    return new Date(iso + "T00:00:00Z").getTime();
+    // Accepts either a YYYY-MM-DD date string (parsed as UTC midnight) or a
+    // full ISO timestamp. Both formats are handled by the Date constructor.
+    return new Date(iso).getTime();
 }
 
 export function PortfolioChart({ history, priceUsd, unit }: Props) {
@@ -215,7 +217,7 @@ export function PortfolioChart({ history, priceUsd, unit }: Props) {
 }
 
 function formatDate(iso: string) {
-    const d = new Date(iso + "T00:00:00Z");
+    const d = new Date(iso);
     return d.toLocaleDateString(undefined, {
         year: "numeric",
         month: "short",
@@ -225,7 +227,7 @@ function formatDate(iso: string) {
 }
 
 function formatTick(iso: string, style: "day" | "year") {
-    const d = new Date(iso + "T00:00:00Z");
+    const d = new Date(iso);
     return d.toLocaleDateString(
         undefined,
         style === "day" ? { month: "short", day: "numeric", timeZone: "UTC" } : { month: "short", year: "numeric", timeZone: "UTC" },
