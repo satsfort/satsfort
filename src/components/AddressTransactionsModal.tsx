@@ -46,17 +46,21 @@ export function AddressTransactionsModal({
     const [total, setTotal] = useState<number | null>(null);
     const [page, setPage] = useState(0);
     const [error, setError] = useState<string | null>(null);
-    const [loadingPage, setLoadingPage] = useState(false);
+    const [loadedKey, setLoadedKey] = useState<string | null>(null);
 
     // Persistence is atomic at end-of-sync, so refetch only when sync finishes
     // (the table has nothing new to show until then).
     const isSyncing = syncStatus !== null;
     const refetchKey = isSyncing ? "syncing" : "done";
+    // Derived loading flag: the current request differs from the last one we
+    // finished. Avoids a synchronous setState inside the effect body, which
+    // React flags as a cascading render.
+    const requestKey = `${addressUuid}|${page}|${refetchKey}`;
+    const loadingPage = loadedKey !== requestKey;
 
     useEffect(() => {
         let cancelled = false;
         const service = new TransactionHistoryService();
-        setLoadingPage(true);
         Promise.all([service.countForAddress(addressUuid), service.getForAddress(addressUuid, PAGE_SIZE, page * PAGE_SIZE)])
             .then(([count, txs]) => {
                 if (cancelled) return;
@@ -72,13 +76,12 @@ export function AddressTransactionsModal({
                 setError(err instanceof Error ? err.message : String(err));
             })
             .finally(() => {
-                if (!cancelled) setLoadingPage(false);
+                if (!cancelled) setLoadedKey(requestKey);
             });
         return () => {
             cancelled = true;
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [addressUuid, page, refetchKey]);
+    }, [addressUuid, page, refetchKey, requestKey]);
 
     const totalPages = total === null ? 0 : Math.max(1, Math.ceil(total / PAGE_SIZE));
     const showingFrom = transactions && transactions.length > 0 ? page * PAGE_SIZE + 1 : 0;
