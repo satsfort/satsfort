@@ -41,7 +41,7 @@ export function TransactionsTable({
                     Failed to load transactions: {error}
                 </div>
             ) : transactions.length === 0 ? (
-                <div className="tx-row muted mono">{emptyMessage}</div>
+                <div className="tx-row tx-empty muted mono">{emptyMessage}</div>
             ) : (
                 transactions.map((tx) => (
                     <div className="tx-row" key={tx.id}>

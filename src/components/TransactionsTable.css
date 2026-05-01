@@ -69,6 +69,12 @@
     word-break: break-word;
 }
 
+.tx-row.tx-empty {
+    display: block;
+    text-align: center;
+    padding: 1.5rem 1.2rem;
+}
+
 .tx-amount {
     color: var(--text);
 }
