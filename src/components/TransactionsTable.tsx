@@ -50,7 +50,9 @@ export function TransactionsTable({
                         </div>
                         <div>{tx.date}</div>
                         <div className="tx-amount">
-                            <span className="plus">+</span>
+                            <span className={tx.type === "transfer" ? "minus" : "plus"}>
+                                {tx.type === "transfer" ? "−" : "+"}
+                            </span>
                             {formatAmount(tx.amount, unit, priceUsd, {
                                 btcDigits: 6,
                                 fiat: currency,

@@ -76,6 +76,11 @@
     margin-right: 0.25rem;
 }
 
+.tx-amount .minus {
+    color: var(--red, #ff6b6b);
+    margin-right: 0.25rem;
+}
+
 @media (max-width: 720px) {
     .tx-row {
         grid-template-columns: 70px 1fr 1fr 40px;

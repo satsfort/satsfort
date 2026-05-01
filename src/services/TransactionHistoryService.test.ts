@@ -32,9 +32,9 @@ type GetForAddressOpts = {
 const blockchainGetForAddress = vi.hoisted(() => vi.fn());
 
 /**
- * Mocks one call to `BlockchainTransactionsRequests.getForAddress`. The new
- * persistence path moves the upsert into the `onPageFetched` callback, so
- * the mock must invoke it (otherwise nothing reaches the DB).
+ * Mocks one call to `BlockchainTransactionsRequests.getForAddress`. The
+ * service persists once at end-of-pagination from the returned array; the
+ * `onPageFetched` invocation here only drives the progress-callback tests.
  */
 function mockBlockchainOnce(txs: RawTx[]) {
     blockchainGetForAddress.mockImplementationOnce(async (_address: string, opts: GetForAddressOpts = {}) => {
