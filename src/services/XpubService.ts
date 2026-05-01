@@ -3,6 +3,7 @@ import type { TrackedXpubMeta } from "./model/TrackedXpubMeta";
 import type { DerivedAddress } from "./model/DerivedAddress";
 import type { AddressDerivationType } from "./model/AddressDerivationType";
 import { XpubDerivationService } from "./XpubDerivationService";
+import { TransactionHistoryService } from "./TransactionHistoryService";
 
 const ADDRESS_DERIVATION_COUNT = 20;
 
@@ -13,6 +14,7 @@ const BASE58_CHARS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
 export class XpubService {
     private readonly xpubRequests = new XpubRequests();
     private readonly xpubDerivationService = new XpubDerivationService();
+    private readonly transactionHistoryService = new TransactionHistoryService();
 
     /** Validates an xpub/zpub/ypub format. Returns null if valid, or an error message string if invalid. */
     validateXpub(xpub: string): string | null {
@@ -111,10 +113,18 @@ export class XpubService {
             derivedAddresses.push(derived);
         }
 
+        try {
+            await this.transactionHistoryService.ingestForXpub(xpubMeta.id);
+        } catch (err) {
+            console.error("Failed to ingest transactions for new xpub", err);
+            throw err;
+        }
+
         return { xpub: xpubMeta, addresses: derivedAddresses };
     }
 
     async remove(id: string): Promise<void> {
+        await this.transactionHistoryService.deleteForXpub(id);
         await this.xpubRequests.remove(id);
     }
 

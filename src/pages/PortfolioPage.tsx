@@ -39,6 +39,7 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [history, setHistory] = useState<HistoryPoint[] | null>(null);
     const [hasTrackedItems, setHasTrackedItems] = useState<boolean | null>(null);
     const [transactions, setTransactions] = useState<Transaction[] | null>(null);
+    const [transactionsError, setTransactionsError] = useState<string | null>(null);
     const [spot, setSpot] = useState<SpotPrice | null>(null);
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
@@ -60,7 +61,17 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     setHasTrackedItems(false);
                     setHistory([]);
                 });
-            transactionHistoryService.execute().then(setTransactions);
+            transactionHistoryService
+                .execute()
+                .then((txs) => {
+                    setTransactions(txs);
+                    setTransactionsError(null);
+                })
+                .catch((err) => {
+                    console.error("Failed to load transactions", err);
+                    setTransactions([]);
+                    setTransactionsError(err instanceof Error ? err.message : String(err));
+                });
             if (isInitial) {
                 track("Spot price", () => spotPriceRequests.execute())
                     .then(setSpot)
@@ -242,7 +253,11 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         <div className="tx-hide-sm">Source</div>
                         <div className="tx-hide-sm">{unit === "BTC" ? `${currency} Value` : "BTC"}</div>
                     </div>
-                    {transactions.length === 0 ? (
+                    {transactionsError ? (
+                        <div className="tx-row tx-error mono" role="alert">
+                            Failed to load transactions: {transactionsError}
+                        </div>
+                    ) : transactions.length === 0 ? (
                         <div className="tx-row muted mono">No transactions yet.</div>
                     ) : (
                         transactions.map((tx) => (

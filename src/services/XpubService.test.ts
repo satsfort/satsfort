@@ -22,6 +22,14 @@ vi.mock("@tauri-apps/api/core", () => ({
     }),
 }));
 
+vi.mock("../requests/BlockchainTransactionsRequests", () => ({
+    BlockchainTransactionsRequests: class {
+        async getForAddress() {
+            return [];
+        }
+    },
+}));
+
 import { XpubService } from "./XpubService";
 
 const migrationsDir = join(process.cwd(), "src-tauri", "migrations");

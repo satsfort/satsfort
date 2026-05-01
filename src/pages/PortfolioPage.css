@@ -119,6 +119,15 @@
     text-transform: uppercase;
 }
 
+.tx-row.tx-error {
+    display: block;
+    color: var(--red, #ff6b6b);
+    background: rgba(255, 107, 107, 0.08);
+    border-left: 3px solid var(--red, #ff6b6b);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .tx-amount {
     color: var(--text);
 }
