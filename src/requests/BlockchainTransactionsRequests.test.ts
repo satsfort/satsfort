@@ -29,9 +29,7 @@ const ADDRESS = "bc1qexampleaddress";
 const SAMPLE_TX = {
     txid: "tx-1",
     status: { confirmed: true, block_time: 1_700_000_000 },
-    vin: [
-        { prevout: { scriptpubkey_address: "bc1qsender", value: 0 } },
-    ],
+    vin: [{ prevout: { scriptpubkey_address: "bc1qsender", value: 0 } }],
     vout: [
         { scriptpubkey_address: ADDRESS, value: 50_000 },
         { scriptpubkey_address: "bc1qchange", value: 12_345 },
@@ -48,9 +46,7 @@ describe("BlockchainTransactionsRequests.getForAddress", () => {
 
         const result = await new BlockchainTransactionsRequests().getForAddress(ADDRESS);
 
-        expect(result).toEqual([
-            { txid: "tx-1", amountSat: 50_000, blockTime: 1_700_000_000, confirmed: true },
-        ]);
+        expect(result).toEqual([{ txid: "tx-1", amountSat: 50_000, blockTime: 1_700_000_000, confirmed: true }]);
     });
 
     it("computes a negative delta for outgoing transactions", async () => {
@@ -69,9 +65,7 @@ describe("BlockchainTransactionsRequests.getForAddress", () => {
         vi.stubGlobal("fetch", fetchSpy);
 
         const result = await new BlockchainTransactionsRequests().getForAddress(ADDRESS);
-        expect(result).toEqual([
-            { txid: "tx-out", amountSat: -81_000, blockTime: 1_700_500_000, confirmed: true },
-        ]);
+        expect(result).toEqual([{ txid: "tx-out", amountSat: -81_000, blockTime: 1_700_500_000, confirmed: true }]);
     });
 
     it("marks unconfirmed transactions correctly", async () => {
@@ -108,9 +102,7 @@ describe("BlockchainTransactionsRequests.getForAddress", () => {
         const fetchSpy = vi.fn(async () => fetchFail(500));
         vi.stubGlobal("fetch", fetchSpy);
 
-        await expect(new BlockchainTransactionsRequests().getForAddress(ADDRESS)).rejects.toThrow(
-            /Failed to fetch transactions for/,
-        );
+        await expect(new BlockchainTransactionsRequests().getForAddress(ADDRESS)).rejects.toThrow(/Failed to fetch transactions for/);
     });
 
     it("stops paginating mid-page when it encounters the stop marker", async () => {

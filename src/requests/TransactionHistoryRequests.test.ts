@@ -57,18 +57,14 @@ function insertAddress(uuid: string, label: string, address: string): number {
 
 function insertXpub(uuid: string, label: string, xpub: string): number {
     const info = dbRef
-        .current!.prepare(
-            "INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)",
-        )
+        .current!.prepare("INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)")
         .run(uuid, label, xpub, "P2WPKH", 20);
     return Number(info.lastInsertRowid);
 }
 
 function insertXpubAddress(xpubId: number, address: string, index: number): number {
     const info = dbRef
-        .current!.prepare(
-            "INSERT INTO xpub_addresses (uuid, xpub_id, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)",
-        )
+        .current!.prepare("INSERT INTO xpub_addresses (uuid, xpub_id, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)")
         .run(crypto.randomUUID(), xpubId, address, `m/0/${index}`, index);
     return Number(info.lastInsertRowid);
 }
@@ -85,13 +81,10 @@ describe("TransactionHistoryRequests.upsertMany", () => {
     it("inserts transactions for an address with the address foreign key set", async () => {
         const addressId = insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
 
-        await transactionHistoryRequests.upsertMany(
-            { kind: "address", addressId },
-            [
-                { txid: "tx1", amountSat: 50_000, blockTime: 1_700_000_000, confirmed: true },
-                { txid: "tx2", amountSat: -25_000, blockTime: 1_700_100_000, confirmed: true },
-            ],
-        );
+        await transactionHistoryRequests.upsertMany({ kind: "address", addressId }, [
+            { txid: "tx1", amountSat: 50_000, blockTime: 1_700_000_000, confirmed: true },
+            { txid: "tx2", amountSat: -25_000, blockTime: 1_700_100_000, confirmed: true },
+        ]);
 
         expect(countTransactions()).toBe(2);
         const rows = dbRef.current!.prepare("SELECT txid, address_id, amount_sat FROM address_transactions ORDER BY id").all();

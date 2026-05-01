@@ -85,10 +85,7 @@ export class TransactionHistoryService {
         if (transactions.length > 0) {
             // eslint-disable-next-line no-console
             console.debug(`[tx-ingest] ${address}: persisting ${transactions.length} new transactions`);
-            await this.transactionHistoryRequests.upsertMany(
-                { kind: "address", addressId: internalId },
-                transactions,
-            );
+            await this.transactionHistoryRequests.upsertMany({ kind: "address", addressId: internalId }, transactions);
             await this.transactionHistoryRequests.markAddressHistoricFetched(internalId);
         }
     }
@@ -109,8 +106,7 @@ export class TransactionHistoryService {
                 try {
                     let stopAtTxid: string | undefined;
                     if (opts.incremental) {
-                        stopAtTxid =
-                            (await this.transactionHistoryRequests.latestConfirmedTxidForXpubAddress(entry.id)) ?? undefined;
+                        stopAtTxid = (await this.transactionHistoryRequests.latestConfirmedTxidForXpubAddress(entry.id)) ?? undefined;
                     }
                     // Atomically persist only after the full pagination
                     // completes — same reasoning as ingestForAddress.
@@ -118,10 +114,7 @@ export class TransactionHistoryService {
                         stopAtTxid,
                     });
                     if (transactions.length > 0) {
-                        await this.transactionHistoryRequests.upsertMany(
-                            { kind: "xpubAddress", xpubAddressId: entry.id },
-                            transactions,
-                        );
+                        await this.transactionHistoryRequests.upsertMany({ kind: "xpubAddress", xpubAddressId: entry.id }, transactions);
                         await this.transactionHistoryRequests.markXpubAddressHistoricFetched(entry.id);
                     }
                 } catch (err) {

@@ -31,11 +31,7 @@ describe("CostBasisService.compute", () => {
 
     it("computes a weighted average across multiple inflows at different prices", () => {
         // +0.5 @ $40k, then +0.5 @ $60k -> total 1 BTC, basis $50k, avg $50k
-        const result = service.compute([
-            point("2026-01-01", 0, 0),
-            point("2026-02-01", 0.5, 20_000),
-            point("2026-03-01", 1, 60_000),
-        ]);
+        const result = service.compute([point("2026-01-01", 0, 0), point("2026-02-01", 0.5, 20_000), point("2026-03-01", 1, 60_000)]);
         expect(result.btcHeld).toBeCloseTo(1, 8);
         expect(result.costBasis).toBeCloseTo(50_000, 4);
         expect(result.avgPrice).toBeCloseTo(50_000, 4);
@@ -56,22 +52,14 @@ describe("CostBasisService.compute", () => {
 
     it("reduces basis pro-rata on partial outflows at the running average", () => {
         // +1 BTC @ $50k, then send out 0.4 BTC -> hold 0.6 BTC, basis 0.6 * $50k = $30k
-        const result = service.compute([
-            point("2026-01-01", 0, 0),
-            point("2026-02-01", 1, 50_000),
-            point("2026-03-01", 0.6, 36_000),
-        ]);
+        const result = service.compute([point("2026-01-01", 0, 0), point("2026-02-01", 1, 50_000), point("2026-03-01", 0.6, 36_000)]);
         expect(result.btcHeld).toBeCloseTo(0.6, 8);
         expect(result.costBasis).toBeCloseTo(30_000, 4);
         expect(result.avgPrice).toBeCloseTo(50_000, 4);
     });
 
     it("zeroes out basis on full outflow", () => {
-        const result = service.compute([
-            point("2026-01-01", 0, 0),
-            point("2026-02-01", 1, 50_000),
-            point("2026-03-01", 0, 0),
-        ]);
+        const result = service.compute([point("2026-01-01", 0, 0), point("2026-02-01", 1, 50_000), point("2026-03-01", 0, 0)]);
         expect(result.btcHeld).toBe(0);
         expect(result.costBasis).toBe(0);
         expect(result.avgPrice).toBe(0);
@@ -118,11 +106,7 @@ describe("CostBasisService.compute", () => {
     it("caps outflow at current holdings to avoid negative state", () => {
         // Buy 0.1, then snapshot drops to a small negative-implying balance ->
         // service must clamp and never produce negative basis or holdings.
-        const result = service.compute([
-            point("2026-01-01", 0, 0),
-            point("2026-02-01", 0.1, 5_000),
-            point("2026-03-01", -0.05, 0),
-        ]);
+        const result = service.compute([point("2026-01-01", 0, 0), point("2026-02-01", 0.1, 5_000), point("2026-03-01", -0.05, 0)]);
         expect(result.btcHeld).toBe(0);
         expect(result.costBasis).toBe(0);
         expect(result.avgPrice).toBe(0);

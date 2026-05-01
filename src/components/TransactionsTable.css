@@ -37,7 +37,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: box-shadow 0.15s, background 0.15s;
+    transition:
+        box-shadow 0.15s,
+        background 0.15s;
 }
 
 .tx-link-btn:hover {

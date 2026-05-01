@@ -25,7 +25,9 @@ const HISTORICAL_SOURCES: HistoricalFetcher[] = [
             const day = String(date.getUTCDate()).padStart(2, "0");
             const month = String(date.getUTCMonth() + 1).padStart(2, "0");
             const year = date.getUTCFullYear();
-            const res = await httpFetch(`https://api.coingecko.com/api/v3/coins/bitcoin/history?date=${day}-${month}-${year}&localization=false`);
+            const res = await httpFetch(
+                `https://api.coingecko.com/api/v3/coins/bitcoin/history?date=${day}-${month}-${year}&localization=false`,
+            );
             if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
             const data = await res.json();
             const usd = data?.market_data?.current_price?.usd;

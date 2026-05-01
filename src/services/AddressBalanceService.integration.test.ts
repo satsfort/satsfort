@@ -86,9 +86,10 @@ describe("addAddress → balance fetch → portfolio snapshot integration", () =
         expect(balance.btc).toBe(0.5);
 
         // Step 3: verify addresses.latest_balance_btc was actually written.
-        const addrRow = db
-            .prepare("SELECT latest_balance_btc, latest_balance_usd FROM addresses WHERE address = ?")
-            .get("bc1qreal") as { latest_balance_btc: number | null; latest_balance_usd: number | null };
+        const addrRow = db.prepare("SELECT latest_balance_btc, latest_balance_usd FROM addresses WHERE address = ?").get("bc1qreal") as {
+            latest_balance_btc: number | null;
+            latest_balance_usd: number | null;
+        };
         expect(addrRow.latest_balance_btc).toBeCloseTo(0.5, 8);
         expect(addrRow.latest_balance_usd).toBeCloseTo(50_000, 4);
 

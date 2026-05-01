@@ -132,10 +132,7 @@ export class TransactionHistoryRequests {
 
     async deleteForAddressUuid(addressUuid: string): Promise<void> {
         if (Config.useMockData) return;
-        await dbExecute(
-            "DELETE FROM address_transactions WHERE address_id = (SELECT id FROM addresses WHERE uuid = ?)",
-            [addressUuid],
-        );
+        await dbExecute("DELETE FROM address_transactions WHERE address_id = (SELECT id FROM addresses WHERE uuid = ?)", [addressUuid]);
     }
 
     async deleteForXpubUuid(xpubUuid: string): Promise<void> {

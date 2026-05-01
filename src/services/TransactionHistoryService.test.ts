@@ -96,18 +96,14 @@ function insertAddress(uuid: string, label: string, address: string): number {
 
 function insertXpub(uuid: string, label: string): number {
     const info = dbRef
-        .current!.prepare(
-            "INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)",
-        )
+        .current!.prepare("INSERT INTO xpubs (uuid, label, xpub, derivation_type, address_count) VALUES (?, ?, ?, ?, ?)")
         .run(uuid, label, `zpub-${uuid}`, "P2WPKH", 20);
     return Number(info.lastInsertRowid);
 }
 
 function insertXpubAddress(xpubId: number, address: string, index: number) {
     dbRef
-        .current!.prepare(
-            "INSERT INTO xpub_addresses (uuid, xpub_id, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)",
-        )
+        .current!.prepare("INSERT INTO xpub_addresses (uuid, xpub_id, address, derivation_path, address_index) VALUES (?, ?, ?, ?, ?)")
         .run(crypto.randomUUID(), xpubId, address, `m/0/${index}`, index);
 }
 
@@ -182,9 +178,10 @@ describe("TransactionHistoryService.ingestForAddress", () => {
 
         const count = (dbRef.current!.prepare("SELECT COUNT(*) AS c FROM address_transactions").get() as { c: number }).c;
         expect(count).toBe(1);
-        const after = dbRef
-            .current!.prepare("SELECT block_time, confirmed FROM address_transactions WHERE txid = ?")
-            .get("tx-pending") as { block_time: number | null; confirmed: number };
+        const after = dbRef.current!.prepare("SELECT block_time, confirmed FROM address_transactions WHERE txid = ?").get("tx-pending") as {
+            block_time: number | null;
+            confirmed: number;
+        };
         expect(after).toEqual({ block_time: 1_700_000_000, confirmed: 1 });
     });
 
@@ -256,9 +253,9 @@ describe("TransactionHistoryService.ingestForAddress", () => {
         const addressId = insertAddress("addr-uuid", "Cold storage", "bc1qaddr1");
 
         const before = (
-            dbRef
-                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
-                .get(addressId) as { v: string | null }
+            dbRef.current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?").get(addressId) as {
+                v: string | null;
+            }
         ).v;
         expect(before).toBeNull();
 
@@ -266,9 +263,9 @@ describe("TransactionHistoryService.ingestForAddress", () => {
         await service.ingestForAddress("addr-uuid", "bc1qaddr1");
 
         const after = (
-            dbRef
-                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
-                .get(addressId) as { v: string | null }
+            dbRef.current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?").get(addressId) as {
+                v: string | null;
+            }
         ).v;
         expect(after).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
     });
@@ -280,9 +277,9 @@ describe("TransactionHistoryService.ingestForAddress", () => {
         await service.ingestForAddress("addr-uuid", "bc1qempty");
 
         const v = (
-            dbRef
-                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
-                .get(addressId) as { v: string | null }
+            dbRef.current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?").get(addressId) as {
+                v: string | null;
+            }
         ).v;
         expect(v).toBeNull();
     });
@@ -302,9 +299,9 @@ describe("TransactionHistoryService.ingestForAddress", () => {
         await expect(service.ingestForAddress("addr-uuid", "bc1qhalfaddr")).rejects.toThrow(/boom/);
 
         const v = (
-            dbRef
-                .current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?")
-                .get(addressId) as { v: string | null }
+            dbRef.current!.prepare("SELECT historic_transactions_fetched_at AS v FROM addresses WHERE id = ?").get(addressId) as {
+                v: string | null;
+            }
         ).v;
         expect(v).toBeNull();
     });
@@ -332,9 +329,7 @@ describe("TransactionHistoryService.ingestForAddress", () => {
             throw new Error("rate limited on page 2");
         });
 
-        await expect(
-            service.ingestForAddress("addr-uuid", "bc1qexisting", { incremental: true }),
-        ).rejects.toThrow(/rate limited/);
+        await expect(service.ingestForAddress("addr-uuid", "bc1qexisting", { incremental: true })).rejects.toThrow(/rate limited/);
 
         // The existing tx-known is still the only row — we did not commit any
         // page-1 txs, so a subsequent refresh will still use tx-known as the
@@ -412,9 +407,7 @@ describe("TransactionHistoryService.ingestForXpub", () => {
 
         // Seed only derived0 with a confirmed tx; derived1 stays empty.
         const xpubAddr0Id = (
-            dbRef
-                .current!.prepare("SELECT id FROM xpub_addresses WHERE address = ?")
-                .get("bc1qderived0") as { id: number }
+            dbRef.current!.prepare("SELECT id FROM xpub_addresses WHERE address = ?").get("bc1qderived0") as { id: number }
         ).id;
         dbRef
             .current!.prepare(
@@ -436,10 +429,9 @@ describe("TransactionHistoryService.ingestForXpub", () => {
 describe("TransactionHistoryService.execute", () => {
     it("returns the most recent persisted transactions mapped to the UI shape", async () => {
         const addressId = insertAddress("addr-uuid", "Strike", "bc1qaddr1");
-        const insert = dbRef
-            .current!.prepare(
-                "INSERT INTO address_transactions (uuid, txid, address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
-            );
+        const insert = dbRef.current!.prepare(
+            "INSERT INTO address_transactions (uuid, txid, address_id, amount_sat, block_time, confirmed) VALUES (?, ?, ?, ?, ?, ?)",
+        );
         insert.run("u-buy", "tx-buy", addressId, 50_000, 1_700_000_000, 1);
         insert.run("u-out", "tx-out", addressId, -10_000, 1_700_100_000, 1);
 

@@ -71,9 +71,7 @@ function fetchFail(status = 500): Response {
 }
 
 function insertHistoricalPrice(date: string, price: number, source: string) {
-    dbRef
-        .current!.prepare("INSERT INTO historical_prices (date, price, source) VALUES (?, ?, ?)")
-        .run(date, price, source);
+    dbRef.current!.prepare("INSERT INTO historical_prices (date, price, source) VALUES (?, ?, ?)").run(date, price, source);
 }
 
 const historicalPriceRequests = new HistoricalPriceRequests();
@@ -104,9 +102,11 @@ describe("HistoricalPriceRequests.getPriceForDate", () => {
         expect(result.price).toBe(42_000);
         expect(result.source).toBe("coingecko");
         expect(fetchSpy).toHaveBeenCalledTimes(1);
-        const persisted = dbRef
-            .current!.prepare("SELECT date, price, source FROM historical_prices WHERE date = ?")
-            .get("2024-06-15") as { date: string; price: number; source: string };
+        const persisted = dbRef.current!.prepare("SELECT date, price, source FROM historical_prices WHERE date = ?").get("2024-06-15") as {
+            date: string;
+            price: number;
+            source: string;
+        };
         expect(persisted).toEqual({ date: "2024-06-15", price: 42_000, source: "coingecko" });
     });
 
@@ -180,9 +180,9 @@ describe("HistoricalPriceRequests.ensureSeeded", () => {
         const count = dbRef.current!.prepare("SELECT COUNT(*) AS c FROM historical_prices").get() as { c: number };
         expect(count.c).toBeGreaterThan(1_000);
 
-        const sample = dbRef
-            .current!.prepare("SELECT date, price, source FROM historical_prices WHERE date = ?")
-            .get("2013-04-28") as { date: string; price: number; source: string } | undefined;
+        const sample = dbRef.current!.prepare("SELECT date, price, source FROM historical_prices WHERE date = ?").get("2013-04-28") as
+            | { date: string; price: number; source: string }
+            | undefined;
         expect(sample).toBeDefined();
         expect(sample!.source).toBe("coingecko_historical");
         expect(sample!.price).toBeGreaterThan(0);

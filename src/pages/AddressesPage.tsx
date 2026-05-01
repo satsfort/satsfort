@@ -122,12 +122,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
      * banner can show running progress. Used both by add (full backfill) and
      * by refresh (incremental).
      */
-    const ingestWithProgress = async (
-        addressId: string,
-        address: string,
-        label: string,
-        incremental: boolean,
-    ): Promise<void> => {
+    const ingestWithProgress = async (addressId: string, address: string, label: string, incremental: boolean): Promise<void> => {
         setSyncingTxs((prev) => new Map(prev).set(addressId, { label, txCount: 0 }));
         try {
             await transactionHistoryService.ingestForAddress(addressId, address, {
@@ -156,9 +151,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         try {
             const next = await track(`Fetching balance for ${addr.label}`, () => addressBalanceService.get(addr.address));
             setAddresses((prev) => (prev ?? []).map((a) => (a.id === addr.id ? { ...a, btc: next.btc, txCount: next.txCount } : a)));
-            await track(`Syncing transactions for ${addr.label}`, () =>
-                ingestWithProgress(addr.id, addr.address, addr.label, true),
-            ).catch((err) => console.warn("Failed to sync transactions", err));
+            await track(`Syncing transactions for ${addr.label}`, () => ingestWithProgress(addr.id, addr.address, addr.label, true)).catch(
+                (err) => console.warn("Failed to sync transactions", err),
+            );
             await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
@@ -172,9 +167,9 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
         setRefreshingXpub(xpub.id);
         try {
             await track(`Refreshing ${xpub.label}`, () => fetchDerivedBalances(xpubDerived));
-            await track(`Syncing transactions for ${xpub.label}`, () =>
-                transactionHistoryService.ingestForXpub(xpub.id),
-            ).catch((err) => console.warn("Failed to sync xpub transactions", err));
+            await track(`Syncing transactions for ${xpub.label}`, () => transactionHistoryService.ingestForXpub(xpub.id)).catch((err) =>
+                console.warn("Failed to sync xpub transactions", err),
+            );
             await portfolioHistoryService.snapshot();
             onPortfolioChanged();
         } catch (err) {
@@ -611,66 +606,69 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         {addresses.map((a) => {
                             const sync = syncingTxs.get(a.id);
                             return (
-                            <article key={a.id} className="addr-card">
-                                <div className="addr-card-head">
-                                    <div>
-                                        <div className="addr-label">{a.label}</div>
-                                        <div className="addr-string mono">
-                                            <span>{shorten(a.address, isMobile)}</span>
-                                            <button
-                                                className="icon-btn"
-                                                title="Copy address"
-                                                aria-label="Copy address"
-                                                onClick={() => {
-                                                    void navigator.clipboard.writeText(a.address).then(() => {
-                                                        setCopiedId(a.id);
-                                                        setTimeout(() => setCopiedId((prev) => (prev === a.id ? null : prev)), 2000);
-                                                    });
-                                                }}
-                                            >
-                                                {copiedId === a.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
-                                            </button>
+                                <article key={a.id} className="addr-card">
+                                    <div className="addr-card-head">
+                                        <div>
+                                            <div className="addr-label">{a.label}</div>
+                                            <div className="addr-string mono">
+                                                <span>{shorten(a.address, isMobile)}</span>
+                                                <button
+                                                    className="icon-btn"
+                                                    title="Copy address"
+                                                    aria-label="Copy address"
+                                                    onClick={() => {
+                                                        void navigator.clipboard.writeText(a.address).then(() => {
+                                                            setCopiedId(a.id);
+                                                            setTimeout(() => setCopiedId((prev) => (prev === a.id ? null : prev)), 2000);
+                                                        });
+                                                    }}
+                                                >
+                                                    {copiedId === a.id ? <span className="copied-label">Copied!</span> : <CopyIcon />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="addr-balance">
+                                            <div className="addr-amount">
+                                                {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}
+                                            </div>
+                                            <div className="small muted mono">
+                                                {formatSecondary(a.btc, unit, priceUsd, currency, denomination)}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="addr-balance">
-                                        <div className="addr-amount">
-                                            {formatAmount(a.btc, unit, priceUsd, { btcDigits: 8, fiat: currency, denom: denomination })}
-                                        </div>
-                                        <div className="small muted mono">
-                                            {formatSecondary(a.btc, unit, priceUsd, currency, denomination)}
-                                        </div>
+                                    <div className="addr-meta">
+                                        <span className={`tx-tag type-${a.type.toLowerCase()}`}>{a.type}</span>
+                                        {a.xpub && <span className="tx-tag xpub">xpub</span>}
+                                        <button
+                                            type="button"
+                                            className="link-btn tx-count-btn"
+                                            onClick={() => setTransactionsTarget(a)}
+                                            title="View transactions"
+                                        >
+                                            · {a.txCount} tx
+                                        </button>
+                                        {sync && (
+                                            <span className="addr-sync-indicator" title="Fetching transactions">
+                                                <SpinnerIcon size={12} />
+                                                syncing · {sync.txCount.toLocaleString()}
+                                            </span>
+                                        )}
+                                        <span className="muted mono small">· added {a.added}</span>
+                                        <span className="addr-spacer" />
+                                        <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id || !!sync}>
+                                            {sync ? "Syncing…" : refreshing === a.id ? "Refreshing…" : "Refresh"}
+                                        </button>
+                                        <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>
+                                            Remove
+                                        </button>
+                                        <button
+                                            className="link-btn"
+                                            onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}
+                                        >
+                                            View <ExternalLinkIcon size={12} />
+                                        </button>
                                     </div>
-                                </div>
-                                <div className="addr-meta">
-                                    <span className={`tx-tag type-${a.type.toLowerCase()}`}>{a.type}</span>
-                                    {a.xpub && <span className="tx-tag xpub">xpub</span>}
-                                    <button
-                                        type="button"
-                                        className="link-btn tx-count-btn"
-                                        onClick={() => setTransactionsTarget(a)}
-                                        title="View transactions"
-                                    >
-                                        · {a.txCount} tx
-                                    </button>
-                                    {sync && (
-                                        <span className="addr-sync-indicator" title="Fetching transactions">
-                                            <SpinnerIcon size={12} />
-                                            syncing · {sync.txCount.toLocaleString()}
-                                        </span>
-                                    )}
-                                    <span className="muted mono small">· added {a.added}</span>
-                                    <span className="addr-spacer" />
-                                    <button className="link-btn" onClick={() => refreshOne(a)} disabled={refreshing === a.id || !!sync}>
-                                        {sync ? "Syncing…" : refreshing === a.id ? "Refreshing…" : "Refresh"}
-                                    </button>
-                                    <button className="link-btn danger" onClick={() => setRemoveTarget(a)}>
-                                        Remove
-                                    </button>
-                                    <button className="link-btn" onClick={() => void openUrl(`https://mempool.space/address/${a.address}`)}>
-                                        View <ExternalLinkIcon size={12} />
-                                    </button>
-                                </div>
-                            </article>
+                                </article>
                             );
                         })}
                     </div>
