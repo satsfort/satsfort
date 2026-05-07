@@ -111,4 +111,83 @@ describe("CostBasisService.compute", () => {
         expect(result.costBasis).toBe(0);
         expect(result.avgPrice).toBe(0);
     });
+
+    it("preserves the historical avg when a fresh snapshot at current spot is appended", () => {
+        // Realistic backtrack scenario: a single historical inflow at an old
+        // price, then a "now" snapshot at the current spot price with the same
+        // balance. The trailing snapshot must NOT inflate the avg, because no
+        // BTC moved.
+        const result = service.compute([
+            point("2022-01-01T00:00:00Z", 0, 0),
+            point("2022-06-15T00:00:00Z", 0.5, 10_000), // implied $20k/BTC
+            point("2026-05-07T12:00:00Z", 0.5, 47_500), // current spot ~$95k, no inflow
+        ]);
+        expect(result.btcHeld).toBeCloseTo(0.5, 8);
+        expect(result.costBasis).toBeCloseTo(10_000, 4);
+        expect(result.avgPrice).toBeCloseTo(20_000, 4);
+    });
+
+    it("yields a high avg when every inflow lands at recent prices (design behavior, not a bug)", () => {
+        // User imports an address that received all its BTC last week. There is
+        // no historical record predating the inflow, so the algorithm values it
+        // at the recent spot. avgPrice ~= recent spot is correct given the
+        // data, even if the user actually acquired the coins years earlier.
+        const result = service.compute([
+            point("2026-04-01T00:00:00Z", 0, 0),
+            point("2026-05-01T00:00:00Z", 0.25, 23_750), // implied $95k
+            point("2026-05-07T00:00:00Z", 0.25, 23_625), // no inflow, slight price drift
+        ]);
+        expect(result.btcHeld).toBeCloseTo(0.25, 8);
+        expect(result.avgPrice).toBeCloseTo(95_000, 4);
+    });
+
+    it("treats a snapshot with usd=0 (failed price fetch) as a zero-priced inflow without NaN", () => {
+        // BacktrackService falls back to price=0 if the historical price API
+        // is down. The algorithm should still finish cleanly and surface a
+        // lower avg, never NaN/Infinity.
+        const result = service.compute([
+            point("2024-01-01T00:00:00Z", 0, 0),
+            point("2024-06-01T00:00:00Z", 0.4, 0), // price fetch failed
+            point("2024-12-01T00:00:00Z", 0.6, 60_000), // implied $100k, +0.2 inflow
+        ]);
+        expect(Number.isFinite(result.avgPrice)).toBe(true);
+        expect(Number.isFinite(result.costBasis)).toBe(true);
+        expect(result.btcHeld).toBeCloseTo(0.6, 8);
+        expect(result.costBasis).toBeCloseTo(20_000, 4); // 0.4*$0 + 0.2*$100k
+        expect(result.avgPrice).toBeCloseTo(20_000 / 0.6, 4);
+    });
+
+    it("accumulates many tiny DCA inflows without precision drift", () => {
+        // 52 weekly buys of 0.01 BTC at a steadily rising price.
+        const points: HistoryPoint[] = [point("2025-01-01T00:00:00Z", 0, 0)];
+        let runningBtc = 0;
+        let expectedBasis = 0;
+        for (let week = 1; week <= 52; week++) {
+            const price = 50_000 + week * 500; // $50,500 .. $76,000
+            const buy = 0.01;
+            runningBtc += buy;
+            expectedBasis += buy * price;
+            const date = new Date(`2025-01-01T00:00:00Z`);
+            date.setUTCDate(date.getUTCDate() + week * 7);
+            points.push(point(date.toISOString(), runningBtc, runningBtc * price));
+        }
+        const result = service.compute(points);
+        expect(result.btcHeld).toBeCloseTo(0.52, 8);
+        expect(result.costBasis).toBeCloseTo(expectedBasis, 2);
+        expect(result.avgPrice).toBeCloseTo(expectedBasis / 0.52, 2);
+    });
+
+    it("re-prices later inflows at later spot prices (weighted average grows)", () => {
+        // Demonstrates that when price ramps up between inflows, the weighted
+        // avg lifts toward the latest inflow's price, not the first.
+        const result = service.compute([
+            point("2024-01-01T00:00:00Z", 0, 0),
+            point("2024-02-01T00:00:00Z", 1, 30_000), // +1 @ $30k
+            point("2024-08-01T00:00:00Z", 2, 120_000), // +1 @ $60k
+            point("2025-02-01T00:00:00Z", 3, 270_000), // +1 @ $90k
+        ]);
+        expect(result.btcHeld).toBeCloseTo(3, 8);
+        expect(result.costBasis).toBeCloseTo(30_000 + 60_000 + 90_000, 4);
+        expect(result.avgPrice).toBeCloseTo(60_000, 4);
+    });
 });

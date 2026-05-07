@@ -8,6 +8,15 @@ import type { HistoryPoint } from "./model/HistoryPoint";
  * (usd / btc); outflows reduce the basis pro-rata at the running weighted-avg
  * cost. There is no separate transactions table with explicit per-buy prices,
  * so this is the best approximation given the data we have.
+ *
+ * Important design assumption: an on-chain receive looks identical to a
+ * "purchase" here. If a user moves BTC into a tracked address from their own
+ * cold storage, the algorithm will value that inflow at the receive date's
+ * spot price, not the date the user originally acquired the coins. As a
+ * result, avgPrice trends toward "current spot" when most inflows are recent,
+ * even though the user may have acquired the coins much earlier at much lower
+ * prices. The fix on the user's side is to track the cold-storage address too
+ * so its earlier inflow at the historical price is the one that counts.
  */
 export class CostBasisService {
     private readonly portfolioHistoryRequests = new PortfolioHistoryRequests();
