@@ -50,12 +50,12 @@ Grab the latest installer from the [Releases](../../releases) page:
 
 ## Tech stack
 
-| Layer    | Stack                                                 |
-|----------| ----------------------------------------------------- |
-| Backend  | [Tauri 2](https://tauri.app) (Rust)                   |
-| Frontend | React 19, TypeScript, Vite                            |
-| Storage  | SQLite (with schema migrations) on the Rust side      |
-| Bitcoin  | `bitcoinjs-lib`, `bip32`, `tiny-secp256k1` for xpub derivation |
+| Layer    | Stack                                                                |
+| -------- | -------------------------------------------------------------------- |
+| Backend  | [Tauri 2](https://tauri.app) (Rust)                                  |
+| Frontend | React 19, TypeScript, Vite                                           |
+| Storage  | SQLite (with schema migrations) on the Rust side                     |
+| Bitcoin  | `bitcoinjs-lib`, `bip32`, `tiny-secp256k1` for xpub derivation       |
 | Tests    | Vitest (unit), WebdriverIO + tauri-driver (e2e), `cargo test` (Rust) |
 
 ## Development
@@ -79,14 +79,14 @@ The app window should open within a minute or two on the first build (Rust compi
 
 ### Useful scripts
 
-| Command             | What it does                                      |
-| ------------------- | ------------------------------------------------- |
-| `npm run tauri dev` | Full app with hot reload                          |
-| `npm test`          | Vitest unit tests                                 |
-| `npm run lint`      | ESLint                                            |
-| `npm run format`    | Prettier write                                    |
-| `npm run test:e2e`  | Build a release binary and run WebdriverIO tests  |
-| `cargo test --manifest-path src-tauri/Cargo.toml` | Rust tests       |
+| Command                                           | What it does                                     |
+| ------------------------------------------------- | ------------------------------------------------ |
+| `npm run tauri dev`                               | Full app with hot reload                         |
+| `npm test`                                        | Vitest unit tests                                |
+| `npm run lint`                                    | ESLint                                           |
+| `npm run format`                                  | Prettier write                                   |
+| `npm run test:e2e`                                | Build a release binary and run WebdriverIO tests |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | Rust tests                                       |
 
 ### Building installers locally
 
