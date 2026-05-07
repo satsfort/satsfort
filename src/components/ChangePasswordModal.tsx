@@ -156,7 +156,7 @@ export function ChangePasswordModal({ username, onClose, onPasswordChanged }: Pr
                             Cancel
                         </button>
                         <button type="submit" className="btn btn-primary" disabled={submitting}>
-                            {submitting ? "Updating..." : "Change Password & Log Out"}
+                            {submitting ? "Updating..." : "Change Password & Lock Vault"}
                         </button>
                     </div>
                 </form>

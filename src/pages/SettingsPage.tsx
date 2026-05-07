@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./SettingsPage.css";
 import { useSettings } from "../lib/SettingsContext";
 import type { FiatCurrency } from "../lib/SettingsContext";
-import { SettingsRequests, type PriceSource } from "../requests/SettingsRequests";
+import { SettingsRequests } from "../requests/SettingsRequests";
 import { ChangePasswordModal } from "../components/ChangePasswordModal";
 import { ConfirmWipeLocalDataModal } from "../components/ConfirmWipeLocalDataModal";
 import { TaskNotifications } from "../components/TaskNotifications";
@@ -14,20 +14,11 @@ type Props = {
 };
 
 export function SettingsPage({ username, onLogout }: Props) {
-    const settingsRequests = new SettingsRequests();
-
     const initialSettings = SettingsRequests.loadSync();
     const { currency, setCurrency, denomination, setDenomination } = useSettings();
-    const [priceSource, setPriceSource] = useState<PriceSource>(initialSettings.priceSource);
     const [passwordModalOpen, setPasswordModalOpen] = useState(false);
     const [wipeModalOpen, setWipeModalOpen] = useState(false);
-    const { useOwnNode, nodeUrl, telemetry, autoSync } = initialSettings;
-
-    const handlePriceSourceChange = (next: PriceSource) => {
-        setPriceSource(next);
-        const current = SettingsRequests.loadSync();
-        void settingsRequests.save({ ...current, priceSource: next });
-    };
+    const { useOwnNode, nodeUrl, autoSync } = initialSettings;
 
     const handleWipeLocalData = async () => {
         await wipeLocalData();
@@ -43,7 +34,7 @@ export function SettingsPage({ username, onLogout }: Props) {
                 </div>
                 <div className="page-actions">
                     <button className="btn btn-danger" onClick={() => void onLogout()}>
-                        Log Out
+                        Lock Vault
                     </button>
                     <TaskNotifications />
                 </div>
@@ -80,19 +71,6 @@ export function SettingsPage({ username, onLogout }: Props) {
                             </button>
                         </div>
                     </Row>
-
-                    <Row label="Price source" hint="Exchange used for the spot price conversion.">
-                        <select
-                            className="text-input"
-                            value={priceSource}
-                            onChange={(e) => handlePriceSourceChange(e.target.value as PriceSource)}
-                        >
-                            <option value="kraken">Kraken</option>
-                            <option value="bitstamp">Bitstamp</option>
-                            <option value="coinbase">Coinbase</option>
-                            <option value="average">Average of above</option>
-                        </select>
-                    </Row>
                 </div>
 
                 <div className="settings-card danger-card">
@@ -100,9 +78,6 @@ export function SettingsPage({ username, onLogout }: Props) {
                         <h3 className="settings-card-title">Danger Zone</h3>
                         <p className="muted small">These actions are irreversible.</p>
                     </div>
-                    <Row label="Delete all tracked addresses">
-                        <button className="btn btn-danger">Delete</button>
-                    </Row>
                     <Row label="Wipe all local data">
                         <button className="btn btn-danger" onClick={() => setWipeModalOpen(true)}>
                             Wipe
@@ -113,27 +88,23 @@ export function SettingsPage({ username, onLogout }: Props) {
                 <div className="settings-card">
                     <div className="settings-card-head">
                         <h3 className="settings-card-title">Security</h3>
-                        <p className="muted small">Change your password. Username stays fixed.</p>
+                        <p className="muted small">Manage the credentials that unlock your local vault.</p>
                     </div>
-                    <div className="settings-security-note small muted">
-                        Account: <span className="mono">{username}</span>
-                    </div>
-                    <button className="btn btn-primary" onClick={() => setPasswordModalOpen(true)}>
-                        Change Password
-                    </button>
+
+                    <Row label="Password" hint="Used to encrypt your local data.">
+                        <button className="btn btn-primary" onClick={() => setPasswordModalOpen(true)}>
+                            Change Password
+                        </button>
+                    </Row>
                 </div>
 
                 <div className="settings-card coming-soon-card">
                     <div className="settings-card-head">
                         <h3 className="settings-card-title">
-                            Privacy <span className="coming-soon-badge">Coming Soon</span>
+                            Data <span className="coming-soon-badge">Coming Soon</span>
                         </h3>
-                        <p className="muted small">No tracking by default. Toggle what you want to share.</p>
+                        <p className="muted small">Move your tracked addresses and history in or out.</p>
                     </div>
-
-                    <Row label="Anonymous telemetry" hint="Send crash reports and latency metrics — no wallet or address data.">
-                        <Toggle checked={telemetry} onChange={() => {}} disabled />
-                    </Row>
 
                     <Row label="Import data">
                         <button className="btn" disabled>
@@ -144,12 +115,6 @@ export function SettingsPage({ username, onLogout }: Props) {
                     <Row label="Export data">
                         <button className="btn" disabled>
                             Download .json
-                        </button>
-                    </Row>
-
-                    <Row label="Clear local cache" hint="Removes cached price history and block headers.">
-                        <button className="btn" disabled>
-                            Clear
                         </button>
                     </Row>
                 </div>
