@@ -24,8 +24,8 @@ Most portfolio trackers ask for your addresses, your email, and your trust. Sats
 - **Local-first.** Your xpubs, addresses, and history live in an encrypted SQLite database on your machine. The app works fully offline, no account required.
 - **Bitcoin only.** No shitcoins, no noise. Every feature is built around BTC.
 - **Watch-only by design.** Sats Fort never holds private keys. Import an xpub or paste an address, and it will track balances and history without ever being able to spend.
-- **Zero-knowledge backups (optional).** Premium users can sync an end-to-end encrypted backup of their vault to our backend. Encryption happens on your device with a key only you hold, so the server stores ciphertext it cannot read.
 - **Open source.** AGPLv3, audit it yourself, run it yourself, fork it if you want to.
+- **Zero-knowledge backups (optional).** Premium users can sync an end-to-end encrypted backup of their vault to our backend. Encryption happens on your device with a key only you hold, so the server stores ciphertext it cannot read. (coming soon)
 
 ## Features
 
