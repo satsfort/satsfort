@@ -173,6 +173,20 @@
     color: var(--orange);
 }
 
+.plan-soon {
+    display: inline-block;
+    margin-left: 0.45rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(247, 147, 26, 0.15);
+    color: var(--orange);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
 .plan-btn {
     margin-top: auto;
 }

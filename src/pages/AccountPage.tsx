@@ -4,11 +4,13 @@ import { TaskNotifications } from "../components/TaskNotifications";
 
 type BillingCycle = "monthly" | "yearly";
 
+type PlanFeature = { label: string; soon?: boolean };
+
 type Plan = {
     id: "free" | "supporter" | "sponsor";
     name: string;
     tagline: string;
-    features: string[];
+    features: PlanFeature[];
     highlight?: boolean;
     badge?: string;
     cta: string;
@@ -18,15 +20,16 @@ type Plan = {
 const PLANS: Plan[] = [
     {
         id: "free",
-        name: "Free Forever",
+        name: "Starter",
         tagline: "Everything you need to track your stack",
         features: [
-            "Up to 10 addresses/XPUBs",
-            "XPUB/ZPUB import",
-            "UTXO management",
-            "Local encrypted storage",
-            "Basic labels",
-            "Export to CSV",
+            { label: "Portfolio history and charts" },
+            { label: "Transaction history" },
+            { label: "Track up to 10 addresses & 2 XPUBs" },
+            { label: "XPUB/ZPUB import" },
+            { label: "Local encrypted storage" },
+            { label: "Export settings and data" },
+            { label: "iOS & Android app", soon: true },
         ],
         cta: "Current plan",
         ctaDisabled: true,
@@ -38,15 +41,14 @@ const PLANS: Plan[] = [
         badge: "Most Popular",
         highlight: true,
         features: [
-            "Everything in Free",
-            "Unlimited addresses/XPUBs",
-            "Connect your own node",
-            "Encrypted cloud backup",
-            "Mobile app (iOS & Android)",
-            "Wallet movement alerts",
-            "Advanced UTXO analysis",
-            "Fee estimation alerts",
-            "Multi-device sync",
+            { label: "Everything in Starter" },
+            { label: "Support development" },
+            { label: "Unlimited addresses/XPUBs" },
+            { label: "Transaction and address labels", soon: true },
+            { label: "Encrypted cloud backup", soon: true },
+            { label: "Connect your own node", soon: true },
+            { label: "Wallet movement alerts", soon: true },
+            { label: "Advanced UTXO analysis", soon: true },
         ],
         cta: "Coming soon",
         ctaDisabled: true,
@@ -56,12 +58,12 @@ const PLANS: Plan[] = [
         name: "Sponsor",
         tagline: "Become a visible supporter of the project",
         features: [
-            "Everything in Supporter",
-            "Your logo on our website",
-            "Your logo in the app's About page",
-            "Your logo in the GitHub README",
-            "Shoutout on social media",
-            "Custom feature requests considered",
+            { label: "Everything in Supporter" },
+            { label: "Your logo on our website" },
+            { label: "Your logo in the app's About page" },
+            { label: "Your logo in the GitHub README" },
+            { label: "Shoutout on social media" },
+            { label: "Custom feature requests considered" },
         ],
         cta: "Coming soon",
         ctaDisabled: true,
@@ -79,7 +81,12 @@ function formatSats(n: number): string {
 
 function renderPrice(plan: Plan, cycle: BillingCycle) {
     if (plan.id === "free") {
-        return "Free";
+        return (
+            <>
+                Free
+                <span>Forever</span>
+            </>
+        );
     }
     if (plan.id === "sponsor") {
         return (
@@ -152,7 +159,10 @@ export function AccountPage() {
                         </div>
                         <ul className="plan-list">
                             {plan.features.map((f) => (
-                                <li key={f}>{f}</li>
+                                <li key={f.label}>
+                                    {f.label}
+                                    {f.soon && <span className="plan-soon">Soon</span>}
+                                </li>
                             ))}
                         </ul>
                         <button className={`btn plan-btn ${plan.highlight ? "btn-primary" : ""}`} disabled={plan.ctaDisabled}>
