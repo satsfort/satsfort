@@ -140,8 +140,9 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
 
     const priceUsd = spot.usd;
     const latest = history[history.length - 1];
-    const yearAgo = history[history.length - 53] ?? history[0];
-    const monthAgo = history[history.length - 5] ?? history[0];
+    const latestT = new Date(latest.date).getTime();
+    const monthAgoBtc = portfolioHistoryService.valueAt(history, new Date(latestT - 30 * 24 * 60 * 60 * 1000));
+    const yearAgoBtc = portfolioHistoryService.valueAt(history, new Date(latestT - 365 * 24 * 60 * 60 * 1000));
 
     const rate = exchangeRateRequests.rateFromUsd(currency);
     const fiatSymbol = formatSymbol("FIAT", currency);
@@ -151,8 +152,8 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const invested = costBasis;
     const pnl = usdValue - invested;
     const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
-    const monthDelta = latest.btc - monthAgo.btc;
-    const yearDelta = latest.btc - yearAgo.btc;
+    const monthDelta = latest.btc - monthAgoBtc;
+    const yearDelta = latest.btc - yearAgoBtc;
 
     const heroNumber = formatNumber(latest.btc, unit, priceUsd, 8, currency, denomination);
     const heroSecondary = formatSecondary(latest.btc, unit, priceUsd, currency, denomination);

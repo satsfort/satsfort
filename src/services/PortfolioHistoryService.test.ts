@@ -156,3 +156,63 @@ describe("PortfolioHistoryService.snapshot", () => {
         expect(count.c).toBe(2);
     });
 });
+
+describe("PortfolioHistoryService.valueAt", () => {
+    it("returns 0 for empty history", () => {
+        expect(portfolioHistoryService.valueAt([], new Date("2026-04-01"))).toBe(0);
+    });
+
+    it("clamps to the first point when target is before the recorded range", () => {
+        const history = [
+            { date: "2026-04-10T00:00:00.000Z", btc: 0.5, usd: 0 },
+            { date: "2026-04-20T00:00:00.000Z", btc: 0.7, usd: 0 },
+        ];
+        expect(portfolioHistoryService.valueAt(history, new Date("2026-03-01T00:00:00.000Z"))).toBe(0.5);
+    });
+
+    it("clamps to the last point when target is after the recorded range", () => {
+        const history = [
+            { date: "2026-04-10T00:00:00.000Z", btc: 0.5, usd: 0 },
+            { date: "2026-04-20T00:00:00.000Z", btc: 0.7, usd: 0 },
+        ];
+        expect(portfolioHistoryService.valueAt(history, new Date("2026-05-01T00:00:00.000Z"))).toBe(0.7);
+    });
+
+    it("returns the point's value on an exact match", () => {
+        const history = [
+            { date: "2026-04-10T00:00:00.000Z", btc: 0.5, usd: 0 },
+            { date: "2026-04-20T00:00:00.000Z", btc: 0.7, usd: 0 },
+            { date: "2026-04-30T00:00:00.000Z", btc: 0.9, usd: 0 },
+        ];
+        expect(portfolioHistoryService.valueAt(history, new Date("2026-04-20T00:00:00.000Z"))).toBe(0.7);
+    });
+
+    it("linearly interpolates between two surrounding points", () => {
+        const history = [
+            { date: "2026-04-10T00:00:00.000Z", btc: 0.5, usd: 0 },
+            { date: "2026-04-20T00:00:00.000Z", btc: 0.7, usd: 0 },
+        ];
+        // halfway between => midpoint of btc
+        const mid = portfolioHistoryService.valueAt(history, new Date("2026-04-15T00:00:00.000Z"));
+        expect(mid).toBeCloseTo(0.6, 10);
+
+        // one quarter of the way
+        const quarter = portfolioHistoryService.valueAt(history, new Date("2026-04-12T12:00:00.000Z"));
+        expect(quarter).toBeCloseTo(0.55, 10);
+    });
+
+    it("interpolates across the right bracket when many points exist", () => {
+        const history = [
+            { date: "2026-01-01T00:00:00.000Z", btc: 0.0, usd: 0 },
+            { date: "2026-02-01T00:00:00.000Z", btc: 0.1, usd: 0 },
+            { date: "2026-03-01T00:00:00.000Z", btc: 0.4, usd: 0 },
+            { date: "2026-04-01T00:00:00.000Z", btc: 0.5, usd: 0 },
+            { date: "2026-05-01T00:00:00.000Z", btc: 1.0, usd: 0 },
+        ];
+        // April 16 is roughly halfway between Apr 1 (0.5) and May 1 (1.0)
+        const result = portfolioHistoryService.valueAt(history, new Date("2026-04-16T00:00:00.000Z"));
+        expect(result).toBeGreaterThan(0.5);
+        expect(result).toBeLessThan(1.0);
+        expect(result).toBeCloseTo(0.75, 1);
+    });
+});

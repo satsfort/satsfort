@@ -42,4 +42,37 @@ export class PortfolioHistoryService {
         await this.portfolioHistoryRequests.insert({ btc, usd, fetchedAt });
         return { date: fetchedAt, btc, usd };
     }
+
+    /**
+     * Approximates the BTC balance at `target` by linearly interpolating between
+     * the closest snapshots before and after it. Clamps to the nearest endpoint
+     * when `target` falls outside the recorded range, and returns 0 for empty
+     * history. Assumes `history` is sorted ascending by date.
+     */
+    valueAt(history: HistoryPoint[], target: Date): number {
+        if (history.length === 0) return 0;
+        const t = target.getTime();
+        const firstT = new Date(history[0].date).getTime();
+        if (t <= firstT) return history[0].btc;
+        const last = history[history.length - 1];
+        const lastT = new Date(last.date).getTime();
+        if (t >= lastT) return last.btc;
+
+        let lo = 0;
+        let hi = history.length - 1;
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >>> 1;
+            const midT = new Date(history[mid].date).getTime();
+            if (midT <= t) lo = mid;
+            else hi = mid;
+        }
+
+        const a = history[lo];
+        const b = history[hi];
+        const aT = new Date(a.date).getTime();
+        const bT = new Date(b.date).getTime();
+        if (bT === aT) return a.btc;
+        const ratio = (t - aT) / (bT - aT);
+        return a.btc + ratio * (b.btc - a.btc);
+    }
 }
