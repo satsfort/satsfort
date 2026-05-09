@@ -32,7 +32,7 @@ describe("vault flow", () => {
         // where the Log Out button currently lives.
         await sidebar.$("button.sidebar-item*=Settings").click();
         await $("h1*=Settings").waitForDisplayed();
-        await $("button*=Log Out").click();
+        await $("button*=Lock Vault").click();
 
         // With the vault now persisted to disk, the login screen should show
         // the Unlock Vault heading instead of Create Vault.
