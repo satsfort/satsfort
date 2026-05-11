@@ -3,12 +3,51 @@ import { dbExecute, dbSelect } from "../db";
 import { MOCK_TARGET_BTC, MOCK_TRACKED_ADDRESSES } from "../lib/mockData";
 import { PortfolioValueRecord } from "../services/model/PortfolioValueRecord.ts";
 import type { HistoryPoint } from "../services/model/HistoryPoint";
+import btcUsdMaxCsv from "../assets/btc-usd-max.csv?raw";
 
 const TARGET_BTC = 2.1;
 const WEEKS = 104;
 const END_DATE = new Date("2026-04-18T00:00:00Z");
 const MOCK_SPOT_USD = 94_820;
 const MOCK_TRACKED_COUNT = MOCK_TRACKED_ADDRESSES.length + 1;
+
+// Parsed once at module load: maps "YYYY-MM-DD" -> daily close USD price.
+// Source is the CoinGecko BTC-USD daily series checked into src/assets.
+const HISTORICAL_BTC_USD: Map<string, number> = (() => {
+    const map = new Map<string, number>();
+    const lines = btcUsdMaxCsv.split("\n");
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
+        const firstComma = line.indexOf(",");
+        if (firstComma < 0) continue;
+        const date = line.slice(0, 10);
+        const rest = line.slice(firstComma + 1);
+        const nextComma = rest.indexOf(",");
+        const priceStr = nextComma < 0 ? rest : rest.slice(0, nextComma);
+        const price = Number(priceStr);
+        if (Number.isFinite(price) && price > 0) map.set(date, price);
+    }
+    return map;
+})();
+const HISTORICAL_DATES_SORTED = [...HISTORICAL_BTC_USD.keys()].sort();
+
+// Nearest-earlier-day lookup. Weekly mock dates fall inside the CSV's daily
+// coverage, so exact hits are the common case; the fallback only matters if
+// the mock series is ever extended past the CSV range.
+function priceOnOrBefore(dateIso: string): number {
+    const key = dateIso.slice(0, 10);
+    const exact = HISTORICAL_BTC_USD.get(key);
+    if (exact !== undefined) return exact;
+    let lo = 0;
+    let hi = HISTORICAL_DATES_SORTED.length - 1;
+    while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (HISTORICAL_DATES_SORTED[mid] <= key) lo = mid;
+        else hi = mid - 1;
+    }
+    return HISTORICAL_BTC_USD.get(HISTORICAL_DATES_SORTED[lo]) ?? MOCK_SPOT_USD;
+}
 
 type PortfolioValueRow = {
     balance_btc: number;
@@ -107,10 +146,15 @@ export class PortfolioHistoryRequests {
         const scale = TARGET_BTC / raw[raw.length - 1].btc;
         return raw.map((p) => {
             const scaledBtc = Math.round(p.btc * scale * 1e8) / 1e8;
+            // Value each snapshot at the real BTC-USD close on that date so the
+            // implied purchase price walks the actual price history. CostBasis
+            // then averages those across the series instead of collapsing to a
+            // single spot.
+            const priceUsd = priceOnOrBefore(p.date);
             return {
                 date: p.date,
                 btc: scaledBtc,
-                usd: scaledBtc * MOCK_SPOT_USD,
+                usd: scaledBtc * priceUsd,
             };
         });
     }
