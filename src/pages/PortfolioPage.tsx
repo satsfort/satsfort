@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./PortfolioPage.css";
 import "./BalancePrivacy.css";
 import { PortfolioChart } from "../components/PortfolioChart";
-import { EyeIcon, EyeOffIcon, BarChartIcon } from "../components/icons";
+import { EyeIcon, EyeOffIcon, BarChartIcon, InfoIcon } from "../components/icons";
 import { EmptyState } from "../components/EmptyState";
 import type { HistoryPoint } from "../services/model/HistoryPoint";
 import { PortfolioHistoryService } from "../services/PortfolioHistoryService";
@@ -190,18 +190,28 @@ export function PortfolioPage({ unit, setUnit, balancesHidden, onToggleBalances,
             <section className="hero">
                 <div className="hero-main">
                     <div className="eyebrow">Total Holdings</div>
-                    <div className="hero-value">
-                        <span className="tick">{formatSymbol(unit, currency, denomination)}</span>
-                        {heroNumber}
-                        {unit === "BTC" && denomination === "SATS" && <span className="tick tick-suffix">sats</span>}
-                    </div>
-                    <div className="hero-sub">
-                        <span className="usd">{heroSecondary}</span>
-                        <span className={pnl >= 0 ? "delta-pos" : "delta-neg"}>
-                            {pnl >= 0 ? "▲" : "▼"} {fiatSymbol}
-                            {Math.abs(pnl * rate).toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pnlPct.toFixed(1)}%)
-                        </span>
-                        <span className="muted">unrealized</span>
+                    <div className="hero-headline">
+                        <div className="hero-value">
+                            <span className="tick">{formatSymbol(unit, currency, denomination)}</span>
+                            {heroNumber}
+                            {unit === "BTC" && denomination === "SATS" && <span className="tick tick-suffix">sats</span>}
+                        </div>
+                        <div className="hero-meta">
+                            <span className="usd">{heroSecondary}</span>
+                            <span className={pnl >= 0 ? "delta-pos" : "delta-neg"}>
+                                {pnl >= 0 ? "▲" : "▼"} {fiatSymbol}
+                                {Math.abs(pnl * rate).toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pnlPct.toFixed(1)}%)
+                            </span>
+                            <span
+                                className="info-tip"
+                                tabIndex={0}
+                                role="img"
+                                aria-label="Unrealized profit and loss: current portfolio value minus average cost basis, valued at today's BTC price."
+                                data-tooltip="Unrealized P&L: current portfolio value minus your average cost basis, marked to today's BTC price."
+                            >
+                                <InfoIcon size={13} />
+                            </span>
+                        </div>
                     </div>
                 </div>
 

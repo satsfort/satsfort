@@ -55,7 +55,7 @@ let lastSourceIndex = -1;
 export class SpotPriceRequests {
     async execute(): Promise<SpotPrice> {
         if (Config.useMockData) {
-            return { usd: 94_820, source: "mock", asOf: new Date().toISOString() };
+            return { usd: 94_820, source: "coingecko", asOf: new Date().toISOString() };
         }
 
         const startIndex = (lastSourceIndex + 1) % PRICE_SOURCES.length;

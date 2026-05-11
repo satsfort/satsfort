@@ -13,6 +13,91 @@
     margin-bottom: 0.5rem;
 }
 
+.hero-headline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 1.5rem;
+}
+
+.hero-meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.75rem;
+    row-gap: 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--muted);
+    flex: 0 0 auto;
+}
+
+.hero-meta .usd {
+    color: var(--text);
+    font-size: 1.1rem;
+}
+
+.info-tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    cursor: help;
+    line-height: 0;
+}
+
+.info-tip:hover,
+.info-tip:focus,
+.info-tip:focus-visible {
+    color: var(--text);
+    outline: none;
+}
+
+.info-tip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 280px;
+    padding: 0.5rem 0.7rem;
+    background: var(--bg-elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-sans, inherit);
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease;
+    z-index: 20;
+}
+
+.info-tip:hover::after,
+.info-tip:focus::after,
+.info-tip:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Below 720px, drop the meta under the big number and left-align it.
+ * Above 720px the flex row lets them sit side-by-side; if the headline runs
+ * long, flex-wrap pushes the meta to its own line automatically. */
+@media (max-width: 720px) {
+    .hero-headline {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 .hero-value {
     font-family: var(--font-mono);
     font-size: clamp(2.2rem, 6vw, 3.6rem);
@@ -35,21 +120,6 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     vertical-align: middle;
-}
-
-.hero-sub {
-    display: flex;
-    gap: 1.25rem;
-    align-items: baseline;
-    flex-wrap: wrap;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 0.95rem;
-}
-
-.hero-sub .usd {
-    color: var(--text);
-    font-size: 1.1rem;
 }
 
 .delta-pos {
