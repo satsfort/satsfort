@@ -59,6 +59,29 @@ Grab the latest installer from the [Releases](../../releases) page:
 
 > Builds are currently unsigned. On macOS you may need to right-click the app and choose "Open" the first time. Code signing is on the roadmap.
 
+## Self-hosting with Docker
+
+Prefer to run Sats Fort as a web app instead of a desktop binary? The repo ships a headless server edition that bundles the React UI and a small Rust HTTP API into a single container, suitable for Umbrel, Start9, or any plain Docker host.
+
+```bash
+docker compose up -d --build
+# open http://localhost:8080
+```
+
+The encrypted SQLite vault is persisted in the `satsfort-data` named volume. The same UI you get on desktop talks to a local HTTP backend over `/api/*`, so you can run it on a home server and reach it from a browser on any device on your network.
+
+Configuration via environment variables on the `satsfort` service in `docker-compose.yml`:
+
+| Variable              | Default     | Notes                                           |
+| --------------------- | ----------- | ----------------------------------------------- |
+| `SATSFORT_HOST_PORT`  | `8080`      | Host port mapped to the container               |
+| `SATSFORT_PORT`       | `8080`      | Port the server listens on inside the container |
+| `SATSFORT_DATA_DIR`   | `/data`     | Where the encrypted SQLite vault lives          |
+| `SATSFORT_STATIC_DIR` | `/app/dist` | Path to the built frontend served by the API    |
+| `SATSFORT_LOG`        | `info`      | `tracing` env filter (e.g. `debug`, `warn`)     |
+
+> The server has no built-in authentication. Only expose it on a trusted network (Umbrel, Tailscale, your LAN), or put an auth proxy in front before exposing it publicly.
+
 ## Tech stack
 
 | Layer    | Stack                                                                |
@@ -111,8 +134,9 @@ Output lands in `src-tauri/target/release/bundle/`. CI builds the same artifacts
 
 ```
 src/              React frontend (pages, components, services)
-src-tauri/        Rust backend (commands, SQLite migrations, structs)
+src-tauri/        Rust backend (commands, SQLite migrations, structs, HTTP server)
 e2e/              WebdriverIO end-to-end specs
+docker/           Dockerfile for the self-hosted server edition
 docs/             Design notes and protocols
 images/           Branding assets
 ```
