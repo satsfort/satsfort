@@ -9,6 +9,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { AccountPage } from "./pages/AccountPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SettingsProvider } from "./lib/SettingsContext";
+import { PremiumProvider } from "./lib/PremiumContext";
 import { TaskNotificationsProvider } from "./lib/TaskNotificationsContext";
 import type { Unit } from "./lib/format";
 import { lockDb } from "./db";
@@ -78,42 +79,45 @@ function App() {
 
     return (
         <SettingsProvider>
-            <TaskNotificationsProvider>
-                <div className="status-bar-mask" aria-hidden="true" />
-                <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
-                    <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-                    <main className="content" ref={contentRef}>
-                        <div className="content-inner">
-                            <div hidden={route !== "portfolio"}>
-                                <PortfolioPage
-                                    unit={unit}
-                                    setUnit={setUnit}
-                                    balancesHidden={balancesHidden}
-                                    onToggleBalances={toggleBalances}
-                                    onNavigate={setRoute}
-                                    version={portfolioVersion}
-                                />
+            <PremiumProvider>
+                <TaskNotificationsProvider>
+                    <div className="status-bar-mask" aria-hidden="true" />
+                    <div className={`layout ${collapsed ? "is-collapsed" : ""}`}>
+                        <Sidebar route={route} onNavigate={setRoute} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+                        <main className="content" ref={contentRef}>
+                            <div className="content-inner">
+                                <div hidden={route !== "portfolio"}>
+                                    <PortfolioPage
+                                        unit={unit}
+                                        setUnit={setUnit}
+                                        balancesHidden={balancesHidden}
+                                        onToggleBalances={toggleBalances}
+                                        onNavigate={setRoute}
+                                        version={portfolioVersion}
+                                    />
+                                </div>
+                                <div hidden={route !== "addresses"}>
+                                    <AddressesPage
+                                        unit={unit}
+                                        setUnit={setUnit}
+                                        balancesHidden={balancesHidden}
+                                        onToggleBalances={toggleBalances}
+                                        onPortfolioChanged={refreshPortfolio}
+                                        onNavigate={setRoute}
+                                    />
+                                </div>
+                                <div hidden={route !== "settings"}>
+                                    <SettingsPage username={user} onLogout={handleLogout} onNavigate={setRoute} />
+                                </div>
+                                <div hidden={route !== "account"}>
+                                    <AccountPage />
+                                </div>
                             </div>
-                            <div hidden={route !== "addresses"}>
-                                <AddressesPage
-                                    unit={unit}
-                                    setUnit={setUnit}
-                                    balancesHidden={balancesHidden}
-                                    onToggleBalances={toggleBalances}
-                                    onPortfolioChanged={refreshPortfolio}
-                                />
-                            </div>
-                            <div hidden={route !== "settings"}>
-                                <SettingsPage username={user} onLogout={handleLogout} />
-                            </div>
-                            <div hidden={route !== "account"}>
-                                <AccountPage />
-                            </div>
-                        </div>
-                    </main>
-                    <BottomNav route={route} onNavigate={setRoute} />
-                </div>
-            </TaskNotificationsProvider>
+                        </main>
+                        <BottomNav route={route} onNavigate={setRoute} />
+                    </div>
+                </TaskNotificationsProvider>
+            </PremiumProvider>
         </SettingsProvider>
     );
 }

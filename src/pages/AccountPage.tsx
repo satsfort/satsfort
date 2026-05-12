@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./AccountPage.css";
 import { TaskNotifications } from "../components/TaskNotifications";
+import { CrownIcon, HeartIcon, RocketIcon } from "../components/icons";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -153,7 +154,24 @@ export function AccountPage() {
                     <div key={plan.id} className={`plan-card ${plan.highlight ? "plan-highlight" : ""}`}>
                         {plan.badge && <div className="plan-badge">{plan.badge}</div>}
                         <div className="plan-head-col">
-                            <h3 className="plan-title">{plan.name}</h3>
+                            <h3 className="plan-title">
+                                {plan.name}
+                                {plan.id === "free" && (
+                                    <span className="plan-title-icon" aria-hidden="true">
+                                        <RocketIcon size={20} />
+                                    </span>
+                                )}
+                                {plan.id === "supporter" && (
+                                    <span className="plan-title-icon" aria-label="Premium">
+                                        <CrownIcon size={20} />
+                                    </span>
+                                )}
+                                {plan.id === "sponsor" && (
+                                    <span className="plan-title-icon" aria-hidden="true">
+                                        <HeartIcon size={20} />
+                                    </span>
+                                )}
+                            </h3>
                             <div className="plan-tagline muted small">{plan.tagline}</div>
                             <div className="plan-price mono">{renderPrice(plan, cycle)}</div>
                         </div>

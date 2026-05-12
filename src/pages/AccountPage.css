@@ -125,6 +125,15 @@
     font-size: 1.75rem;
     font-weight: 700;
     margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.plan-title-icon {
+    display: inline-flex;
+    color: var(--orange);
+    filter: drop-shadow(0 0 8px var(--orange-glow));
 }
 
 .plan-tagline {

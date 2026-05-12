@@ -25,7 +25,10 @@ import { ConfirmRemoveXpubModal } from "../components/ConfirmRemoveXpubModal";
 import { AddressTransactionsModal } from "../components/AddressTransactionsModal";
 import { LoadingIndicator } from "../components/LoadingIndicator";
 import { TaskNotifications } from "../components/TaskNotifications";
+import { PremiumLimitModal } from "../components/PremiumLimitModal";
 import { useTaskNotifications } from "../lib/TaskNotificationsContext";
+import { usePremium } from "../lib/PremiumContext";
+import type { Route } from "../components/Sidebar";
 
 type Props = {
     unit: Unit;
@@ -33,6 +36,7 @@ type Props = {
     balancesHidden: boolean;
     onToggleBalances: () => void;
     onPortfolioChanged: () => void;
+    onNavigate: (r: Route) => void;
 };
 
 type DerivedBalance = { btc: number; txCount: number };
@@ -62,7 +66,7 @@ function useIsMobile() {
     return isMobile;
 }
 
-export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances, onPortfolioChanged }: Props) {
+export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances, onPortfolioChanged, onNavigate }: Props) {
     const trackedAddressesService = new TrackedAddressesService();
     const addressBalanceService = new AddressBalanceService();
     const xpubService = new XpubService();
@@ -84,6 +88,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showImportXpubModal, setShowImportXpubModal] = useState(false);
+    const [premiumLimit, setPremiumLimit] = useState<{ title: string; message: string } | null>(null);
     const [removeTarget, setRemoveTarget] = useState<TrackedAddress | null>(null);
     const [removeXpubTarget, setRemoveXpubTarget] = useState<TrackedXpubMeta | null>(null);
     const [transactionsTarget, setTransactionsTarget] = useState<TrackedAddress | null>(null);
@@ -92,7 +97,32 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const [syncingTxs, setSyncingTxs] = useState<Map<string, { label: string; txCount: number }>>(new Map());
     const { currency, denomination } = useSettings();
     const { track } = useTaskNotifications();
+    const { isPremium, limits } = usePremium();
     const isMobile = useIsMobile();
+
+    const tryOpenAddAddress = () => {
+        const count = addresses?.length ?? 0;
+        if (!isPremium && count >= limits.maxAddresses) {
+            setPremiumLimit({
+                title: "Address limit reached",
+                message: `The free tier supports up to ${limits.maxAddresses} standalone addresses. You're currently tracking ${count}.`,
+            });
+            return;
+        }
+        setShowAddModal(true);
+    };
+
+    const tryOpenAddXpub = () => {
+        const count = xpubs.length;
+        if (!isPremium && count >= limits.maxXpubs) {
+            setPremiumLimit({
+                title: "Xpub limit reached",
+                message: `The free tier supports up to ${limits.maxXpubs} extended public keys. You're currently tracking ${count}.`,
+            });
+            return;
+        }
+        setShowImportXpubModal(true);
+    };
 
     /** Fetches balances for a list of derived addresses and merges them into state. */
     const fetchDerivedBalances = async (addresses: DerivedAddress[]) => {
@@ -324,10 +354,10 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         </div>
                     </div>
                     <div className="page-actions page-actions-stacked">
-                        <button className="btn" onClick={() => setShowImportXpubModal(true)}>
+                        <button className="btn" onClick={tryOpenAddXpub}>
                             Add xpub
                         </button>
-                        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                        <button className="btn btn-primary" onClick={tryOpenAddAddress}>
                             {isMobile ? "Add" : "+ Add Address"}
                         </button>
                     </div>
@@ -338,10 +368,10 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     description="Add a Bitcoin address or import an xpub to start watching your balances."
                     action={
                         <>
-                            <button className="btn" onClick={() => setShowImportXpubModal(true)}>
+                            <button className="btn" onClick={tryOpenAddXpub}>
                                 Add xpub
                             </button>
-                            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                            <button className="btn btn-primary" onClick={tryOpenAddAddress}>
                                 {isMobile ? "Add" : "+ Add Address"}
                             </button>
                         </>
@@ -396,10 +426,10 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         <RefreshIcon size={14} />
                         {refreshingAll ? "Refreshing…" : isMobile ? "Refresh" : "Refresh All"}
                     </button>
-                    <button className="btn" onClick={() => setShowImportXpubModal(true)}>
+                    <button className="btn" onClick={tryOpenAddXpub}>
                         Add xpub
                     </button>
-                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                    <button className="btn btn-primary" onClick={tryOpenAddAddress}>
                         {isMobile ? "Add" : "+ Add Address"}
                     </button>
                 </div>
@@ -704,6 +734,14 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                     denomination={denomination}
                     syncStatus={syncingTxs.get(transactionsTarget.id) ?? null}
                     onClose={() => setTransactionsTarget(null)}
+                />
+            )}
+            {premiumLimit && (
+                <PremiumLimitModal
+                    title={premiumLimit.title}
+                    message={premiumLimit.message}
+                    onClose={() => setPremiumLimit(null)}
+                    onUpgrade={() => onNavigate("account")}
                 />
             )}
         </div>

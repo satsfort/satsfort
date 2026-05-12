@@ -2,18 +2,23 @@ import { useState } from "react";
 import "./SettingsPage.css";
 import { useSettings } from "../lib/SettingsContext";
 import type { FiatCurrency } from "../lib/SettingsContext";
+import { usePremium } from "../lib/PremiumContext";
 import { SettingsRequests } from "../requests/SettingsRequests";
+import { CrownIcon } from "../components/icons";
 import { ChangePasswordModal } from "../components/ChangePasswordModal";
 import { ConfirmWipeLocalDataModal } from "../components/ConfirmWipeLocalDataModal";
 import { TaskNotifications } from "../components/TaskNotifications";
+import type { Route } from "../components/Sidebar";
 import { wipeLocalData } from "../db";
 
 type Props = {
     username: string;
     onLogout: () => void | Promise<void>;
+    onNavigate: (r: Route) => void;
 };
 
-export function SettingsPage({ username, onLogout }: Props) {
+export function SettingsPage({ username, onLogout, onNavigate }: Props) {
+    const { isPremium } = usePremium();
     const initialSettings = SettingsRequests.loadSync();
     const { currency, setCurrency, denomination, setDenomination } = useSettings();
     const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -101,7 +106,7 @@ export function SettingsPage({ username, onLogout }: Props) {
                 <div className="settings-card coming-soon-card">
                     <div className="settings-card-head">
                         <h3 className="settings-card-title">
-                            Data <span className="coming-soon-badge">Coming Soon</span>
+                            Data <span className="coming-soon-badge">Soon</span>
                         </h3>
                         <p className="muted small">Move your tracked addresses and history in or out.</p>
                     </div>
@@ -119,10 +124,57 @@ export function SettingsPage({ username, onLogout }: Props) {
                     </Row>
                 </div>
 
-                <div className="settings-card coming-soon-card">
+                <div className={`settings-card coming-soon-card ${isPremium ? "" : "has-premium-badge"}`}>
                     <div className="settings-card-head">
                         <h3 className="settings-card-title">
-                            Node <span className="coming-soon-badge">Coming Soon</span>
+                            <span className="settings-card-title-text">Encrypted Cloud Backup</span>{" "}
+                            {!isPremium && (
+                                <button
+                                    type="button"
+                                    className="pro-badge pro-badge-button"
+                                    data-tooltip="Supporter feature. Click to upgrade."
+                                    onClick={() => onNavigate("account")}
+                                    aria-label="Supporter feature. Click to upgrade."
+                                >
+                                    <CrownIcon />
+                                </button>
+                            )}{" "}
+                            <span className="coming-soon-badge">Soon</span>
+                        </h3>
+                        <p className="muted small">
+                            Sync a zero-knowledge backup of your vault to our backend. Encrypted on this device with a key only you hold.
+                        </p>
+                    </div>
+
+                    <Row label="Cloud backup" hint="Encrypted end-to-end before it ever leaves this device.">
+                        <Toggle checked={false} onChange={() => {}} disabled />
+                    </Row>
+
+                    <Row label="Backup frequency" hint="How often the encrypted snapshot is uploaded.">
+                        <select className="text-input" disabled value="daily" onChange={() => {}}>
+                            <option value="hourly">Every hour</option>
+                            <option value="daily">Once a day</option>
+                            <option value="weekly">Once a week</option>
+                        </select>
+                    </Row>
+                </div>
+
+                <div className={`settings-card coming-soon-card ${isPremium ? "" : "has-premium-badge"}`}>
+                    <div className="settings-card-head">
+                        <h3 className="settings-card-title">
+                            <span className="settings-card-title-text">Node</span>{" "}
+                            {!isPremium && (
+                                <button
+                                    type="button"
+                                    className="pro-badge pro-badge-button"
+                                    data-tooltip="Supporter feature. Click to upgrade."
+                                    onClick={() => onNavigate("account")}
+                                    aria-label="Supporter feature. Click to upgrade."
+                                >
+                                    <CrownIcon />
+                                </button>
+                            )}{" "}
+                            <span className="coming-soon-badge">Soon</span>
                         </h3>
                         <p className="muted small">Skip third parties. Point the app at a node you control.</p>
                     </div>

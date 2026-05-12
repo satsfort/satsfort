@@ -12,7 +12,6 @@ const ITEMS: NavItem[] = [
     { id: "portfolio", label: "Portfolio", icon: <ChartIcon /> },
     { id: "addresses", label: "Addresses", icon: <AddressIcon /> },
     { id: "settings", label: "Settings", icon: <SettingsIcon /> },
-    { id: "account", label: "Upgrade", icon: <ZapIcon /> },
 ];
 
 const COMING_SOON: ComingSoonItem[] = [
@@ -69,6 +68,20 @@ export function Sidebar({ route, onNavigate, collapsed, onToggle }: Props) {
                         )}
                     </button>
                 ))}
+
+                <div className="sidebar-separator" aria-hidden="true" />
+
+                <button
+                    className={`sidebar-item sidebar-item-upgrade ${route === "account" ? "active" : ""}`}
+                    onClick={() => onNavigate("account")}
+                    title={collapsed ? "Upgrade" : undefined}
+                    aria-current={route === "account" ? "page" : undefined}
+                >
+                    <span className="sidebar-icon">
+                        <ZapIcon />
+                    </span>
+                    {!collapsed && <span className="sidebar-label">Upgrade</span>}
+                </button>
             </nav>
 
             <div className="sidebar-footer">

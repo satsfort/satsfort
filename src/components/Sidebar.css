@@ -93,6 +93,35 @@
     background: transparent;
 }
 
+.sidebar-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 0.5rem 0.25rem;
+}
+
+.sidebar-item.sidebar-item-upgrade {
+    color: var(--orange);
+    background: rgba(247, 147, 26, 0.08);
+    border-color: rgba(247, 147, 26, 0.25);
+    font-weight: 600;
+}
+
+.sidebar-item.sidebar-item-upgrade:hover {
+    background: rgba(247, 147, 26, 0.16);
+    border-color: rgba(247, 147, 26, 0.45);
+    color: var(--orange);
+}
+
+.sidebar-item.sidebar-item-upgrade.active {
+    background: rgba(247, 147, 26, 0.18);
+    border-color: rgba(247, 147, 26, 0.55);
+    box-shadow: inset 2px 0 0 var(--orange);
+}
+
+.sidebar-item.sidebar-item-upgrade .sidebar-icon {
+    color: var(--orange);
+}
+
 .sidebar-badge {
     margin-left: auto;
     font-family: var(--font-head);
@@ -104,6 +133,16 @@
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--border);
     color: var(--muted);
+}
+
+.sidebar-badge.pro-badge {
+    background: rgba(247, 147, 26, 0.1);
+    border-color: rgba(247, 147, 26, 0.4);
+    color: var(--orange);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.18rem 0.32rem;
 }
 
 .sidebar-icon {
