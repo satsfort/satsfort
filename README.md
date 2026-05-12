@@ -20,21 +20,16 @@
 ## Screenshots
 
 <p align="center">
-  <img src="images/screenshot_portfolio.png" alt="Portfolio page" width="800"/>
+  <img src="images/screenshot_portfolio.png" alt="Portfolio page" width="1200"/>
   <br/>
   <em>Portfolio page</em>
 </p>
 
 <p align="center">
-  <img src="images/screenshot_addresses.png" alt="Addresses page" width="800"/>
+  <img src="images/screenshot_addresses.png" alt="Addresses page" width="480"/>
+  <img src="images/screenshot_settings.png" alt="Settings page" width="480"/>
   <br/>
-  <em>Addresses page</em>
-</p>
-
-<p align="center">
-  <img src="images/screenshot_settings.png" alt="Settings page" width="800"/>
-  <br/>
-  <em>Settings page</em>
+  <em>Addresses page · Settings page</em>
 </p>
 
 ## Why Sats Fort
