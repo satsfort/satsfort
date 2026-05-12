@@ -9,6 +9,7 @@ const xpubService = new XpubService();
 type ImportXpubModalProps = {
     onClose: () => void;
     onImport: (xpub: string, label: string, derivationType: AddressDerivationType) => Promise<void>;
+    existingLabels: string[];
 };
 
 const DERIVATION_TYPE_OPTIONS: { value: AddressDerivationType; label: string; description: string }[] = [
@@ -18,7 +19,7 @@ const DERIVATION_TYPE_OPTIONS: { value: AddressDerivationType; label: string; de
     { value: "P2PKH", label: "Legacy (P2PKH)", description: "1... addresses" },
 ];
 
-export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
+export function ImportXpubModal({ onClose, onImport, existingLabels }: ImportXpubModalProps) {
     useEscapeKey(onClose);
     const [xpub, setXpub] = useState("");
     const [label, setLabel] = useState("");
@@ -43,8 +44,14 @@ export function ImportXpubModal({ onClose, onImport }: ImportXpubModalProps) {
             setError(validationError);
             return;
         }
-        if (label.trim().length === 0) {
+        const trimmedLabel = label.trim();
+        if (trimmedLabel.length === 0) {
             setError("Label is required");
+            return;
+        }
+        const normalized = trimmedLabel.toLowerCase();
+        if (existingLabels.some((l) => l.trim().toLowerCase() === normalized)) {
+            setError("That label is already in use. Pick a unique one.");
             return;
         }
 

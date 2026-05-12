@@ -8,9 +8,10 @@ const bitcoinAddressValidationService = new BitcoinAddressValidationService();
 type AddAddressModalProps = {
     onClose: () => void;
     onAdd: (address: string, label: string) => Promise<void>;
+    existingLabels: string[];
 };
 
-export function AddAddressModal({ onClose, onAdd }: AddAddressModalProps) {
+export function AddAddressModal({ onClose, onAdd, existingLabels }: AddAddressModalProps) {
     useEscapeKey(onClose);
     const [address, setAddress] = useState("");
     const [label, setLabel] = useState("");
@@ -26,8 +27,14 @@ export function AddAddressModal({ onClose, onAdd }: AddAddressModalProps) {
             setError(validationError);
             return;
         }
-        if (label.trim().length === 0) {
+        const trimmedLabel = label.trim();
+        if (trimmedLabel.length === 0) {
             setError("Label is required");
+            return;
+        }
+        const normalized = trimmedLabel.toLowerCase();
+        if (existingLabels.some((l) => l.trim().toLowerCase() === normalized)) {
+            setError("That label is already in use. Pick a unique one.");
             return;
         }
 

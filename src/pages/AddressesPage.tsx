@@ -300,6 +300,7 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
     const totalAddressCount = (addresses?.length ?? 0) + derivedAddresses.length;
     const hasAnyData = totalAddressCount > 0 || xpubs.length > 0;
     const xpubTotal = Array.from(derivedBalances.values()).reduce((s, b) => s + b.btc, 0);
+    const existingLabels = [...(addresses ?? []).map((a) => a.label), ...xpubs.map((x) => x.label)];
 
     useEffect(() => {
         // TEMP: artificial delay to preview loading state
@@ -377,8 +378,16 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                         </>
                     }
                 />
-                {showAddModal && <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} />}
-                {showImportXpubModal && <ImportXpubModal onClose={() => setShowImportXpubModal(false)} onImport={handleImportXpub} />}
+                {showAddModal && (
+                    <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} existingLabels={existingLabels} />
+                )}
+                {showImportXpubModal && (
+                    <ImportXpubModal
+                        onClose={() => setShowImportXpubModal(false)}
+                        onImport={handleImportXpub}
+                        existingLabels={existingLabels}
+                    />
+                )}
             </>
         );
     }
@@ -705,8 +714,16 @@ export function AddressesPage({ unit, setUnit, balancesHidden, onToggleBalances,
                 </section>
             )}
 
-            {showAddModal && <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} />}
-            {showImportXpubModal && <ImportXpubModal onClose={() => setShowImportXpubModal(false)} onImport={handleImportXpub} />}
+            {showAddModal && (
+                <AddAddressModal onClose={() => setShowAddModal(false)} onAdd={handleAddAddress} existingLabels={existingLabels} />
+            )}
+            {showImportXpubModal && (
+                <ImportXpubModal
+                    onClose={() => setShowImportXpubModal(false)}
+                    onImport={handleImportXpub}
+                    existingLabels={existingLabels}
+                />
+            )}
             {removeTarget && (
                 <ConfirmRemoveAddressModal
                     label={removeTarget.label}
