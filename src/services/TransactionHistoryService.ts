@@ -40,13 +40,11 @@ export class TransactionHistoryService {
      * ordered most-recent first.
      */
     async getForAddress(addressUuid: string, limit: number = 25, offset: number = 0): Promise<Transaction[]> {
-        if (Config.useMockData) return [];
         const rows = await this.transactionHistoryRequests.listForAddressUuid(addressUuid, limit, offset);
         return rows.map(this.rowToTransaction);
     }
 
     async countForAddress(addressUuid: string): Promise<number> {
-        if (Config.useMockData) return 0;
         return this.transactionHistoryRequests.countForAddressUuid(addressUuid);
     }
 

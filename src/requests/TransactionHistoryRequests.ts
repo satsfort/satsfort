@@ -1,5 +1,6 @@
 import { Config } from "../lib/Config";
 import { dbExecute, dbSelect } from "../db";
+import { MOCK_TRACKED_ADDRESSES, MOCK_XPUB, MOCK_XPUB_DERIVED } from "../lib/mockData";
 import type { RawTransaction } from "../services/model/RawTransaction";
 
 export type TransactionRow = {
@@ -85,7 +86,7 @@ export class TransactionHistoryRequests {
      * by the address-table uuid), ordered most-recent first.
      */
     async listForAddressUuid(addressUuid: string, limit: number, offset: number = 0): Promise<TransactionRow[]> {
-        if (Config.useMockData) return [];
+        if (Config.useMockData) return this.mockRowsForAddress(addressUuid).slice(offset, offset + limit);
         return dbSelect<TransactionRow>(
             `SELECT t.uuid, t.txid, t.amount_sat, t.block_time, t.confirmed, a.label AS label
              FROM address_transactions t
@@ -98,7 +99,7 @@ export class TransactionHistoryRequests {
     }
 
     async countForAddressUuid(addressUuid: string): Promise<number> {
-        if (Config.useMockData) return 0;
+        if (Config.useMockData) return this.mockRowsForAddress(addressUuid).length;
         const rows = await dbSelect<{ count: number }>(
             `SELECT COUNT(*) AS count
              FROM address_transactions t
@@ -185,5 +186,38 @@ export class TransactionHistoryRequests {
             "SELECT xa.id, xa.address FROM xpub_addresses xa JOIN xpubs x ON xa.xpub_id = x.id WHERE x.uuid = ? ORDER BY xa.address_index",
             [xpubUuid],
         );
+    }
+
+    /**
+     * Synthesizes mock transaction rows for a tracked address (standalone or
+     * xpub-derived), sized to match the address's recorded balance and tx
+     * count. The shape mirrors what the real DB query would return so the
+     * service's row-to-Transaction mapping handles it transparently.
+     */
+    private mockRowsForAddress(addressUuid: string): TransactionRow[] {
+        const tracked = MOCK_TRACKED_ADDRESSES.find((a) => a.id === addressUuid);
+        const derived = MOCK_XPUB_DERIVED.find((a) => a.id === addressUuid);
+        const entry = tracked ?? derived;
+        if (!entry || entry.txCount === 0) return [];
+        const label = tracked ? tracked.label : MOCK_XPUB.label;
+        const baseDate = new Date(entry.lastSeen);
+        const avg = entry.btc / Math.max(1, entry.txCount);
+        const rows: TransactionRow[] = [];
+        for (let i = 0; i < entry.txCount; i++) {
+            const d = new Date(baseDate);
+            d.setDate(d.getDate() - i * 18);
+            const isSell = i > 0 && i % 5 === 0;
+            const btc = Math.max(0.0001, Math.round((isSell ? avg * 0.4 : avg * 1.2) * 1e8) / 1e8);
+            const sats = Math.round(btc * 1e8) * (isSell ? -1 : 1);
+            rows.push({
+                uuid: `mock-tx-${addressUuid}-${i}`,
+                txid: `${addressUuid.replace(/-/g, "")}${String(i).padStart(4, "0")}`.padEnd(64, "0").slice(0, 64),
+                amount_sat: sats,
+                block_time: Math.floor(d.getTime() / 1000),
+                confirmed: 1,
+                label,
+            });
+        }
+        return rows;
     }
 }
