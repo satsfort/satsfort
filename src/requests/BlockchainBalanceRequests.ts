@@ -1,4 +1,5 @@
 import { Config } from "../lib/Config";
+import { httpFetch } from "../lib/httpFetch";
 import { MOCK_BALANCE_BY_ADDRESS } from "../lib/mockData";
 import type { AddressBalance } from "../services/model/AddressBalance";
 
@@ -141,7 +142,7 @@ export class BlockchainBalanceRequests {
     private async fetchFromEndpoint(endpoint: ElectrumApiEndpoint, address: string): Promise<AddressBalance> {
         const url = endpoint.getAddressUrl(address);
 
-        const response = await fetch(url, {
+        const response = await httpFetch(url, {
             headers: {
                 Accept: "application/json",
             },

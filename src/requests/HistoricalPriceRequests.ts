@@ -1,14 +1,8 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import csvText from "../assets/btc-usd-max.csv?raw";
 import { Config } from "../lib/Config";
+import { httpFetch } from "../lib/httpFetch";
 import { dbExecute, dbSelect } from "../db";
 import type { HistoricalPrice } from "../services/model/HistoricalPrice";
-
-const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-function httpFetch(url: string): Promise<Response> {
-    if (inTauri) return (tauriFetch as unknown as typeof fetch)(url);
-    return globalThis.fetch(url);
-}
 
 const CSV_SOURCE = "coingecko_historical";
 const SEED_CHUNK_SIZE = 300;

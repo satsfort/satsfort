@@ -1,9 +1,6 @@
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { Config } from "../lib/Config";
+import { httpFetch } from "../lib/httpFetch";
 import type { SpotPrice } from "../services/model/SpotPrice";
-
-const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-const httpFetch: typeof fetch = inTauri ? (tauriFetch as unknown as typeof fetch) : fetch;
 
 type PriceFetcher = {
     name: string;

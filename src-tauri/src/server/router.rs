@@ -9,6 +9,7 @@ use crate::structs::AppState;
 
 use super::config::ServerConfig;
 use super::handlers::{self, ServerState};
+use super::proxy;
 
 pub fn build_router(app_state: AppState, config: ServerConfig) -> Router {
     let state = ServerState {
@@ -24,7 +25,8 @@ pub fn build_router(app_state: AppState, config: ServerConfig) -> Router {
         .route("/wipe-local-data", post(handlers::wipe_local_data))
         .route("/db-execute", post(handlers::db_execute))
         .route("/db-select", post(handlers::db_select))
-        .with_state(state);
+        .with_state(state)
+        .route("/proxy", get(proxy::proxy_get));
 
     let index_file = config.static_dir.join("index.html");
     let static_service = ServeDir::new(&config.static_dir).fallback(ServeFile::new(index_file));

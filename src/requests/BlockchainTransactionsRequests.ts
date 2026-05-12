@@ -1,3 +1,4 @@
+import { httpFetch } from "../lib/httpFetch";
 import type { RawTransaction } from "../services/model/RawTransaction";
 
 // Mempool.space / blockstream.info return 25 confirmed txs per chain page.
@@ -66,7 +67,7 @@ function netAmountForAddress(tx: MempoolTx, address: string): number {
 }
 
 async function fetchPage(url: string): Promise<MempoolTx[]> {
-    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    const response = await httpFetch(url, { headers: { Accept: "application/json" } });
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }

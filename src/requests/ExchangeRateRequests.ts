@@ -1,4 +1,5 @@
 import { Config } from "../lib/Config";
+import { httpFetch } from "../lib/httpFetch";
 import type { FiatCurrency } from "../lib/SettingsContext";
 
 /** Approximate exchange rates used for mock mode: 1 USD → X target. */
@@ -37,7 +38,7 @@ const RATE_SOURCES: RateFetcher[] = [
         name: "frankfurter",
         fetch: async () => {
             const symbols = SUPPORTED_CURRENCIES.filter((c) => c !== "USD").join(",");
-            const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=USD&symbols=${symbols}`);
+            const res = await httpFetch(`https://api.frankfurter.dev/v1/latest?base=USD&symbols=${symbols}`);
             if (!res.ok) throw new Error(`Frankfurter HTTP ${res.status}`);
             const data = await res.json();
             return pickRates(data.rates);
@@ -46,7 +47,7 @@ const RATE_SOURCES: RateFetcher[] = [
     {
         name: "exchangerate-api",
         fetch: async () => {
-            const res = await fetch("https://open.er-api.com/v6/latest/USD");
+            const res = await httpFetch("https://open.er-api.com/v6/latest/USD");
             if (!res.ok) throw new Error(`ExchangeRate-API HTTP ${res.status}`);
             const data = await res.json();
             return pickRates(data.rates);
@@ -55,7 +56,7 @@ const RATE_SOURCES: RateFetcher[] = [
     {
         name: "fawazahmed0",
         fetch: async () => {
-            const res = await fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json");
+            const res = await httpFetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json");
             if (!res.ok) throw new Error(`fawazahmed0 HTTP ${res.status}`);
             const data = await res.json();
             const raw = data.usd;
