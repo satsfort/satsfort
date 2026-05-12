@@ -17,6 +17,26 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="images/screenshot_portfolio.png" alt="Portfolio page" width="800"/>
+  <br/>
+  <em>Portfolio page</em>
+</p>
+
+<p align="center">
+  <img src="images/screenshot_addresses.png" alt="Addresses page" width="800"/>
+  <br/>
+  <em>Addresses page</em>
+</p>
+
+<p align="center">
+  <img src="images/screenshot_settings.png" alt="Settings page" width="800"/>
+  <br/>
+  <em>Settings page</em>
+</p>
+
 ## Why Sats Fort
 
 Most portfolio trackers ask for your addresses, your email, and your trust. Sats Fort asks for none of that.
