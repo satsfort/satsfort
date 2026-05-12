@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/banner-v1.png" alt="Sats Fort" width="1280"/>
+  <img src="images/banner.png" alt="Sats Fort" width="1280"/>
 </p>
 
 <h1 align="center">Sats Fort</h1>
@@ -27,7 +27,6 @@
   <img src="images/screenshot_addresses.png" alt="Addresses page" width="49%"/>
   <img src="images/screenshot_settings.png" alt="Settings page" width="49%"/>
 </p>
-
 
 ## Why Sats Fort
 
