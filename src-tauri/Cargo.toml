@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
+default-run = "SatsFort"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,6 +19,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "SatsFort"
 path = "src/main.rs"
 
+[[bin]]
+name = "satsfort-server"
+path = "src/bin/server.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -25,6 +30,10 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-http = "2"
+axum = "0.8"
+tower-http = { version = "0.6", features = ["fs", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 include_dir = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

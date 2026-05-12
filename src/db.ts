@@ -7,37 +7,88 @@ export type VaultStatus = {
     database_exists: boolean;
 };
 
+const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const API_BASE = "/api";
+
+type HttpMethod = "GET" | "POST";
+
+async function httpCall<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
+    const init: RequestInit = { method };
+    if (body !== undefined) {
+        init.headers = { "Content-Type": "application/json" };
+        init.body = JSON.stringify(body);
+    }
+    const response = await fetch(`${API_BASE}${path}`, init);
+    if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(text || `${path} failed with status ${response.status}`);
+    }
+    if (response.status === 204) {
+        return undefined as T;
+    }
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+        return undefined as T;
+    }
+    return (await response.json()) as T;
+}
+
 export async function unlockDb(password: string): Promise<void> {
     if (Config.useMockData) return;
-    await invoke("unlock_db", { password });
+    if (inTauri) {
+        await invoke("unlock_db", { password });
+        return;
+    }
+    await httpCall<void>("POST", "/unlock-db", { password });
 }
 
 export async function lockDb(): Promise<void> {
     if (Config.useMockData) return;
-    await invoke("lock_db");
+    if (inTauri) {
+        await invoke("lock_db");
+        return;
+    }
+    await httpCall<void>("POST", "/lock-db");
 }
 
 export async function getVaultStatus(): Promise<VaultStatus> {
     if (Config.useMockData) return { database_exists: true };
-    return invoke<VaultStatus>("get_vault_status");
+    if (inTauri) {
+        return invoke<VaultStatus>("get_vault_status");
+    }
+    return httpCall<VaultStatus>("GET", "/vault-status");
 }
 
 export async function changeVaultPassword(currentPassword: string, newPassword: string): Promise<void> {
     if (Config.useMockData) return;
-    await invoke("change_vault_password", { currentPassword, newPassword });
+    if (inTauri) {
+        await invoke("change_vault_password", { currentPassword, newPassword });
+        return;
+    }
+    await httpCall<void>("POST", "/change-vault-password", { currentPassword, newPassword });
 }
 
 export async function wipeLocalData(): Promise<void> {
     if (Config.useMockData) return;
-    await invoke("wipe_local_data");
+    if (inTauri) {
+        await invoke("wipe_local_data");
+        return;
+    }
+    await httpCall<void>("POST", "/wipe-local-data");
 }
 
 export async function dbExecute(query: string, values: DatabaseValue[] = []): Promise<number> {
     if (Config.useMockData) return 0;
-    return invoke<number>("db_execute", { query, values });
+    if (inTauri) {
+        return invoke<number>("db_execute", { query, values });
+    }
+    return httpCall<number>("POST", "/db-execute", { query, values });
 }
 
 export async function dbSelect<T = DatabaseRow>(query: string, values: DatabaseValue[] = []): Promise<T[]> {
     if (Config.useMockData) return [];
-    return invoke<T[]>("db_select", { query, values });
+    if (inTauri) {
+        return invoke<T[]>("db_select", { query, values });
+    }
+    return httpCall<T[]>("POST", "/db-select", { query, values });
 }

@@ -1,0 +1,20 @@
+services:
+    satsfort:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile
+        image: satsfort:local
+        container_name: satsfort
+        restart: unless-stopped
+        ports:
+            - "${SATSFORT_HOST_PORT:-8080}:8080"
+        environment:
+            SATSFORT_PORT: "8080"
+            SATSFORT_DATA_DIR: /data
+            SATSFORT_STATIC_DIR: /app/dist
+            SATSFORT_LOG: info
+        volumes:
+            - satsfort-data:/data
+
+volumes:
+    satsfort-data:

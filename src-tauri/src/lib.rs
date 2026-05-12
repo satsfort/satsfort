@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod server;
 pub mod structs;
 pub mod utils;
 

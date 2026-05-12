@@ -9,7 +9,7 @@
         "preview": "vite preview",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:e2e:build": "npm run build && cargo build --release --features custom-protocol --manifest-path src-tauri/Cargo.toml",
+        "test:e2e:build": "npm run build && cargo build --release --features custom-protocol --bin SatsFort --manifest-path src-tauri/Cargo.toml",
         "test:e2e": "npm run test:e2e:build && wdio run ./wdio.conf.ts",
         "test:e2e:mac": "bash scripts/test-e2e-docker.sh",
         "tauri": "tauri",
