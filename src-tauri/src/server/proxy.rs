@@ -9,13 +9,10 @@ use axum::{
 };
 use serde::Deserialize;
 
-const USER_AGENT: &str = concat!("satsfort-server/", env!("CARGO_PKG_VERSION"));
-
 fn shared_client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
-            .user_agent(USER_AGENT)
             .timeout(Duration::from_secs(30))
             .build()
             .expect("failed to build reqwest client")
