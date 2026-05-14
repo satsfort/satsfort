@@ -8,12 +8,7 @@
         "opener:default",
         {
             "identifier": "http:default",
-            "allow": [
-                { "url": "https://api.coingecko.com/*" },
-                { "url": "https://api.coinbase.com/*" },
-                { "url": "https://api.kraken.com/*" },
-                { "url": "https://blockchain.info/*" }
-            ]
+            "allow": [{ "url": "https://**" }]
         }
     ]
 }

@@ -9,19 +9,6 @@ use axum::{
 };
 use serde::Deserialize;
 
-const ALLOWED_HOSTS: &[&str] = &[
-    "api.coingecko.com",
-    "api.coinbase.com",
-    "api.kraken.com",
-    "blockchain.info",
-    "mempool.space",
-    "blockstream.info",
-    "min-api.cryptocompare.com",
-    "api.frankfurter.dev",
-    "open.er-api.com",
-    "cdn.jsdelivr.net",
-];
-
 const USER_AGENT: &str = concat!("satsfort-server/", env!("CARGO_PKG_VERSION"));
 
 fn shared_client() -> &'static reqwest::Client {
@@ -54,13 +41,8 @@ pub async fn proxy_get(Query(query): Query<ProxyQuery>) -> Response {
         return bad_request("only https urls are allowed");
     }
 
-    let host = match parsed.host_str() {
-        Some(host) => host.to_ascii_lowercase(),
-        None => return bad_request("missing host in url"),
-    };
-
-    if !ALLOWED_HOSTS.iter().any(|allowed| host == *allowed) {
-        return (StatusCode::FORBIDDEN, format!("host not allowed: {host}")).into_response();
+    if parsed.host_str().is_none() {
+        return bad_request("missing host in url");
     }
 
     let upstream = match shared_client()
